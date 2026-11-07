@@ -1,0 +1,78 @@
+# Implementation plan
+
+Source of truth for behaviour: `docs/prd.md`. This file is the build order. Each stage should be demoable before the next starts. `docs/samples/` is raw material to rewrite, not code to keep.
+
+## Stage 1 — Package and CLI
+
+`dev-harness` with bin `dhs`: `install` and `uninstall` only. Copies global skills (`/dhs-init`, `/dhs-config`). Uninstall reverses. Idempotent. No project generation.
+
+**Done when:** on a clean machine, install puts the two global skills in place and uninstall removes them; a second install/uninstall does not break.
+
+## Stage 2 — Templates aligned with the PRD
+
+Rewrite samples into package templates:
+
+- Agents: Architect, Implementer, Consultant, Reviewer.
+- Brainstorm: member template, persona output format, facilitator (collect-only runner, not `agents.roles`), report template, app-context skeleton.
+- Skills: init, config (global); planit, doit, checkit, feature, brainstorm (project).
+- Packs: JS/TS, React Native, Angular, Next.js, Python, Django, FastAPI.
+
+Drop Bugfixer, Improver, facilitator-as-product-agent, leftover CLI from samples.
+
+**Done when:** templates mention only PRD roles and skills; Consultant and facilitator-as-collector exist; no sample-only commands.
+
+## Stage 3 — First `/dhs-init`
+
+Write `harness.config.json`, infer from the repo, generate agents/skills/rules into the project, detect packs. If config already exists, do not re-init; run `/dhs-config` in the same conversation.
+
+**Done when:** empty repo → config + generated files; second `/dhs-init` does not overwrite set keys.
+
+## Stage 4 — `/dhs-config`
+
+Change one key at a time. Regenerate after `agents` or `packsIgnored`. Skill text already describes Jira add/change/remove; the MCP wiring and live mapping land in stage 10.
+
+**Done when:** model / base branch / content language change sticks after a restart.
+
+## Stage 5 — Artifacts + Architect + `/dhs-planit`
+
+Three task files, statuses, modes, split into smaller tasks, `depends`. Architect does not interview personae (that is stage 9).
+
+**Done when:** one sentence → spec + prompt + log, status stays `todo`.
+
+## Stage 6 — Implementer + Consultant + `/dhs-doit`
+
+Branch from base, 2–6 phases, Consultant loop (2 passes / 6 phases / 8 launches + debt), project test command.
+
+**Done when:** a phase can go pass 1 → `must-fix` → pass 2; hitting a cap ends the loop.
+
+## Stage 7 — Reviewer + `/dhs-checkit`
+
+Spec compliance, ❌ rounds, acceptance, commit/push/PR, update from base, close after merge. Git allowlist from the PRD.
+
+**Done when:** interactive waits for acceptance; critical/autonomous opens a PR and does not merge.
+
+## Stage 8 — `/dhs-feature`
+
+Chain 5→7 without pause, start at the first missing stage, max 3 review rounds.
+
+**Done when:** description → PR (or a question) in one run.
+
+## Stage 9 — Brainstorm
+
+Members CRUD, app context, round:
+
+`material → isolated personae → facilitator (collect only, no judgement) → Architect gets PART A only.`
+
+Architect does not prompt personae. Threshold `any` / `significant` / `broad` for consult during spec.
+
+**Done when:** a persona round returns PART A without Architect framing in the persona prompts, and Architect can decide from that pack.
+
+## Stage 10 — Jira via `/dhs-config`
+
+Implement the tracker section of `/dhs-config`: **add**, **change**, and **remove**, also long after init and after a first-run decline. Agents read/write the ticket when connected; after remove, files are SoT again.
+
+**Done when:** connect → agents write only tickets (no feature/prompt/log files); change mapping without losing the token; remove → new work is files-only and tickets are not mirrored; never both trackers at once.
+
+---
+
+Stages 1–4 = harness. 5–8 = SE path. 9–10 = optional relative to core v1; 9 can start after 5 if consult-during-spec is needed earlier.
