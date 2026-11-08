@@ -28,7 +28,7 @@ Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longe
 - The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-layer`**.
 - CLI in v1: `dhs install` and `dhs uninstall` only. No `dhs agent`, `dhs git`, status, or Jira subcommand. Never `npm install -g`.
 - Never write skills, templates, or a CLI to `~/.claude/` or any other machine-wide path. Run only in the target project.
-- There is no `/dhs-init` or `/dhs-config`. Setup is `/dhs-setup`.
+- Setup is `/dhs-setup`.
 - Exactly four product agents: Architect, Implementer, Consultant, Reviewer. The brainstorm facilitator is a collector runner, not a fifth role and not in `agents/`.
 - Git allowlist helpers are POSIX `sh` files under package `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands. Agents call those scripts; they do not compose the matching `git`/`gh` themselves.
 - Status, log, and Jira writes are agent work against `harness.config.json`. They are not scripts in v1.

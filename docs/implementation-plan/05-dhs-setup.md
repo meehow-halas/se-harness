@@ -25,7 +25,7 @@ Cite [prd.md](../prd.md) sections **Skills** and **`/dhs-setup` (detail)** as th
 - Rewriting an existing project PRD on later run.
 - Remaking `AGENTS.md` on later run.
 - Editing `agents.brainstorm` members (that is `/dhs-brainstorm`).
-- Global install, `/dhs-init`, `/dhs-config`.
+- Global install.
 - Regenerating agent **bodies** because base branch, statuses, tracker maps, `fetchFields`, content language, or product line changed.
 
 ## Inputs

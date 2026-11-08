@@ -5,7 +5,7 @@ description: First-time dhs setup and later parameter changes. Use when the user
 
 # /dhs-setup
 
-Finish first-time setup, or later change the same config. The CLI does not configure the project. There is no `/dhs-init` or `/dhs-config`.
+Finish first-time setup, or later change the same config. The CLI does not configure the project.
 
 Generate from `.dhs/` only. Do not invent CLI commands. Do not `npm install -g`. Do not write to `~/.claude/` or any other machine-wide path. Do not commit.
 

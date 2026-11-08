@@ -101,7 +101,7 @@ flowchart LR
 
 ## /dhs-setup
 
-The only way to configure this project. There is no `/dhs-init` or `/dhs-config`. The CLI does not write config. Questions are **one at a time**. The skill does not commit.
+The only way to configure this project. The CLI does not write config. Questions are **one at a time**. The skill does not commit.
 
 If `harness.config.json` is missing, that is a **first run**. If the file is already there, that is a **later run** — the same skill, not a second command.
 
@@ -342,4 +342,4 @@ Replies follow the conversation language. Spec, prompt, log, changelog, and PR t
 
 v1 CLI is only `dhs install` and `dhs uninstall`. Everything else is a skill.
 
-No `/dhs-init` or `/dhs-config`. No extra product agents. No worktrees. No Linear or GitHub Issues as a tracker. No merging pull requests.
+No extra product agents. No worktrees. No Linear or GitHub Issues as a tracker. No merging pull requests.
