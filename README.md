@@ -39,6 +39,8 @@ First run asks one question at a time (role models, content language, base git b
 
 Until `harness.config.json` exists, and whenever `.dhs/VERSION` does not match `dhs.generatedFrom`, work skills stop and tell you to run `/dhs-setup`.
 
+First run, later changes, and what you can set: [`/dhs-setup`](#dhs-setup).
+
 ## 3. Work
 
 Say what you want in ordinary language. The assistant matches **intent** to a skill; slash names (`/dhs-feature`, and so on) label the skill in the host, they are not a command line to assemble.
@@ -77,12 +79,12 @@ If Architect needs a persona round, work skills **stop and ask** `/dhs-brainstor
 
 | Skill | When | What happens | Example |
 |-------|------|----------------|---------|
-| `/dhs-setup` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit | "change the architect model" · "connect Jira" |
+| `/dhs-setup` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit. See [`/dhs-setup`](#dhs-setup). | "change the architect model" · "connect Jira" |
 | `/dhs-planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
 | `/dhs-doit` | Spec and prompt already exist | Implementer + Consultant loop; status stays `in progress` | "implement 001-login" · "implement PROJ-12" |
 | `/dhs-checkit` | One Reviewer round | Variants: review (default), update from base, close after **you** confirm merge | "review this" · "update this branch from base" · "the PR is merged, close the task" |
 | `/dhs-feature` | Full path | Starts at the first missing stage; does not merge | "add password reset from spec through PR" |
-| `/dhs-brainstorm` | Personae | CRUD members, app context, consult round; does not role-play | "consult this spec with the personae" · "build the app context" |
+| `/dhs-brainstorm` | Personae | CRUD members, app context, consult round; does not role-play. See [Brainstorm](#brainstorm). | "consult this spec with the personae" · "build the app context" |
 
 ```mermaid
 flowchart LR
@@ -97,6 +99,53 @@ flowchart LR
   humanMerge --> close["/dhs-checkit close"]
 ```
 
+## /dhs-setup
+
+The only way to configure this project. There is no `/dhs-init` or `/dhs-config`. The CLI does not write config. Questions are **one at a time**. The skill does not commit.
+
+If `harness.config.json` is missing, that is a **first run**. If the file is already there, that is a **later run** — the same skill, not a second command.
+
+```text
+"change the architect model" · "connect Jira" · "change the base branch"
+```
+
+### First run
+
+1. Reads the repo and states inferred choices so you can object.
+2. **Project PRD.** Uses an existing one and does not rewrite it. If none exists, gathers from the repo, asks only for facts the repo does not contain, then writes `docs/prd.md`. Config stores a one-line product plus `agents.docs`, not the PRD body.
+3. **Questions** (before it writes config): models for the four roles (suggest opus / sonnet / haiku / sonnet); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
+4. Writes `harness.config.json` (`dhs.generatedFrom` = `.dhs/VERSION`) and generates live agents, work skills, and rule packs from `.dhs/`.
+5. Merges project-root `AGENTS.md` and/or `CLAUDE.md` with the dhs template, shows the full proposed markdown, and waits for acceptance. The result is always `AGENTS.md`. It writes `CLAUDE.md` only when `.claude/` was present and/or `CLAUDE.md` already existed (prefer a symlink to `AGENTS.md`; if the link fails, an independent file with the same body).
+6. Offers Jira **once**. A decline is stored; add, change, or remove later is this same skill.
+
+### Later run
+
+Config already exists. Say what to change in ordinary language.
+
+If `.dhs/VERSION` does not match `dhs.generatedFrom`, it first regenerates live agents, work skills, and rule packs, sets `dhs.generatedFrom` to `.dhs/VERSION`, and tells you the installed package templates changed — then continues. That is the same mechanism as [After a package update](#after-a-package-update).
+
+Then **one change at a time**: show current and new value, wait for confirmation, then write. It does not overwrite keys you did not confirm.
+
+It does **not** touch `agents.brainstorm` (that is `/dhs-brainstorm`), rewrite the project PRD, remake or re-merge `AGENTS.md`, or commit. If `.claude/` is present and `CLAUDE.md` is still missing, it creates the symlink the same way as on first run.
+
+### What you can set or change
+
+| Setting | First run | Later run | Side effect |
+|---------|-----------|-----------|-------------|
+| Role models | ask | yes | rewrite that live agent’s `model:` frontmatter |
+| `agents.contentLanguage` | ask | yes | config only |
+| `agents.baseBranch` | ask | yes | config only |
+| Optional project rule | one; skip is default | if you ask — stored on the roles (`rules`; reviewer `checklist` when it is a review constraint) | stored on roles |
+| Packs / `packsIgnored` | detect; honour ignore | yes | regenerate rule packs |
+| Status strings | skeleton unless you confirm other strings | yes | config only |
+| Product line / `agents.docs` | from the PRD step | yes | config only |
+| Jira tracker | offer once: add or decline | add / change mapping / remove | config + local credentials file; no agent-body regen |
+| Project PRD | create only if missing | no rewrite | — |
+| `AGENTS.md` | merge + accept | no remake | later: only create missing `CLAUDE.md` if `.claude/` exists |
+| Brainstorm members / model / consult | no | no | `/dhs-brainstorm` |
+
+**Jira.** Add asks URL, user, and project key (one at a time). You put the token in a project-local ignored credentials file — never in chat, git, or `harness.config.json`. Then map each status `todo` → `done` (or skip = `null`), where spec and prompt live, and issue types for `feature` and `bug`. Change keeps the token unless you rotate it in that file. Remove drops the tracker; the project is files-only again. Switching trackers does not migrate old tasks.
+
 ## Agents
 
 Exactly four product agents. Brainstorm members are not agents and are not `@`-addressable. Default models: Architect opus, Implementer sonnet, Consultant haiku, Reviewer sonnet.
@@ -108,7 +157,103 @@ Exactly four product agents. Brainstorm members are not agents and are not `@`-a
 | **Consultant** | Code **quality** on the **phase diff**. Structured `CONSULT` report. Not a user skill. | Edit product code; talk to the user; judge spec compliance |
 | **Reviewer** | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, commit, push, PR, return to base. | Merge the PR; treat Consultant `should-fix` as ❌ |
 
-**Quality loop (required).** After each phase: Consultant pass 1 → fix `must-fix` → pass 2 → else log debt and continue. Caps: 2 passes per phase, 6 phases per task, 8 Consultant launches per task. Reviewer: max three rounds. Debt protocol and report shape: [`docs/prd.md`](docs/prd.md).
+### Architect
+
+Writes the spec, the implementation prompt, and the first log row. Status stays `todo`; the Implementer moves it later. Read-only on application code; no git writes.
+
+If a persona round is needed, Architect **stops and asks** `/dhs-brainstorm`. It does not interview personae itself. When that skill returns **PART A**, Architect decides on every blocker, conflict, and gap, then continues the spec. Details: [Brainstorm](#brainstorm).
+
+### Implementer and Consultant
+
+Consultant is **not** a slash skill. The Implementer launches it after **each** phase so cheap quality feedback happens during implementation, and Reviewer can stay spec-only.
+
+The Implementer plans 2–6 coherent phases (a slice of behaviour, not one file), runs `.dhs/scripts/start-task`, sets status `in progress`, and does the work. After a phase:
+
+```text
+phase work → Consultant pass 1
+  no must-fix → next phase
+  must-fix    → Implementer fixes only those ids → Consultant pass 2
+                  closed → next phase
+                  still open → debt protocol, then continue
+```
+
+```mermaid
+flowchart LR
+  phase[Phase work] --> consult[Consultant]
+  consult --> report[CONSULT report]
+  report --> implementer[Implementer]
+  implementer --> nextPhase[Next phase or debt]
+```
+
+Consultant reads the **phase diff**, touched files, generated rules, and tests for those files. It returns a structured report: `must-fix` can block the phase; `should-fix` never blocks (Implementer may apply or skip; skipped items get one log line); `notes` never block.
+
+Consultant never talks to the user. In interactive mode, if `must-fix` is still open after pass 2, the **Implementer** asks whether to grant one extra pass or accept debt. Caps, stale findings, and the full report shape: [`docs/prd.md`](docs/prd.md) (Agents / Consultant).
+
+### Reviewer
+
+A different axis from Consultant: **does this match the spec** (requirements + acceptance criteria), not how the code is written. Leftover Consultant `should-fix` is not ❌. Leftover `must-fix` may be ❌ only when it actually misses an acceptance criterion.
+
+First review while `in progress` sets `code review`. ❌ goes back to the Implementer with those items only. After acceptance: changelog, commit, push, PR, return to base. You merge on GitHub. Max three Reviewer rounds.
+
+## Brainstorm
+
+Optional extra viewpoints while specifying. Members are markdown **personae**, not dhs roles and not `@`-targets. The skill orchestrates; it does not role-play.
+
+There is still a **facilitator**, but it is not a fifth product agent: no model in `agents.roles`, no `/dhs-setup` question. It is an isolated collector. Implementer, Consultant, and Reviewer never run a round. `/dhs-setup` does not edit members.
+
+```mermaid
+flowchart LR
+  skill["/dhs-brainstorm"] --> personas[Persona turns]
+  personas --> facilitator[Facilitator]
+  facilitator --> partA[PART A]
+  partA --> architect[Architect decides]
+```
+
+### Personae and how you manage them
+
+CRUD is **only** `/dhs-brainstorm`. Config lives in `agents.brainstorm.members`: `id`, `description`, `identity`, `cares`, `dislikes`. Live files are typically `.claude/brainstorm/members/<id>.md`, generated from the template. After create, edit, or remove, regenerate that file from config. Do not hand-edit generated member markdown.
+
+On the **first** member in a project, the skill also asks (once):
+
+- Consult threshold: `any` (every user-visible change) / `significant` (default — hard to reverse, or changes how the product is used) / `broad` (new module, onboarding, pricing, navigation rebuild). Written as `agents.brainstorm.consult`.
+- One model for every persona turn **and** the facilitator. No per-persona model. Suggest `sonnet`. Written as `agents.brainstorm.model`.
+
+**App context** is `.claude/brainstorm/app-context.md`, built from the repo (product line, `agents.docs`, README). Gaps: one question at a time; write only after you confirm the file. A consult without a ready app context stops.
+
+### How a round collects opinions
+
+Isolation is the point. Personae must not see Architect notes, `Q<n>` leanings, each other, or a “corrected” spec.
+
+```text
+material (spec or question)
+    → each persona, alone, without Architect context
+    → facilitator collates, without scoring or picking a winner
+    → Architect receives PART A and decides
+```
+
+1. Ready app context (or stop and finish it).
+2. **Persona turns.** Isolated one-shot per member, in parallel when the runtime allows. Each sees: their member file, the output format, app context, and the material. Read only. No git. No spec edits.
+3. Each persona answers in a fixed shape: needs and barriers marked `[BLOCKER]` / `[IMPORTANT]` / `[NICE]`, facts vs assumptions, a short use scene, confidence. They do not propose a technical implementation.
+4. **Facilitator** (two or more members): isolated one-shot that **only collects** PART A — shared points, conflicts, blockers, lone voices, review quality. It does not decide who is right, drop a lone blocker, or average. One member → that reply **is** PART A; skip the facilitator.
+5. **Architect** with **PART A only** plus the material. Do not pass persona transcripts.
+
+Do not paste transcripts back into the chat or into the Architect launch. If every persona says almost the same thing, that is a weak set — the facilitator flags it under review quality. One round unless you ask for another, and then only for what changed.
+
+### Two ways in
+
+**Direct consult** (`/dhs-brainstorm` plus a question or a spec). Needs a ready app context and at least one member. The consult threshold does **not** apply. If you name members, those are asked; otherwise every member. The skill runs personae → facilitator → Architect, then **shows the Architect’s decisions** (not the raw persona replies). You resolve leftover conflicts. A blocker the Architect rejected is still shown.
+
+**During specification** (`/dhs-planit`, or Architect inside `/dhs-feature`). If Architect needs a round, work skills **stop and ask** `/dhs-brainstorm`. They do not interview personae in-process. `/dhs-feature` does not start a round by itself.
+
+A round **on its own** (nobody named a question) runs only when there are at least **two** members **and** the work passes `agents.brainstorm.consult` (`any` / `significant` / `broad` as above).
+
+### How Architect uses PART A
+
+Architect decides on every blocker, conflict, and gap. Agreement among personae is not required and is not proof. A persona opinion is not user approval.
+
+**Interactive:** after you confirm the round, the skill writes `docs/brainstorm/<slug>-<YYYY-MM-DD>.md`. That settled record is Accepted / Left for the user only — no persona replies, no PART A. **Critical / autonomous:** Architect consumes PART A and does **not** write that file.
+
+Settled records stay files under `docs/brainstorm/`. They are not the task tracker.
 
 ## Modes
 
