@@ -3,6 +3,7 @@
 # Example basename: 001-feature-example-name
 # id: task key (basename on files; issue key on Jira).
 # status: write the string from agents.statuses in harness.config.json for this step (Jira: agents.tracker.statuses). Do not invent names.
+# The `todo` value below is an example of agents.statuses.todo (skeleton default).
 id: 001-feature-example-name
 title: Example name
 status: todo

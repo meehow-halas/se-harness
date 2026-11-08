@@ -122,3 +122,5 @@ Then set that phase’s **Status** to `done` in the Phase index. That write is p
 ## Out of this v1 plan (PRD Deferred)
 
 Cursor-specific generators if they diverge from Claude Code; trackers beyond Jira; auto-merge; a user-facing Consultant skill; changing `agents.contentLanguage` mid-task; status/log/Jira helpers in `.dhs/scripts/`; Windows `sh` hosts; symlinking live agents to `.dhs/agents/`.
+
+This list is a **scope boundary**, not a backlog. Do not open tickets from it. Do not implement these items in a v1 phase. A later version may pick items up only after an explicit new scope.

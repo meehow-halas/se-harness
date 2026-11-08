@@ -4,7 +4,7 @@
 
 `dhs` is an SE harness for coding assistants: skills, agents, rule packs, and a small CLI (`dhs`). The npm package and the binary are both `dhs`. There is no `dev-harness` name.
 
-Behaviour is defined in `docs/prd.md`. That file wins over samples, old agent files, and chat history. `docs/implementation-plan.md` is the build order, not a second spec.
+Behaviour is defined in `docs/prd.md`. That file wins over old agent files and chat history. `docs/implementation-plan.md` is the build order, not a second spec.
 
 CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never write to `~/.claude/` or another machine-wide path. There is no `/dhs-init` or `/dhs-config`; setup is `/dhs-setup`. Git allowlist helpers are POSIX scripts under `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands.
 
@@ -12,13 +12,13 @@ CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never
 
 Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, and `src/` (CLI). `dhs install` copies the first six into a consuming repo as `.dhs/<same-name>/` and writes `.dhs/VERSION`. Write files in those directories; do not invent a parallel tree and rename on copy.
 
-## `samples/`
+There is no `samples/` tree. Do not recreate it.
 
-`samples/` (including any `docs/samples/` leftover) is a **temporary** kit: read it, rewrite into the published directories, then **delete it**. It is not the product and it is not a second spec.
+## Deferred (not a backlog)
 
-Until that rewrite is done: do not create, edit, or move files under `samples/`. Implement elsewhere. Anything in samples that the PRD does not name is out of scope.
+PRD **Deferred** and the plan’s **Out of this v1 plan** are a **scope boundary**. They record decisions we considered and postponed. They are not tickets, not leftover audit work, and not items to implement “while here”. A ticket exists only when someone opens a **new** version scope. Read the list before new work: if it is Deferred, it is not v1.
 
-As soon as `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` exist from that rewrite: delete `samples/` and any leftover `docs/samples/`. Do not keep both trees.
+README for npm consumers is not required by the PRD. The plan’s “Repo state before phase 1” is a historical snapshot, not TODO.
 
 ## Commands
 

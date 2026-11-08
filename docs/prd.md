@@ -633,6 +633,8 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does n
 
 ## Deferred
 
+These are **out of v1 on purpose**. The list is a scope boundary, not a backlog: do not treat it as leftover work or open tickets from it until a later version is explicitly in scope.
+
 - Cursor-specific generators if they diverge from Claude Code.
 - Trackers beyond Jira.
 - Auto-merge.

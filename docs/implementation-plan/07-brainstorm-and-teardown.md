@@ -105,4 +105,4 @@ When published `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and
 
 ## Handoff
 
-v1 payload is complete. Remaining work is PRD Deferred only (Cursor-specific generators, extra trackers, auto-merge, Windows scripts, and the rest listed in the main plan file).
+v1 payload is complete. PRD Deferred is out of this plan (scope boundary, not leftover work).

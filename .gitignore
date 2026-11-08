@@ -24,7 +24,6 @@ coverage/
 !.env.example
 *.pem
 *.local.json
-.claude/jira.local.json
 
 # OS
 .DS_Store
