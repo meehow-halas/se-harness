@@ -41,9 +41,11 @@ Until `harness.config.json` exists, and whenever `.dhs/VERSION` does not match `
 
 ## 3. Work
 
-| Intent | Command |
+Say what you want in ordinary language. The assistant matches **intent** to a skill; slash names (`/dhs-feature`, and so on) label the skill in the host, they are not a command line to assemble.
+
+| Intent | Skill |
 |--------|---------|
-| Full path | `/dhs-feature` plus what to build |
+| Full path | `/dhs-feature` |
 | Spec only | `/dhs-planit` |
 | Implementation only | `/dhs-doit` |
 | One review / update from base / close after merge | `/dhs-checkit` |
@@ -75,12 +77,12 @@ If Architect needs a persona round, work skills **stop and ask** `/dhs-brainstor
 
 | Skill | When | What happens | Example |
 |-------|------|----------------|---------|
-| `/dhs-setup` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit | `/dhs-setup` · change architect model · add Jira |
-| `/dhs-planit` | Spec only | Architect once; offer next step; **do not start it** | `/dhs-planit add login` · `/dhs-planit 001-login` · `/dhs-planit PROJ-12` |
-| `/dhs-doit` | Spec and prompt already exist | Implementer + Consultant loop; status stays `in progress` | `/dhs-doit 001-login` · `/dhs-doit PROJ-12` |
-| `/dhs-checkit` | One Reviewer round | Variants: review (default), update from base, close after **you** confirm merge | `/dhs-checkit` · `/dhs-checkit update` · `/dhs-checkit close` |
-| `/dhs-feature` | Full path | Starts at the first missing stage; does not merge | `/dhs-feature add password reset` |
-| `/dhs-brainstorm` | Personae | CRUD members, app context, consult round; does not role-play | `/dhs-brainstorm` · consult this spec · build app context |
+| `/dhs-setup` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit | "change the architect model" · "connect Jira" |
+| `/dhs-planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
+| `/dhs-doit` | Spec and prompt already exist | Implementer + Consultant loop; status stays `in progress` | "implement 001-login" · "implement PROJ-12" |
+| `/dhs-checkit` | One Reviewer round | Variants: review (default), update from base, close after **you** confirm merge | "review this" · "update this branch from base" · "the PR is merged, close the task" |
+| `/dhs-feature` | Full path | Starts at the first missing stage; does not merge | "add password reset from spec through PR" |
+| `/dhs-brainstorm` | Personae | CRUD members, app context, consult round; does not role-play | "consult this spec with the personae" · "build the app context" |
 
 ```mermaid
 flowchart LR
@@ -114,7 +116,7 @@ Two axes. Do not mix them.
 
 ### Interaction
 
-From **intent**, not a required slash flag. Default: `interactive`. A `/dhs-feature` launch may name the mode so every agent in that run shares it.
+From **intent**, not a required slash flag. Default: `interactive`. You may name the mode in the request so every agent in a `/dhs-feature` run shares it; you do not assemble it like a CLI flag.
 
 | Mode | Ask the user |
 |------|----------------|
@@ -125,9 +127,9 @@ From **intent**, not a required slash flag. Default: `interactive`. A `/dhs-feat
 A decision is **critical** when the request contradicts itself or an existing spec and the two readings ship different behaviour; the work needs a new dependency or external service; it would delete or overwrite user data or be hard to undo in production; or a missing fact would ship two different behaviours.
 
 ```text
-/dhs-feature add export to CSV
-/dhs-feature autonomous add export to CSV
-/dhs-planit critical tighten the login spec
+"add export to CSV" → interactive (default)
+"add export to CSV and don't ask me" → autonomous
+"tighten the login spec; only stop me for critical decisions" → critical
 ```
 
 Consultant never talks to the user; the Implementer does, if the debt protocol requires it.
