@@ -4,8 +4,6 @@ paths:
   - "**/app/**/*.tsx"
 ---
 
-<!-- dev-harness:pack:nextjs -->
-
 # Next.js App Router
 
 - A component is a Server Component unless the file has `'use client'`.

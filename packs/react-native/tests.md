@@ -4,8 +4,6 @@ paths:
   - "**/*.test.tsx"
 ---
 
-<!-- dev-harness:pack:react-native -->
-
 # React Native tests
 
 - Structure each test as arrange, act, assert.

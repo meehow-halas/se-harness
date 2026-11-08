@@ -1,5 +1,3 @@
-<!-- dev-harness:brainstorm -->
-
 # Persona output format
 
 Answer only in this structure, in the conversation language, in the first person.

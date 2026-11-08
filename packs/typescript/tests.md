@@ -5,8 +5,6 @@ paths:
   - "**/*.spec.ts"
 ---
 
-<!-- dev-harness:pack:typescript -->
-
 # TypeScript tests
 
 - Type the fixture and the expected value. Do not annotate them as `any`.

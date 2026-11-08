@@ -1,13 +1,11 @@
-<!-- dev-harness:brainstorm -->
-
 # Brainstorm report template
 
-PART A is the synthesizer's reply. It is not a file.
+PART A is the facilitator's reply. It is not a file.
 The settled record is written only after the user confirms the round, as `docs/brainstorm/<slug>-<YYYY-MM-DD>.md`. Persona replies are not saved.
 
 ---
 
-# PART A — Synthesizer report
+# PART A — Facilitator report
 
 **Material:** <path or question>
 **Personas:** <list>
@@ -23,7 +21,7 @@ Points marked [BLOCKER] by at least one persona.
 |----|---------|-----------|-----------|--------------------|
 | B1 | ... | id | section | assumption |
 
-## 3. Agreements
+## 3. Shared points
 Points where at least two personas agree independently. Name the personas.
 
 ## 4. Conflicts

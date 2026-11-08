@@ -3,8 +3,6 @@ paths:
   - "**/*.py"
 ---
 
-<!-- dev-harness:pack:fastapi -->
-
 # FastAPI
 
 - One `APIRouter` per area, included from the application the project already builds.

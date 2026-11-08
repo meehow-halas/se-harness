@@ -3,8 +3,6 @@ paths:
   - "**/*.py"
 ---
 
-<!-- dev-harness:pack:python -->
-
 # Python
 
 - Follow the style of the file you are editing, including the formatter the project already runs.

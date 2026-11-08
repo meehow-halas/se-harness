@@ -4,8 +4,6 @@ paths:
   - "**/*.html"
 ---
 
-<!-- dev-harness:pack:angular -->
-
 # Angular
 
 - Follow the style of the file you are editing. A file that uses decorator inputs keeps decorator inputs; a file that uses signal inputs keeps signal inputs.

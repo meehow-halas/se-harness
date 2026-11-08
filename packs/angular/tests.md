@@ -3,8 +3,6 @@ paths:
   - "**/*.spec.ts"
 ---
 
-<!-- dev-harness:pack:angular -->
-
 # Angular tests
 
 - Use the project's existing TestBed setup. Do not introduce a second testing style.

@@ -5,8 +5,6 @@ paths:
   - "**/tests/**/*.py"
 ---
 
-<!-- dev-harness:pack:django -->
-
 # Django tests
 
 - Use the project's existing test style, Django `TestCase` or pytest-django. Do not introduce the other one.

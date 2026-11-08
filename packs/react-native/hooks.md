@@ -5,8 +5,6 @@ paths:
   - "**/use*.tsx"
 ---
 
-<!-- dev-harness:pack:react-native -->
-
 # React Native hooks
 
 - The name starts with `use` and the file name matches the hook.

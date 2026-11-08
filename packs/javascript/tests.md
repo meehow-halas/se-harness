@@ -5,8 +5,6 @@ paths:
   - "**/*.spec.js"
 ---
 
-<!-- dev-harness:pack:javascript -->
-
 # JavaScript tests
 
 - Use the test runner the project already uses. Do not introduce a second one.
