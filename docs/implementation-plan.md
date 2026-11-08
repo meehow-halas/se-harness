@@ -103,7 +103,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 3 | References and config templates | 1 | done |
 | 4 | Four product agents | 3 (runtime-config rule) | done |
 | 5 | `/dhs-setup` | 1–4 (`packs/` already at root) | done |
-| 6 | Work skills | 5 | todo |
+| 6 | Work skills | 5 | done |
 | 7 | Brainstorm, pack leftover cleanup, delete `samples/` | 5–6 | todo |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.dhs/VERSION`.
