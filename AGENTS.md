@@ -18,9 +18,10 @@ There is no `samples/` tree. Do not recreate it.
 
 PRD **Deferred** and the plan’s **Out of this v1 plan** are a **scope boundary**. They record decisions we considered and postponed. They are not tickets, not leftover audit work, and not items to implement “while here”. A ticket exists only when someone opens a **new** version scope. Read the list before new work: if it is Deferred, it is not v1.
 
-README for npm consumers is not required by the PRD. The plan’s “Repo state before phase 1” is a historical snapshot, not TODO.
+The plan’s “Repo state before phase 1” is a historical snapshot, not TODO.
 
 ## Commands
 
 - Tests: none yet (`npm test` is a stub). Do not invent a suite unless the task asks for it.
 - Do not commit unless the user asks.
+- Do not edit, “improve”, or sync `README.md` with the PRD, the plan, or the code unless the user explicitly asks to change the README.
