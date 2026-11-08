@@ -4,9 +4,26 @@ A layer for software engineering work in an AI coding assistant (Claude Code fir
 
 The product name, the npm package, and the CLI binary are all **`dhs`**. There is no `dev-harness` name.
 
-`docs/samples/` is an **authoring kit for this repo**: patterns to copy and rewrite into the published templates. It is not the product. It must not stay as a second spec. Anything in samples that this PRD does not name is out of scope and gets dropped when templates are written.
+`samples/` (including any `docs/samples/` leftover) is a **temporary authoring kit**: patterns to copy and rewrite into the published directories below. It is not the product. Anything in samples that this PRD does not name is out of scope and is dropped when those directories are written. **Delete `samples/` (and any leftover `docs/samples/`) as soon as the published sources exist.** Do not keep it as a second spec.
 
 This PRD wins whenever samples, old agent files, or chat history disagree.
+
+## Package source layout
+
+Published product sources live in this repo at the package root, **not** under `samples/`. Do not invent a wrapping `templates/` directory.
+
+| Directory | Role |
+|-----------|------|
+| `agents/` | The four product agents: Architect, Implementer, Consultant, Reviewer. |
+| `packs/` | Framework rule packs (JS/TS, React Native, Angular, Next.js, Python, Django, FastAPI). |
+| `skills/` | Skill templates, including `/dhs-setup`. |
+| `brainstorm/` | Round templates: member, persona output format, facilitator (collect only), report, app-context skeleton. Not product agents and not in `agents/`. |
+| `references/` | Extra file templates (spec / prompt / log shapes, config skeleton, `BLOCKED` format, the consumer `AGENTS.md` template, and the like). |
+| `src/` | CLI (`install` / `uninstall` only). Not copied into `.dhs/`. |
+
+`docs/` is this product’s own documentation. `samples/` is not part of the shipped package; it is removed from this repo immediately after the rewrite into the directories above.
+
+`dhs install` copies `agents/`, `packs/`, `skills/`, `brainstorm/`, and `references/` into the target project’s `.dhs/` under the **same names**, and writes the live `/dhs-setup` skill from `skills/`. Those directory names in this package **are** the payload: do not keep a second internal tree and remap on copy. When this repo is implemented, write product files in these directories so a consuming repo receives `.dhs/agents/`, `.dhs/packs/`, `.dhs/skills/`, `.dhs/brainstorm/`, and `.dhs/references/`.
 
 ## Binding user flow
 
@@ -36,9 +53,9 @@ npx -p https://github.com/<owner>/<repo> dhs install
 
 The user runs `/dhs-setup` in the assistant. That is the only way to finish first-time setup. The CLI does not configure the project.
 
-The skill reads the repo and `.dhs/`. It looks for a project PRD. It gathers what the repo already shows and states those inferences so the user can object. If there is no PRD, it asks one question at a time for the missing product facts, then writes `docs/prd.md`. It does not overwrite an existing PRD. After that it asks one question at a time only for what the repo (and that PRD) do not decide: role models, content language, an optional project rule (explained in that question so the user knows what it is for), then Jira yes/no. It does not commit.
+The skill reads the repo and `.dhs/`. It looks for a project PRD. It gathers what the repo already shows and states those inferences so the user can object. If there is no PRD, it asks one question at a time for the missing product facts, then writes `docs/prd.md`. It does not overwrite an existing PRD. After that it asks one question at a time only for what the repo (and that PRD) do not decide: role models, content language, an optional project rule (explained in that question so the user knows what it is for), then Jira yes/no. It always handles project-root `AGENTS.md` and `CLAUDE.md` in every combination (neither, only one, or both): merge what exists, then merge with the dhs agents-file template, show the proposed `AGENTS.md`, and write only after the user accepts. It does not commit.
 
-**Required result:** a project PRD (`docs/prd.md` when it had to be created, otherwise the one already in the repo), `harness.config.json`, agents, remaining skills, rule packs. Until this step has produced `harness.config.json`, work skills must stop and tell the user to run `/dhs-setup`. If step 1 was skipped, `/dhs-setup` stops and tells the user to run `dhs install` here, then `/dhs-setup` again.
+**Required result:** a project PRD (`docs/prd.md` when it had to be created, otherwise the one already in the repo), `harness.config.json`, agents, remaining skills, rule packs, and a project-root `AGENTS.md` (accepted on first run) — including when the project originally had only `CLAUDE.md`. `CLAUDE.md` exists after this step when the project originally had a `.claude/` directory **and/or** a `CLAUDE.md` (symlink to `AGENTS.md` when the host can create one; otherwise an independent file with the same accepted body). Until this step has produced `harness.config.json`, work skills must stop and tell the user to run `/dhs-setup`. If step 1 was skipped, `/dhs-setup` stops and tells the user to run `dhs install` here, then `/dhs-setup` again.
 
 A later `/dhs-setup` does not repeat first-run setup. It changes parameters (models, statuses, ignored packs, tracker, …) one at a time.
 
@@ -82,7 +99,7 @@ Into **this project only**:
 
 | Path | Role |
 |------|------|
-| `.dhs/` | Working copy of everything `/dhs-setup` needs: templates for agents, skills, packs, and references. |
+| `.dhs/` | Working copy of `agents/`, `packs/`, `skills/`, `brainstorm/`, and `references/` from the package. |
 | Project skill `/dhs-setup` | First-time configuration and later parameter changes (binding flow steps 2 and 3). |
 
 That is the full install-owned set. After install, `/dhs-setup` is invocable. Live agents, the other skills, rule packs, and `harness.config.json` do **not** exist yet.
@@ -91,7 +108,7 @@ That is the full install-owned set. After install, `/dhs-setup` is invocable. Li
 
 ### What `/dhs-setup` does
 
-**First run** (no `harness.config.json`): binding flow step 2. Ensures the project has a PRD (creates `docs/prd.md` when none exists). Writes config and generates agents, the remaining skills, and rule packs from `.dhs/`.
+**First run** (no `harness.config.json`): binding flow step 2. Ensures the project has a PRD (creates `docs/prd.md` when none exists). Writes config and generates agents, the remaining skills, and rule packs from `.dhs/`. Builds project-root `AGENTS.md` from any existing `AGENTS.md` / `CLAUDE.md` plus the dhs template (always writes `AGENTS.md`, even if only `CLAUDE.md` was there), writes it only after the user accepts the proposed body, then writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (see `/dhs-setup` detail).
 
 **Later run** (config already there): change one parameter at a time (including Jira). Do not overwrite keys the user did not confirm. Regenerate generated files when `agents` or `packsIgnored` (or the tracker) change.
 
@@ -391,7 +408,7 @@ Single-stage skills do not chain. Only `/dhs-feature` runs the full path.
 
 | Skill | Does |
 |-------|------|
-| `/dhs-setup` | Project-local, written by `dhs install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Writes config, generates agents/skills/rules from `.dhs/`. Offers Jira once. Does not commit. **Later run** (config already there): change one parameter at a time, including add/change/remove Jira. Does not rewrite the project PRD. Regenerates generated files as needed. |
+| `/dhs-setup` | Project-local, written by `dhs install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Writes config, generates agents/skills/rules from `.dhs/`. Merges existing `AGENTS.md` and/or `CLAUDE.md` with the dhs template, shows the proposed body, writes `AGENTS.md` only after acceptance (even if the project had only `CLAUDE.md`). Writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (symlink, or independent file if the link cannot be created). Offers Jira once. Does not commit. **Later run** (config already there): change one parameter at a time, including add/change/remove Jira. Does not rewrite the project PRD or remake `AGENTS.md`. Regenerates generated files as needed. Ensures `CLAUDE.md` if `.claude/` is present and the file is still missing (symlink first, independent file if the link fails). |
 | `/dhs-planit` | Architect once. Offer next step; do not start it. |
 | `/dhs-doit` | Implementer, including the Consultant loop. Feature or bug: same agent. |
 | `/dhs-checkit` | One Reviewer round. Variants: review, update, close. |
@@ -414,11 +431,39 @@ If `harness.config.json` is missing: first-run path below. If it is present: lat
 - Roles: architect, implementer, consultant, reviewer. Models: suggest opus / sonnet / haiku / sonnet. No other roles.
 - `agents.contentLanguage`: language of files and tracker text; ask once, suggest the conversation language.
 - **Project rule (optional).** One question, after models and content language. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. It is stored on the roles (`rules`; reviewer `checklist` when it is a review constraint). Skip is the default: empty is fine, and the skill must not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
+- **Project agents file (`AGENTS.md` / `CLAUDE.md`).** After writing config and generating files, first run **always** inspects project-root `AGENTS.md` and `CLAUDE.md`. Every combination is in scope: neither, only `AGENTS.md`, only `CLAUDE.md`, or both. Do not skip a file that exists. The dhs source is the template `.dhs/references/AGENTS.md` (package `references/AGENTS.md`).
+
+  Treat a symlink as the target’s body, read once. If `CLAUDE.md` already links to `AGENTS.md` (or the reverse), that is one existing document, not two. If a named path exists but the symlink is broken, treat that path as missing and use the other file if it exists.
+
+  Build the **proposed** `AGENTS.md` in this order; do not write yet:
+
+  | What exists at project root | Merge input (then always merge with the dhs template) |
+  |-----------------------------|--------------------------------------------------------|
+  | Neither | dhs template only |
+  | Only `AGENTS.md` | that file, then the dhs template |
+  | Only `CLAUDE.md` | that file, then the dhs template |
+  | Both (two regular files) | merge `AGENTS.md` with `CLAUDE.md` first (keep project-specific instructions, drop duplicated paragraphs), then merge that with the dhs template |
+  | Both, already the same via symlink | the single target body, then the dhs template |
+
+  Do not replace an existing project file with a raw copy of the template. Show the user the full proposed markdown and wait for acceptance. This confirmation is required on first run in every row above, including “neither”. If they reject it, take their edits (one question) and show the body again until they accept.
+
+  After acceptance, the **result is always** a regular project-root `AGENTS.md` with the accepted body. That is true even when the project originally had only `CLAUDE.md` — do not leave `CLAUDE.md` as the only agents file.
+
+  Then `CLAUDE.md` when the project **originally** had a `.claude/` directory **and/or** a `CLAUDE.md`. If neither was there, do not create `CLAUDE.md`.
+
+  | Originally | After the write |
+  |------------|-----------------|
+  | No `.claude/`, no `CLAUDE.md` | `AGENTS.md` only |
+  | No `.claude/`, `CLAUDE.md` existed | `AGENTS.md` plus `CLAUDE.md` |
+  | `.claude/` present, no `CLAUDE.md` | `AGENTS.md` plus `CLAUDE.md` |
+  | `.claude/` present, `CLAUDE.md` existed | `AGENTS.md` plus `CLAUDE.md` |
+
+  When `CLAUDE.md` is required: prefer a relative file symlink `CLAUDE.md` → `AGENTS.md`. If it is already that symlink, leave it. If it was a regular file, replace it with the symlink (content is already in `AGENTS.md`). Detect the host OS and create the link the way that OS expects (Unix: `ln -s AGENTS.md CLAUDE.md`; Windows: a file symlink such as `mklink CLAUDE.md AGENTS.md` — not a directory junction). **Having `CLAUDE.md` when it is required matters more than the link.** If the symlink cannot be created for any reason (OS, permissions, filesystem, tooling), write `CLAUDE.md` as an **independent regular file** with the same accepted body as `AGENTS.md`. Tell the user they are two files because the link failed. Do not stop setup. Do not omit `CLAUDE.md` when `.claude/` was present or when `CLAUDE.md` already existed.
 - After writing config and generating files, offer Jira once. Decline is stored; connect/change/remove later is the same skill (later run).
 
 **Later run** (config already there):
 
-One change at a time. Show current and new value, wait for confirmation, then write. Do not touch `agents.brainstorm` (that is `/dhs-brainstorm`). Do not create or rewrite the project PRD. Do not commit.
+One change at a time. Show current and new value, wait for confirmation, then write. Do not touch `agents.brainstorm` (that is `/dhs-brainstorm`). Do not create or rewrite the project PRD. Do not remake or re-merge `AGENTS.md`. Do not commit. If `.claude/` is present and `CLAUDE.md` is still missing, create the symlink the same way as on first run; if the link fails, write `CLAUDE.md` as an independent file with the current `AGENTS.md` body. If `CLAUDE.md` already exists as a regular file on a later run, do not overwrite it and do not re-run the first-run merge.
 
 **Tracker (Jira)** — first-run offer and every later run:
 
@@ -535,7 +580,7 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, user approval missing
 ## Decisions
 
 1. **The name is `dhs`.** Package, binary, product. `dev-harness` is leftover from samples and is not used.
-2. **Samples are disposable patterns** — rewrite into templates; do not keep sample-only commands or agents as product.
+2. **Samples are disposable patterns** — rewrite into `agents/`, `packs/`, `skills/`, `brainstorm/`, and `references/` at the package root, then **delete `samples/`** (and any leftover `docs/samples/`). Do not keep sample-only commands or agents as product. Do not leave samples in the repo after the published sources exist.
 3. **The binding user flow is the only adoption path:** `dhs install` (npm or GitHub) → `/dhs-setup` → work skills. Reverse of install is `dhs uninstall` with the same source. No extra CLI for setup or config, no global install, no skip of `/dhs-setup`.
 4. **CLI is only install/uninstall, always in the current project.** Install writes `.dhs/` and `/dhs-setup`. Generation of the rest is the first `/dhs-setup`. Verify is the project’s script. Git is git/`gh` on the allowlist.
 5. **Consultant is in the default pipeline** — haiku, per phase, structured verdict, 2-pass cap, debt protocol. That is the finite loop (see the table under Consultant).
@@ -546,7 +591,9 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, user approval missing
 10. **Only four product agents** — Architect, Implementer, Consultant, Reviewer. Brainstorm facilitator is an isolated collector, not a fifth role in `agents.roles`.
 11. **`/dhs-setup` is the only skill install writes.** It is first-time setup when `harness.config.json` is missing, and later parameter changes when the file already exists. Other skills are generated by the first `/dhs-setup`. Work skills must not run before `harness.config.json` exists.
 12. **First `/dhs-setup` leaves the project with a PRD.** It uses an existing one and does not rewrite it. If none exists, it gathers from the repo, asks for gaps, and writes `docs/prd.md`. Config stores a one-line product plus doc paths, not the PRD body. Later `/dhs-setup` does not rewrite that file.
-13. **One tracker.** Files or Jira, never both. `/dhs-setup` can add, change, or remove Jira; a switch does not migrate old tasks.
+13. **Result is always `AGENTS.md`.** First `/dhs-setup` always handles neither, only `AGENTS.md`, only `CLAUDE.md`, or both. It merges whatever exists with the dhs template (`.dhs/references/AGENTS.md`), shows the proposed body, and does not write until the user accepts. The written file is always `AGENTS.md`, even if the project had only `CLAUDE.md`. `CLAUDE.md` exists afterwards when `.claude/` was present and/or `CLAUDE.md` already existed (symlink preferred; independent file with the same body if the link fails). Later `/dhs-setup` does not remake `AGENTS.md`.
+14. **One tracker.** Files or Jira, never both. `/dhs-setup` can add, change, or remove Jira; a switch does not migrate old tasks.
+15. **Package source layout** — product files live in `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `src/` (CLI). Install copies the first five into `.dhs/` under the same names. Do not remap. Facilitator templates stay in `brainstorm/`, not `agents/`.
 
 ## Deferred
 

@@ -8,11 +8,17 @@ Behaviour is defined in `docs/prd.md`. That file wins over samples, old agent fi
 
 CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never write to `~/.claude/` or another machine-wide path. There is no `/dhs-init` or `/dhs-config`; setup is `/dhs-setup`.
 
+## Package directories
+
+Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `src/` (CLI). `dhs install` copies the first five into a consuming repo as `.dhs/<same-name>/`. Write files in those directories; do not invent a parallel tree and rename on copy.
+
 ## `samples/`
 
-`samples/` (including any `docs/samples/` leftover) is **only a reference**: a pattern and a source of information to copy and rewrite into published templates. It is not the product and it is not a second spec.
+`samples/` (including any `docs/samples/` leftover) is a **temporary** kit: read it, rewrite into the published directories, then **delete it**. It is not the product and it is not a second spec.
 
-**Do not create, edit, move, or delete anything under `samples/`.** Read it. Implement elsewhere. Anything in samples that the PRD does not name is out of scope.
+Until that rewrite is done: do not create, edit, or move files under `samples/`. Implement elsewhere. Anything in samples that the PRD does not name is out of scope.
+
+As soon as `agents/`, `packs/`, `skills/`, `brainstorm/`, and `references/` exist from that rewrite: delete `samples/` and any leftover `docs/samples/`. Do not keep both trees.
 
 ## Commands
 
