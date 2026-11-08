@@ -2,12 +2,23 @@
   "name": "dhs",
   "version": "1.0.0",
   "description": "SE harness layer",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
+  "bin": {
+    "dhs": "./src/cli.js"
   },
+  "files": [
+    "src",
+    "agents",
+    "packs",
+    "skills",
+    "brainstorm",
+    "references",
+    "scripts"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "author": "",
   "license": "ISC"
