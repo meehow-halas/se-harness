@@ -1,0 +1,46 @@
+#!/bin/sh
+# start-task <task>
+# Checkout the task branch, or create it from agents.baseBranch.
+# Reads project-root harness.config.json. No commit, no push.
+# Invoked as .dhs/scripts/start-task after dhs install.
+
+. "$(dirname "$0")/lib.sh"
+
+require_git
+require_task "${1-}"
+task=$1
+if [ $# -ne 1 ]; then
+  blocked "unexpected arguments" "usage: start-task <task>"
+fi
+
+read_base_branch
+base=$DHS_BASE_BRANCH
+require_not_base "$task" "$base"
+
+if local_branch_exists "$task"; then
+  cur=$(current_branch)
+  if [ "$cur" = "$task" ]; then
+    unchanged "branch: $task" "base: $base" "created: no"
+  fi
+  if ! out=$(git checkout "$task" 2>&1); then
+    blocked "could not check out $task ($out)" "commit or stash the working tree, then retry start-task"
+  fi
+  ok "branch: $task" "base: $base" "created: no"
+fi
+
+if remote_branch_exists "$task"; then
+  if ! out=$(git checkout -b "$task" "origin/$task" 2>&1); then
+    blocked "could not check out origin/$task ($out)" "commit or stash the working tree, then retry start-task"
+  fi
+  ok "branch: $task" "base: $base" "created: no"
+fi
+
+if ! local_branch_exists "$base"; then
+  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /dhs-setup"
+fi
+
+if ! out=$(git checkout -b "$task" "$base" 2>&1); then
+  blocked "could not create $task from $base ($out)" "commit or stash the working tree, then retry start-task"
+fi
+
+ok "branch: $task" "base: $base" "created: yes"

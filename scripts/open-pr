@@ -1,0 +1,76 @@
+#!/bin/sh
+# open-pr <task> [--title <text>] [--body <text>]
+# gh pr create --base <agents.baseBranch> --head <task>
+# Does not merge the pull request.
+
+. "$(dirname "$0")/lib.sh"
+
+require_git
+
+if ! command -v gh >/dev/null 2>&1; then
+  blocked "gh is not available" "install GitHub CLI (gh) and retry open-pr"
+fi
+
+task=
+title=
+body=
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --title)
+      if [ $# -lt 2 ]; then
+        blocked "missing value for --title" "usage: open-pr <task> [--title <text>] [--body <text>]"
+      fi
+      title=$2
+      shift 2
+      ;;
+    --body)
+      if [ $# -lt 2 ]; then
+        blocked "missing value for --body" "usage: open-pr <task> [--title <text>] [--body <text>]"
+      fi
+      body=$2
+      shift 2
+      ;;
+    --*)
+      blocked "unknown option $1" "usage: open-pr <task> [--title <text>] [--body <text>]"
+      ;;
+    *)
+      if [ -n "$task" ]; then
+        blocked "unexpected arguments" "usage: open-pr <task> [--title <text>] [--body <text>]"
+      fi
+      task=$1
+      shift
+      ;;
+  esac
+done
+
+require_task "$task"
+read_base_branch
+base=$DHS_BASE_BRANCH
+require_not_base "$task" "$base"
+
+if ! local_branch_exists "$task"; then
+  blocked "task branch $task does not exist" "run start-task $task, then retry open-pr"
+fi
+
+existing=$(gh pr view "$task" --json url --jq .url 2>/dev/null || true)
+if [ -n "$existing" ]; then
+  unchanged "branch: $task" "base: $base" "head: $task" "url: $existing"
+fi
+
+set -- gh pr create --base "$base" --head "$task"
+if [ -n "$title" ]; then
+  set -- "$@" --title "$title"
+fi
+if [ -n "$body" ]; then
+  set -- "$@" --body "$body"
+fi
+if [ -z "$title" ] && [ -z "$body" ]; then
+  set -- "$@" --fill
+fi
+
+if ! url=$("$@" 2>&1); then
+  blocked "pull request failed ($url)" "fix the gh error, then retry open-pr"
+fi
+
+ok "branch: $task" "base: $base" "head: $task" "url: $url"
