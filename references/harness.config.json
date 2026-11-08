@@ -1,0 +1,37 @@
+{
+  "dhs": {
+    "generatedFrom": ""
+  },
+  "product": "",
+  "packsIgnored": [],
+  "jiraOffer": null,
+  "agents": {
+    "docs": [],
+    "baseBranch": "",
+    "contentLanguage": "",
+    "statuses": {
+      "todo": "todo",
+      "in progress": "in progress",
+      "code review": "code review",
+      "in review": "in review",
+      "done": "done"
+    },
+    "roles": {
+      "architect": {
+        "model": "opus"
+      },
+      "implementer": {
+        "model": "sonnet"
+      },
+      "consultant": {
+        "model": "haiku"
+      },
+      "reviewer": {
+        "model": "sonnet"
+      }
+    },
+    "brainstorm": {
+      "consult": "significant"
+    }
+  }
+}
