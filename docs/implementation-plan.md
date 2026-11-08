@@ -101,7 +101,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 1 | Package + CLI install/uninstall | — | done |
 | 2 | POSIX git/`gh` scripts | 1 (copy target `scripts/` exists) | done |
 | 3 | References and config templates | 1 | done |
-| 4 | Four product agents | 3 (runtime-config rule) | todo |
+| 4 | Four product agents | 3 (runtime-config rule) | done |
 | 5 | `/dhs-setup` | 1–4 (`packs/` already at root) | todo |
 | 6 | Work skills | 5 | todo |
 | 7 | Brainstorm, pack leftover cleanup, delete `samples/` | 5–6 | todo |
