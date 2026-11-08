@@ -53,11 +53,11 @@ npx -p https://github.com/<owner>/<repo> dhs install
 
 The user runs `/dhs-setup` in the assistant. That is the only way to finish first-time setup. The CLI does not configure the project.
 
-The skill reads the repo and `.dhs/`. It looks for a project PRD. It gathers what the repo already shows and states those inferences so the user can object. If there is no PRD, it asks one question at a time for the missing product facts, then writes `docs/prd.md`. It does not overwrite an existing PRD. After that it asks one question at a time only for what the repo (and that PRD) do not decide: role models, content language, an optional project rule (explained in that question so the user knows what it is for), then Jira yes/no. It always handles project-root `AGENTS.md` and `CLAUDE.md` in every combination (neither, only one, or both): merge what exists, then merge with the dhs agents-file template, show the proposed `AGENTS.md`, and write only after the user accepts. It does not commit.
+The skill reads the repo and `.dhs/`. It looks for a project PRD. It gathers what the repo already shows and states those inferences so the user can object. If there is no PRD, it asks one question at a time for the missing product facts, then writes `docs/prd.md`. It does not overwrite an existing PRD. After that it asks one question at a time only for what the repo (and that PRD) do not decide: role models, content language, the base git branch (`agents.baseBranch`; suggested default `dev`), an optional project rule (explained in that question so the user knows what it is for), then Jira yes/no. It always handles project-root `AGENTS.md` and `CLAUDE.md` in every combination (neither, only one, or both): merge what exists, then merge with the dhs agents-file template, show the proposed `AGENTS.md`, and write only after the user accepts. It does not commit.
 
 **Required result:** a project PRD (`docs/prd.md` when it had to be created, otherwise the one already in the repo), `harness.config.json`, agents, remaining skills, rule packs, and a project-root `AGENTS.md` (accepted on first run) — including when the project originally had only `CLAUDE.md`. `CLAUDE.md` exists after this step when the project originally had a `.claude/` directory **and/or** a `CLAUDE.md` (symlink to `AGENTS.md` when the host can create one; otherwise an independent file with the same accepted body). Until this step has produced `harness.config.json`, work skills must stop and tell the user to run `/dhs-setup`. If step 1 was skipped, `/dhs-setup` stops and tells the user to run `dhs install` here, then `/dhs-setup` again.
 
-A later `/dhs-setup` does not repeat first-run setup. It changes parameters (models, statuses, ignored packs, tracker, …) one at a time.
+A later `/dhs-setup` does not repeat first-run setup. It changes parameters (models, statuses, ignored packs, tracker, base branch, …) one at a time.
 
 ### 3. Work
 
@@ -108,7 +108,7 @@ That is the full install-owned set. After install, `/dhs-setup` is invocable. Li
 
 ### What `/dhs-setup` does
 
-**First run** (no `harness.config.json`): binding flow step 2. Ensures the project has a PRD (creates `docs/prd.md` when none exists). Writes config and generates agents, the remaining skills, and rule packs from `.dhs/`. Builds project-root `AGENTS.md` from any existing `AGENTS.md` / `CLAUDE.md` plus the dhs template (always writes `AGENTS.md`, even if only `CLAUDE.md` was there), writes it only after the user accepts the proposed body, then writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (see `/dhs-setup` detail).
+**First run** (no `harness.config.json`): binding flow step 2. Ensures the project has a PRD (creates `docs/prd.md` when none exists). Asks for `agents.baseBranch` (suggested default `dev`). Writes config and generates agents, the remaining skills, and rule packs from `.dhs/`. Builds project-root `AGENTS.md` from any existing `AGENTS.md` / `CLAUDE.md` plus the dhs template (always writes `AGENTS.md`, even if only `CLAUDE.md` was there), writes it only after the user accepts the proposed body, then writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (see `/dhs-setup` detail).
 
 **Later run** (config already there): change one parameter at a time (including Jira). Do not overwrite keys the user did not confirm. Regenerate generated files when `agents` or `packsIgnored` (or the tracker) change.
 
@@ -287,7 +287,7 @@ Brainstorm members are not agents and are not `@`-addressable.
 ### Implementer
 
 - Implements whatever the Architect specified, including tasks with `type: bug`. There is no separate bug agent.
-- Before work: create and check out a branch named as the basename, from the configured base branch. No commit, no push.
+- Before work: create and check out a branch named as the basename, from `agents.baseBranch`. No commit, no push. Do not guess `main`, `master`, or the current checkout.
 - Set status `in progress`.
 - Plan 2–6 phases. A phase is a coherent slice (e.g. model + tests, then API), not one file.
 - After **each** phase: launch Consultant (see below). Do not start the next phase until the Consultant protocol says `continue`.
@@ -376,11 +376,11 @@ Checks the finished implementation against the spec. Not formatting, not Consult
 - `interactive`: wait for explicit user acceptance. Until then: no changelog, no commit, no push, no PR, status stays `code review`.
 - `critical` / `autonomous`: this Reviewer run is acceptance. Then the git steps. Do not merge.
 
-After acceptance, in order: final review in the log → status `in review` → `CHANGELOG.md` entry → commit → push task branch → open GitHub PR to the base branch → check out the base branch. Do not merge. PR body notes unfinished blockers.
+After acceptance, in order: final review in the log → status `in review` → `CHANGELOG.md` entry → commit → push task branch → open GitHub PR to `agents.baseBranch` → check out `agents.baseBranch`. Do not merge. PR body notes unfinished blockers.
 
-**Update from base:** only when the user asks (e.g. `/dhs-checkit … update`). Merge the base branch into the task branch, resolve if possible, stop on conflicts.
+**Update from base:** only when the user asks (e.g. `/dhs-checkit … update`). Merge `agents.baseBranch` into the task branch, resolve if possible, stop on conflicts.
 
-**Close:** only when the user says the PR is merged. Verify the merge, set `done`, check out the base branch if this checkout is still on the task branch.
+**Close:** only when the user says the PR is merged. Verify the merge, set `done`, check out `agents.baseBranch` if this checkout is still on the task branch.
 
 ---
 
@@ -388,13 +388,15 @@ After acceptance, in order: final review in the log → status `in review` → `
 
 No `dhs` git wrapper. Agents use git/`gh` **only** on the allowlist. No rebase, reset, or force. No merge of the PR.
 
+The base git branch is `agents.baseBranch` (set on first `/dhs-setup`, changeable later). Agents cut task branches from it, open PRs against it, merge it into a task branch on **update**, and check it out after PR or **close**. They do not invent a base name.
+
 | Operation | Who |
 |-----------|-----|
-| `git checkout -b <basename>` from base, `git checkout <basename>` | Implementer at start; Reviewer if the branch is missing |
-| `git add` / `commit` / `push` of the task branch, `gh pr create` | Reviewer, after Acceptance |
+| `git checkout -b <basename>` from `agents.baseBranch`, `git checkout <basename>` | Implementer at start; Reviewer if the branch is missing |
+| `git add` / `commit` / `push` of the task branch, `gh pr create` targeting `agents.baseBranch` | Reviewer, after Acceptance |
 | Merge the PR | Human (GitHub) |
-| Merge base into task branch | Reviewer, only on **update** |
-| `git checkout` base | Reviewer, after PR opened or after **close** |
+| Merge `agents.baseBranch` into task branch | Reviewer, only on **update** |
+| `git checkout` `agents.baseBranch` | Reviewer, after PR opened or after **close** |
 
 Architect and Consultant: no git writes.
 
@@ -408,7 +410,7 @@ Single-stage skills do not chain. Only `/dhs-feature` runs the full path.
 
 | Skill | Does |
 |-------|------|
-| `/dhs-setup` | Project-local, written by `dhs install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Writes config, generates agents/skills/rules from `.dhs/`. Merges existing `AGENTS.md` and/or `CLAUDE.md` with the dhs template, shows the proposed body, writes `AGENTS.md` only after acceptance (even if the project had only `CLAUDE.md`). Writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (symlink, or independent file if the link cannot be created). Offers Jira once. Does not commit. **Later run** (config already there): change one parameter at a time, including add/change/remove Jira. Does not rewrite the project PRD or remake `AGENTS.md`. Regenerates generated files as needed. Ensures `CLAUDE.md` if `.claude/` is present and the file is still missing (symlink first, independent file if the link fails). |
+| `/dhs-setup` | Project-local, written by `dhs install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Asks for `agents.baseBranch` (suggested default `dev`). Writes config, generates agents/skills/rules from `.dhs/`. Merges existing `AGENTS.md` and/or `CLAUDE.md` with the dhs template, shows the proposed body, writes `AGENTS.md` only after acceptance (even if the project had only `CLAUDE.md`). Writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (symlink, or independent file if the link cannot be created). Offers Jira once. Does not commit. **Later run** (config already there): change one parameter at a time, including the base branch and add/change/remove Jira. Does not rewrite the project PRD or remake `AGENTS.md`. Regenerates generated files as needed. Ensures `CLAUDE.md` if `.claude/` is present and the file is still missing (symlink first, independent file if the link fails). |
 | `/dhs-planit` | Architect once. Offer next step; do not start it. |
 | `/dhs-doit` | Implementer, including the Consultant loop. Feature or bug: same agent. |
 | `/dhs-checkit` | One Reviewer round. Variants: review, update, close. |
@@ -430,7 +432,8 @@ If `harness.config.json` is missing: first-run path below. If it is present: lat
 - Detect frameworks; generate rule packs from `.dhs/` (JS/TS, React Native, Angular, Next.js, Python, Django, FastAPI). Monorepo: pack only on trees that use it. Ignore list: `packsIgnored`.
 - Roles: architect, implementer, consultant, reviewer. Models: suggest opus / sonnet / haiku / sonnet. No other roles.
 - `agents.contentLanguage`: language of files and tracker text; ask once, suggest the conversation language.
-- **Project rule (optional).** One question, after models and content language. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. It is stored on the roles (`rules`; reviewer `checklist` when it is a review constraint). Skip is the default: empty is fine, and the skill must not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
+- `agents.baseBranch`: the git branch agents cut task branches from, open PRs against, merge into a task branch on **update**, and return to after PR or **close**. Ask once. Suggested default is `dev` (for example `dev` vs `main`). If the repo already names a default branch, state that inference so the user can object; do not silently take `main`, `master`, or the current checkout. Without this key, agents have no base and must not guess one.
+- **Project rule (optional).** One question, after models, content language, and base branch. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. It is stored on the roles (`rules`; reviewer `checklist` when it is a review constraint). Skip is the default: empty is fine, and the skill must not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
 - **Project agents file (`AGENTS.md` / `CLAUDE.md`).** After writing config and generating files, first run **always** inspects project-root `AGENTS.md` and `CLAUDE.md`. Every combination is in scope: neither, only `AGENTS.md`, only `CLAUDE.md`, or both. Do not skip a file that exists. The dhs source is the template `.dhs/references/AGENTS.md` (package `references/AGENTS.md`).
 
   Treat a symlink as the target’s body, read once. If `CLAUDE.md` already links to `AGENTS.md` (or the reverse), that is one existing document, not two. If a named path exists but the symlink is broken, treat that path as missing and use the other file if it exists.
@@ -463,7 +466,7 @@ If `harness.config.json` is missing: first-run path below. If it is present: lat
 
 **Later run** (config already there):
 
-One change at a time. Show current and new value, wait for confirmation, then write. Do not touch `agents.brainstorm` (that is `/dhs-brainstorm`). Do not create or rewrite the project PRD. Do not remake or re-merge `AGENTS.md`. Do not commit. If `.claude/` is present and `CLAUDE.md` is still missing, create the symlink the same way as on first run; if the link fails, write `CLAUDE.md` as an independent file with the current `AGENTS.md` body. If `CLAUDE.md` already exists as a regular file on a later run, do not overwrite it and do not re-run the first-run merge.
+One change at a time. Show current and new value, wait for confirmation, then write. The base branch (`agents.baseBranch`) is one of those parameters. Do not touch `agents.brainstorm` (that is `/dhs-brainstorm`). Do not create or rewrite the project PRD. Do not remake or re-merge `AGENTS.md`. Do not commit. If `.claude/` is present and `CLAUDE.md` is still missing, create the symlink the same way as on first run; if the link fails, write `CLAUDE.md` as an independent file with the current `AGENTS.md` body. If `CLAUDE.md` already exists as a regular file on a later run, do not overwrite it and do not re-run the first-run merge.
 
 **Tracker (Jira)** — first-run offer and every later run:
 
@@ -587,13 +590,14 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, user approval missing
 6. **Reviewer stays spec-only** — split of duties: Consultant = how the code is written; Reviewer = whether it matches the spec.
 7. **Mode names** — `interactive` / `critical` / `autonomous` (same meaning as default / semi-standalone / standalone).
 8. **Five statuses** — drop `backlog` / `reviewReady` / `reviewDone` as duplicate labels.
-9. **Git allowlist, not a wrapper CLI** — Implementer: branch create/switch only. Reviewer: commit/push/PR/return. Merge is always human.
+9. **Git allowlist, not a wrapper CLI** — Implementer: branch create/switch only, from `agents.baseBranch`. Reviewer: commit/push/PR/return against that same branch. Merge is always human.
 10. **Only four product agents** — Architect, Implementer, Consultant, Reviewer. Brainstorm facilitator is an isolated collector, not a fifth role in `agents.roles`.
 11. **`/dhs-setup` is the only skill install writes.** It is first-time setup when `harness.config.json` is missing, and later parameter changes when the file already exists. Other skills are generated by the first `/dhs-setup`. Work skills must not run before `harness.config.json` exists.
 12. **First `/dhs-setup` leaves the project with a PRD.** It uses an existing one and does not rewrite it. If none exists, it gathers from the repo, asks for gaps, and writes `docs/prd.md`. Config stores a one-line product plus doc paths, not the PRD body. Later `/dhs-setup` does not rewrite that file.
 13. **Result is always `AGENTS.md`.** First `/dhs-setup` always handles neither, only `AGENTS.md`, only `CLAUDE.md`, or both. It merges whatever exists with the dhs template (`.dhs/references/AGENTS.md`), shows the proposed body, and does not write until the user accepts. The written file is always `AGENTS.md`, even if the project had only `CLAUDE.md`. `CLAUDE.md` exists afterwards when `.claude/` was present and/or `CLAUDE.md` already existed (symlink preferred; independent file with the same body if the link fails). Later `/dhs-setup` does not remake `AGENTS.md`.
 14. **One tracker.** Files or Jira, never both. `/dhs-setup` can add, change, or remove Jira; a switch does not migrate old tasks.
 15. **Package source layout** — product files live in `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `src/` (CLI). Install copies the first five into `.dhs/` under the same names. Do not remap. Facilitator templates stay in `brainstorm/`, not `agents/`.
+16. **Base branch is configured, never guessed.** First `/dhs-setup` asks for `agents.baseBranch` (suggested default `dev`). Later `/dhs-setup` can change it. Agents use only that value to cut, return, update-from-base, and target PRs.
 
 ## Deferred
 
