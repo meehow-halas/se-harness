@@ -6,11 +6,11 @@
 
 Behaviour is defined in `docs/prd.md`. That file wins over samples, old agent files, and chat history. `docs/implementation-plan.md` is the build order, not a second spec.
 
-CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never write to `~/.claude/` or another machine-wide path. There is no `/dhs-init` or `/dhs-config`; setup is `/dhs-setup`.
+CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never write to `~/.claude/` or another machine-wide path. There is no `/dhs-init` or `/dhs-config`; setup is `/dhs-setup`. Git allowlist helpers are POSIX scripts under `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands.
 
 ## Package directories
 
-Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `src/` (CLI). `dhs install` copies the first five into a consuming repo as `.dhs/<same-name>/`. Write files in those directories; do not invent a parallel tree and rename on copy.
+Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, and `src/` (CLI). `dhs install` copies the first six into a consuming repo as `.dhs/<same-name>/` and writes `.dhs/VERSION`. Write files in those directories; do not invent a parallel tree and rename on copy.
 
 ## `samples/`
 
@@ -18,7 +18,7 @@ Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm
 
 Until that rewrite is done: do not create, edit, or move files under `samples/`. Implement elsewhere. Anything in samples that the PRD does not name is out of scope.
 
-As soon as `agents/`, `packs/`, `skills/`, `brainstorm/`, and `references/` exist from that rewrite: delete `samples/` and any leftover `docs/samples/`. Do not keep both trees.
+As soon as `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` exist from that rewrite: delete `samples/` and any leftover `docs/samples/`. Do not keep both trees.
 
 ## Commands
 
