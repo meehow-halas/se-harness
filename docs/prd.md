@@ -1,26 +1,99 @@
-# Product: dev-harness
+# Product: dhs
 
-A harness layer for software engineering work in an AI coding assistant (Claude Code first; Cursor later if the same skill/agent shape applies). It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
+A layer for software engineering work in an AI coding assistant (Claude Code first; Cursor later if the same skill/agent shape applies). It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
+
+The product name, the npm package, and the CLI binary are all **`dhs`**. There is no `dev-harness` name.
 
 `docs/samples/` is an **authoring kit for this repo**: patterns to copy and rewrite into the published templates. It is not the product. It must not stay as a second spec. Anything in samples that this PRD does not name is out of scope and gets dropped when templates are written.
 
 This PRD wins whenever samples, old agent files, or chat history disagree.
 
-## How it runs
+## Binding user flow
 
-Install from the npm registry or a GitHub repo. Package name: `dev-harness`. Binary: `dhs`.
+This sequence is the product contract. Templates, CLI, and skills must implement it. There is no other supported way to adopt `dhs`.
+
+The user is in **their** project directory. The assistant is open on that project. Nothing is installed on the machine.
+
+### 1. Bootstrap
+
+Exactly one of:
 
 ```text
-npm install -g dev-harness
-dhs install          # machine: global skills /dhs-init and /dhs-config
-dhs uninstall        # reverse of install; idempotent
+# npm
+npx dhs install
+
+# GitHub (the dhs repo; #ref is an optional tag, branch, or commit)
+npx -p github:<owner>/<repo> dhs install
+npx -p github:<owner>/<repo>#<ref> dhs install
+npx -p https://github.com/<owner>/<repo> dhs install
 ```
 
-These two commands are the entire `dhs` CLI in v1. They are idempotent. They do not configure a project.
+`<owner>/<repo>` is the GitHub repository that publishes `dhs`. A git HTTPS URL is the same as `github:<owner>/<repo>`. npm and GitHub are first-class and equivalent.
 
-Project setup is the **`/dhs-init` skill**: it writes `harness.config.json` and generates agents, skills, and rule packs from templates inside the npm package.
+**Required result:** `.dhs/` and the project skill `/dhs-setup`. Setup is **not** done. `/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, and `/dhs-brainstorm` do not exist yet and must not be offered. `/dhs-setup` is the skill that finishes first-time setup and later changes the same config.
 
-**Already initialized:** if `/dhs-init` finds harness in this project (`harness.config.json` exists), it does **not** run setup again. It launches `/dhs-config` in the same conversation and follows that skill. First-time setup and later changes stay one user-facing command (`/dhs-init`) plus an explicit `/dhs-config` when the user wants config only.
+### 2. Finish setup
+
+The user runs `/dhs-setup` in the assistant. That is the only way to finish first-time setup. The CLI does not configure the project.
+
+The skill reads the repo and `.dhs/`. It looks for a project PRD. It gathers what the repo already shows and states those inferences so the user can object. If there is no PRD, it asks one question at a time for the missing product facts, then writes `docs/prd.md`. It does not overwrite an existing PRD. After that it asks one question at a time only for what the repo (and that PRD) do not decide: role models, content language, an optional project rule (explained in that question so the user knows what it is for), then Jira yes/no. It does not commit.
+
+**Required result:** a project PRD (`docs/prd.md` when it had to be created, otherwise the one already in the repo), `harness.config.json`, agents, remaining skills, rule packs. Until this step has produced `harness.config.json`, work skills must stop and tell the user to run `/dhs-setup`. If step 1 was skipped, `/dhs-setup` stops and tells the user to run `dhs install` here, then `/dhs-setup` again.
+
+A later `/dhs-setup` does not repeat first-run setup. It changes parameters (models, statuses, ignored packs, tracker, …) one at a time.
+
+### 3. Work
+
+Only after step 2:
+
+| Intent | Command |
+|--------|---------|
+| Full path | `/dhs-feature` plus what to build |
+| Spec only | `/dhs-planit` |
+| Implementation only | `/dhs-doit` |
+| One review / update from base / close after merge | `/dhs-checkit` |
+| Change parameters or Jira | `/dhs-setup` |
+| Personae | `/dhs-brainstorm` |
+
+The user merges the GitHub PR. Close is `/dhs-checkit` after they confirm the merge.
+
+### 4. Remove bootstrap (optional)
+
+Same source as step 1:
+
+```text
+npx dhs uninstall
+npx -p github:<owner>/<repo> dhs uninstall
+```
+
+Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config.json` and files `/dhs-setup` generated.
+
+## How it runs
+
+`dhs` is **never** installed globally (`npm install -g` is out). **Never** write skills, templates, or a CLI to `~/.claude/` or any other machine-wide location.
+
+The product name, the npm package, and the CLI binary are all **`dhs`**. Run the CLI only in the target project. Pick one source in step 1 and reuse it in step 4.
+
+These two commands are the entire `dhs` CLI in v1. They are idempotent.
+
+### What `dhs install` writes
+
+Into **this project only**:
+
+| Path | Role |
+|------|------|
+| `.dhs/` | Working copy of everything `/dhs-setup` needs: templates for agents, skills, packs, and references. |
+| Project skill `/dhs-setup` | First-time configuration and later parameter changes (binding flow steps 2 and 3). |
+
+That is the full install-owned set. After install, `/dhs-setup` is invocable. Live agents, the other skills, rule packs, and `harness.config.json` do **not** exist yet.
+
+`dhs uninstall` removes that same set (`.dhs/` and the install-owned `/dhs-setup` skill). It does not delete `harness.config.json` or files `/dhs-setup` already generated.
+
+### What `/dhs-setup` does
+
+**First run** (no `harness.config.json`): binding flow step 2. Ensures the project has a PRD (creates `docs/prd.md` when none exists). Writes config and generates agents, the remaining skills, and rule packs from `.dhs/`.
+
+**Later run** (config already there): change one parameter at a time (including Jira). Do not overwrite keys the user did not confirm. Regenerate generated files when `agents` or `packsIgnored` (or the tracker) change.
 
 Agents run the **project’s own** test/lint/typecheck scripts (from `package.json` or the equivalent).
 
@@ -34,8 +107,11 @@ Agents run the **project’s own** test/lint/typecheck scripts (from `package.js
 ## Non-goals (v1)
 
 - Any `dhs` CLI beyond `install` and `uninstall`.
+- A second skill for first-time setup or later config changes. `/dhs-setup` does both.
+- Global install (`npm install -g`, machine-wide skills, `~/.claude/`).
+- Finishing setup by any path other than `/dhs-setup` after `dhs install`.
 - Extra product agents. The set is Architect, Implementer, Consultant, Reviewer. The brainstorm facilitator is a collector runner, not a fifth role.
-- Worktrees as a harness feature.
+- Worktrees as a dhs feature.
 - Merging pull requests.
 - Trackers other than files and Jira.
 - Architect writing line-level implementation instructions.
@@ -46,7 +122,7 @@ Agents run the **project’s own** test/lint/typecheck scripts (from `package.js
 
 **Exactly one tracker.** Files **or** Jira, never both. Agents write spec, prompt, log and status to the active tracker only. They do not mirror.
 
-`/dhs-init` asks once whether to connect Jira. Decline is remembered (`jiraOffer: declined`) so init does not ask again. **`/dhs-config` owns the tracker for the rest of the project’s life:** connect, change, or remove, including after a decline.
+The first `/dhs-setup` asks once whether to connect Jira. Decline is remembered (`jiraOffer: declined`) so it does not ask again. **Later `/dhs-setup` owns the tracker:** connect, change, or remove, including after a decline.
 
 Switching does **not** migrate. Connect Jira → new work is tickets only; leftover `docs/features` (etc.) are ignored. Remove Jira → new work is files only; existing tickets are not copied into files.
 
@@ -68,10 +144,10 @@ Task key = basename. Branch name = basename. Status strings = `agents.statuses`.
 
 Via Jira MCP. Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log and status live **only** on the ticket. Agents do not create or edit `docs/features/`, `docs/prompt/` or `docs/feature-log/` while this tracker is active.
 
-The five harness steps are the same as on files. **Which Jira status each step uses is not guessed.** `/dhs-config` writes `agents.tracker.statuses` from that project’s workflow (names taken from Jira, shown as a numbered list). Agents transition only to those exact strings.
+The five dhs steps are the same as on files. **Which Jira status each step uses is not guessed.** `/dhs-setup` writes `agents.tracker.statuses` from that project’s workflow (names taken from Jira, shown as a numbered list). Agents transition only to those exact strings.
 
-| Harness key | When the agent moves the issue | Config |
-|-------------|-------------------------------|--------|
+| Key | When the agent moves the issue | Config |
+|-----|-------------------------------|--------|
 | `todo` | Architect has created spec + prompt | Jira status or `null` |
 | `inProgress` | Implementer starts | Jira status or `null` |
 | `codeReview` | Reviewer starts the first round | Jira status or `null` |
@@ -79,7 +155,7 @@ The five harness steps are the same as on files. **Which Jira status each step u
 | `done` | PR merged and close confirmed | Jira status or `null` |
 | `blocker` (optional extra) | Status a **depends** issue must already have before this one may start | Jira status; required if `depends` is used |
 
-`null` = this step does not call a Jira transition. There is no file fallback and no invented name. If the mapped status does not exist on that issue type’s workflow, stop and tell the user to fix the mapping in `/dhs-config`.
+`null` = this step does not call a Jira transition. There is no file fallback and no invented name. If the mapped status does not exist on that issue type’s workflow, stop and tell the user to fix the mapping in `/dhs-setup`.
 
 While Jira is the tracker, `agents.statuses` is not written. After Remove, file-tracker strings from `agents.statuses` apply again.
 
@@ -149,7 +225,7 @@ todo → in progress → code review → in review → done
 
 Earlier names: `backlog` → `todo`; `reviewReady` is not a status (stay on `in progress` until the Reviewer starts); `reviewDone` → `in review`.
 
-Agents update status **only** on the active tracker. Files: write `agents.statuses` into the feature file. Jira: transition to `agents.tracker.statuses.<key>`. There is no harness CLI for status.
+Agents update status **only** on the active tracker. Files: write `agents.statuses` into the feature file. Jira: transition to `agents.tracker.statuses.<key>`. There is no `dhs` CLI for status.
 
 ---
 
@@ -293,7 +369,7 @@ After acceptance, in order: final review in the log → status `in review` → `
 
 ## Git
 
-No harness git wrapper. Agents use git/`gh` **only** on the allowlist. No rebase, reset, or force. No merge of the PR.
+No `dhs` git wrapper. Agents use git/`gh` **only** on the allowlist. No rebase, reset, or force. No merge of the PR.
 
 | Operation | Who |
 |-----------|-----|
@@ -309,14 +385,13 @@ Architect and Consultant: no git writes.
 
 ## Skills
 
-`/dhs-init` and `/dhs-config` are **global** (`dhs install`). The other skills are generated **into the project** by the first `/dhs-init`.
+`/dhs-setup` lands **in this project** via `dhs install`. The other skills are generated **into the same project** by the first `/dhs-setup` from `.dhs/`. None of them are installed on the machine.
 
 Single-stage skills do not chain. Only `/dhs-feature` runs the full path.
 
 | Skill | Does |
 |-------|------|
-| `/dhs-init` | Global. **First run** (no `harness.config.json`): project setup. Infers what it can from the repo; one question at a time otherwise. Writes config, generates agents/skills/rules from package templates. Offers Jira once. Does not commit. **Later run** (config already there): do not re-init; launch `/dhs-config`. |
-| `/dhs-config` | Global. Change config (models, statuses, ignored packs, …). **Tracker:** add, change, or remove Jira at any time. Regenerates generated files as needed. Continuation of `/dhs-init` when the project is already initialized. |
+| `/dhs-setup` | Project-local, written by `dhs install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Writes config, generates agents/skills/rules from `.dhs/`. Offers Jira once. Does not commit. **Later run** (config already there): change one parameter at a time, including add/change/remove Jira. Does not rewrite the project PRD. Regenerates generated files as needed. |
 | `/dhs-planit` | Architect once. Offer next step; do not start it. |
 | `/dhs-doit` | Implementer, including the Consultant loop. Feature or bug: same agent. |
 | `/dhs-checkit` | One Reviewer round. Variants: review, update, close. |
@@ -325,32 +400,35 @@ Single-stage skills do not chain. Only `/dhs-feature` runs the full path.
 
 There is no user-facing Consultant skill.
 
-### `/dhs-init` (detail)
+### `/dhs-setup` (detail)
 
-**Entry.** If `harness.config.json` is present, stop the init flow and run `/dhs-config` (same conversation, no second slash command required from the user). Do not overwrite keys. Do not regenerate as a silent re-init.
+**Entry.** If `dhs install` has not been run in this project (`.dhs/` or the `/dhs-setup` skill is missing), stop and tell the user to run `dhs install` here from npm (`npx dhs install`) or from GitHub (`npx -p github:<owner>/<repo> dhs install`), then `/dhs-setup` again.
+
+If `harness.config.json` is missing: first-run path below. If it is present: later-run path below. Do not overwrite keys the user did not confirm. Do not regenerate generated files as a silent first-run repeat.
 
 **First run** (file missing):
 
 - Read the repo first; state inferred choices so the user can object.
-- Detect frameworks; generate rule packs from the harness templates (JS/TS, React Native, Angular, Next.js, Python, Django, FastAPI). Monorepo: pack only on trees that use it. Ignore list: `packsIgnored`.
+- **Project PRD.** Look for an existing product requirements document (typical `docs/prd.md`, or a path the repo already treats as the PRD). If one exists, use it and do not rewrite it. If none exists, gather product facts from the repo (README, architecture, existing docs, what the code does). Ask one question at a time only for facts the repo does not contain. Then write `docs/prd.md` from those inferences and answers. Put that path in `agents.docs`. Do not put the PRD body into `harness.config.json`. One-line product + paths to docs are enough in config.
+- Detect frameworks; generate rule packs from `.dhs/` (JS/TS, React Native, Angular, Next.js, Python, Django, FastAPI). Monorepo: pack only on trees that use it. Ignore list: `packsIgnored`.
 - Roles: architect, implementer, consultant, reviewer. Models: suggest opus / sonnet / haiku / sonnet. No other roles.
 - `agents.contentLanguage`: language of files and tracker text; ask once, suggest the conversation language.
-- Do not put this PRD into config. One-line product + paths to existing docs.
-- After writing config and generating files, offer Jira once. Decline is stored; connect/change/remove later is `/dhs-config` (see below).
+- **Project rule (optional).** One question, after models and content language. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. It is stored on the roles (`rules`; reviewer `checklist` when it is a review constraint). Skip is the default: empty is fine, and the skill must not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
+- After writing config and generating files, offer Jira once. Decline is stored; connect/change/remove later is the same skill (later run).
 
-### `/dhs-config` (detail)
+**Later run** (config already there):
 
-One change at a time. Show current and new value, wait for confirmation, then write. Do not touch `agents.brainstorm` (that is `/dhs-brainstorm`). Do not commit.
+One change at a time. Show current and new value, wait for confirmation, then write. Do not touch `agents.brainstorm` (that is `/dhs-brainstorm`). Do not create or rewrite the project PRD. Do not commit.
 
-**Tracker (Jira)** — always available here, not only at init:
+**Tracker (Jira)** — first-run offer and every later run:
 
 | Intent | What happens |
 |--------|----------------|
-| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in the local ignored credentials file; never paste it in chat. Fetch that project’s statuses, issue types and custom fields. Then, one question at a time, map **each** harness key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that list (or skip = `null`). Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker.statuses` (and the rest) into config. Agents must not pick a Jira status that is not in this map. |
+| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in the local ignored credentials file; never paste it in chat. Fetch that project’s statuses, issue types and custom fields. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that list (or skip = `null`). Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker.statuses` (and the rest) into config. Agents must not pick a Jira status that is not in this map. |
 | **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named; keep the token unless they rotate it in the credentials file. |
 | **Remove** | Confirm, drop tracker from config, delete or clear the local credentials file. Project is files-only again. `jiraOffer` does not block a later **Add**. |
 
-Do not invent a harness CLI for Jira. The skill uses Jira MCP and writes config. After a tracker change, regenerate whatever agents need (`fetchFields`, task key pattern) so the next Architect/Implementer/Reviewer run uses the new source of truth.
+Do not invent a `dhs` CLI for Jira. The skill uses Jira MCP and writes config. After a tracker change, regenerate whatever agents need (`fetchFields`, task key pattern) so the next Architect/Implementer/Reviewer run uses the new source of truth.
 
 If the user names another config key (model, base branch, …), do that key first, then the tracker offer only when there is still no tracker and the offer was not declined — unless they explicitly asked to add/change/remove Jira, in which case do the tracker path even after a decline.
 
@@ -368,9 +446,9 @@ Do not pause between stages when there is no question and no stop. Report once a
 
 ## Brainstorm
 
-Optional extra viewpoints while specifying. Members are markdown personae, not `@`-targets and not harness roles.
+Optional extra viewpoints while specifying. Members are markdown personae, not `@`-targets and not dhs roles.
 
-The four product agents stay Architect, Implementer, Consultant, Reviewer. Brainstorm still has a **facilitator**, but it is not a fifth product role (no model in `agents.roles`, no `/dhs-init` question for it). It is an isolated runner: collect opinions, do not judge them, hand the pack to the Architect.
+The four product agents stay Architect, Implementer, Consultant, Reviewer. Brainstorm still has a **facilitator**, but it is not a fifth product role (no model in `agents.roles`, no `/dhs-setup` question for it). It is an isolated runner: collect opinions, do not judge them, hand the pack to the Architect.
 
 That split is the point:
 
@@ -394,7 +472,7 @@ Personae must not see the Architect’s notes, recommendations, `Q<n>` leanings,
 | Facilitator | Isolated one-shot that **only collects**. Fills PART A (shared points, conflicts, blockers, lone voices, review quality). Does not decide who is right, does not drop a lone blocker, does not average. Used when two or more members were asked; one member → that reply is PART A. |
 | Architect | Receives PART A. Decides on every blocker, conflict and gap. Does not run persona or facilitator turns. A persona opinion is not user approval. |
 
-`/dhs-config` does not edit members. Implementer, Consultant and Reviewer never run a round.
+`/dhs-setup` does not edit members. Implementer, Consultant and Reviewer never run a round.
 
 ### Two entries
 
@@ -427,7 +505,7 @@ On create, ask once for the consult threshold and the model used for persona and
 
 ## Coding standards
 
-`/dhs-init` generates rule files from packs. Agents follow rules that load on Read/Write/Edit.
+`/dhs-setup` generates rule files from packs in `.dhs/`. Agents follow rules that load on Read/Write/Edit.
 
 Quality during implementation is **Consultant + the project’s own test command**. Reviewer does not replace Consultant.
 
@@ -437,8 +515,8 @@ Quality during implementation is **Consultant + the project’s own test command
 
 | Command | Purpose |
 |---------|---------|
-| `dhs install` | Machine: global skills |
-| `dhs uninstall` | Reverse install |
+| `dhs install` | This project: `.dhs/` plus the `/dhs-setup` skill. From npm (`npx dhs install`) or GitHub (`npx -p github:<owner>/<repo> dhs install`). |
+| `dhs uninstall` | Reverse of install in this project. Same source as install. |
 
 Everything else is a skill or a normal project/git/`gh` command.
 
@@ -450,22 +528,25 @@ Not questions and not Consultant `must-fix`. Report in one line:
 
 `BLOCKED: <what stopped> — <what the user or another skill must do>`
 
-Examples: user approval missing, open blocker task, merge not confirmed, dirty checkout when Reviewer must switch branch, PR failed, project tests failing on untouched code.
+Examples: `dhs install` missing, `/dhs-setup` not run yet, user approval missing, open blocker task, merge not confirmed, dirty checkout when Reviewer must switch branch, PR failed, project tests failing on untouched code.
 
 ---
 
 ## Decisions
 
-1. **Samples are disposable patterns** — rewrite into templates; do not keep sample-only commands or agents as product.
-2. **CLI is only install/uninstall.** Generation is `/dhs-init`. Verify is the project’s script. Git is git/`gh` on the allowlist.
-3. **Consultant is in the default pipeline** — haiku, per phase, structured verdict, 2-pass cap, debt protocol. That is the finite loop (see the table under Consultant).
-4. **Reviewer stays spec-only** — split of duties: Consultant = how the code is written; Reviewer = whether it matches the spec.
-5. **Mode names** — `interactive` / `critical` / `autonomous` (same meaning as default / semi-standalone / standalone).
-6. **Five statuses** — drop `backlog` / `reviewReady` / `reviewDone` as duplicate labels.
-7. **Git allowlist, not a wrapper CLI** — Implementer: branch create/switch only. Reviewer: commit/push/PR/return. Merge is always human.
-8. **Only four product agents** — Architect, Implementer, Consultant, Reviewer. Brainstorm facilitator is an isolated collector, not a fifth role in `agents.roles`.
-9. **Init and config are global.** Other skills are per project. A second `/dhs-init` is `/dhs-config`. `/dhs-config` is a skill, not an agent.
-10. **One tracker.** Files or Jira, never both. `/dhs-config` can add, change, or remove Jira; a switch does not migrate old tasks.
+1. **The name is `dhs`.** Package, binary, product. `dev-harness` is leftover from samples and is not used.
+2. **Samples are disposable patterns** — rewrite into templates; do not keep sample-only commands or agents as product.
+3. **The binding user flow is the only adoption path:** `dhs install` (npm or GitHub) → `/dhs-setup` → work skills. Reverse of install is `dhs uninstall` with the same source. No extra CLI for setup or config, no global install, no skip of `/dhs-setup`.
+4. **CLI is only install/uninstall, always in the current project.** Install writes `.dhs/` and `/dhs-setup`. Generation of the rest is the first `/dhs-setup`. Verify is the project’s script. Git is git/`gh` on the allowlist.
+5. **Consultant is in the default pipeline** — haiku, per phase, structured verdict, 2-pass cap, debt protocol. That is the finite loop (see the table under Consultant).
+6. **Reviewer stays spec-only** — split of duties: Consultant = how the code is written; Reviewer = whether it matches the spec.
+7. **Mode names** — `interactive` / `critical` / `autonomous` (same meaning as default / semi-standalone / standalone).
+8. **Five statuses** — drop `backlog` / `reviewReady` / `reviewDone` as duplicate labels.
+9. **Git allowlist, not a wrapper CLI** — Implementer: branch create/switch only. Reviewer: commit/push/PR/return. Merge is always human.
+10. **Only four product agents** — Architect, Implementer, Consultant, Reviewer. Brainstorm facilitator is an isolated collector, not a fifth role in `agents.roles`.
+11. **`/dhs-setup` is the only skill install writes.** It is first-time setup when `harness.config.json` is missing, and later parameter changes when the file already exists. Other skills are generated by the first `/dhs-setup`. Work skills must not run before `harness.config.json` exists.
+12. **First `/dhs-setup` leaves the project with a PRD.** It uses an existing one and does not rewrite it. If none exists, it gathers from the repo, asks for gaps, and writes `docs/prd.md`. Config stores a one-line product plus doc paths, not the PRD body. Later `/dhs-setup` does not rewrite that file.
+13. **One tracker.** Files or Jira, never both. `/dhs-setup` can add, change, or remove Jira; a switch does not migrate old tasks.
 
 ## Deferred
 
