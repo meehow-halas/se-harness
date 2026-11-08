@@ -26,7 +26,6 @@ Cite [prd.md](../prd.md) sections **Skills** and **`/dhs-setup` (detail)** as th
 - Remaking `AGENTS.md` on later run.
 - Editing `agents.brainstorm` members (that is `/dhs-brainstorm`).
 - Global install, `/dhs-init`, `/dhs-config`.
-- Editing `samples/`.
 - Regenerating agent **bodies** because base branch, statuses, tracker maps, `fetchFields`, content language, or product line changed.
 
 ## Inputs
@@ -103,9 +102,8 @@ If the user names another config key, do that key first, then the tracker offer 
 
 - `skills/` contains a complete `/dhs-setup` that distinguishes first vs later run and VERSION mismatch.
 - Procedure matches PRD detail (PRD, questions one at a time, AGENTS.md acceptance, CLAUDE.md rules, Jira, no commit).
-- Setup generates from `.dhs/`, not from `samples/`.
+- Setup generates from `.dhs/`.
 - Install still writes **only** this skill live; it does not generate the rest.
-- No `dev-harness` in the skill. `samples/` unchanged.
 
 ## Handoff
 

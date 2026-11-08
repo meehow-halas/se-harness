@@ -2,15 +2,13 @@
 
 A layer for software engineering work in an AI coding assistant (Claude Code first; Cursor later if the same skill/agent shape applies). It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
 
-The product name, the npm package, and the CLI binary are all **`dhs`**. There is no `dev-harness` name.
+The product name, the npm package, and the CLI binary are all **`dhs`**.
 
-`samples/` (including any `docs/samples/` leftover) is a **temporary authoring kit**: patterns to copy and rewrite into the published directories below. It is not the product. Anything in samples that this PRD does not name is out of scope and is dropped when those directories are written. **Delete `samples/` (and any leftover `docs/samples/`) as soon as the published sources exist.** Do not keep it as a second spec.
-
-This PRD wins whenever samples, old agent files, or chat history disagree.
+This PRD wins whenever old agent files or chat history disagree.
 
 ## Package source layout
 
-Published product sources live in this repo at the package root, **not** under `samples/`. Do not invent a wrapping `templates/` directory.
+Published product sources live in this repo at the package root. Do not invent a wrapping `templates/` directory.
 
 | Directory | Role |
 |-----------|------|
@@ -22,7 +20,7 @@ Published product sources live in this repo at the package root, **not** under `
 | `scripts/` | POSIX `sh` git/`gh` helpers. Copied into `.dhs/scripts/`. Not the `dhs` CLI. |
 | `src/` | CLI (`install` / `uninstall` only). Not copied into `.dhs/`. |
 
-`docs/` is this product’s own documentation. `samples/` is not part of the shipped package; it is removed from this repo immediately after the rewrite into the directories above.
+`docs/` is this product’s own documentation. It is not copied into a consuming project’s `.dhs/`.
 
 `dhs install` copies `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` into the target project’s `.dhs/` under the **same names**, writes `.dhs/VERSION` (the package version), and writes the live `/dhs-setup` skill from `skills/`. Those directory names in this package **are** the payload: do not keep a second internal tree and remap on copy. When this repo is implemented, write product files in these directories so a consuming repo receives `.dhs/agents/`, `.dhs/packs/`, `.dhs/skills/`, `.dhs/brainstorm/`, `.dhs/references/`, and `.dhs/scripts/`.
 
@@ -612,8 +610,8 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does n
 
 ## Decisions
 
-1. **The name is `dhs`.** Package, binary, product. `dev-harness` is leftover from samples and is not used.
-2. **Samples are disposable patterns** — rewrite into `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` at the package root, then **delete `samples/`** (and any leftover `docs/samples/`). Do not keep sample-only commands or agents as product. Do not leave samples in the repo after the published sources exist. Sample `dev-harness agent` wrappers and worktrees are not product.
+1. **The name is `dhs`.** Package, binary, product.
+2. **Worktrees and extra wrappers are not product.** There is no agent-wrapper CLI. Worktrees are not a dhs feature. Ship only what this PRD names.
 3. **The binding user flow is the only adoption path:** `dhs install` (npm or GitHub) → `/dhs-setup` → work skills. Reverse of install is `dhs uninstall` with the same source. No extra CLI for setup or config, no global install, no skip of `/dhs-setup`.
 4. **CLI is only install/uninstall, always in the current project.** Install writes `.dhs/` (including `scripts/` and `.dhs/VERSION`) and `/dhs-setup`. It does not generate live agents, work skills, or rule packs. Generation of those is `/dhs-setup`. Verify is the project’s script. Git/`gh` on the allowlist is invoked by `.dhs/scripts/`.
 5. **Consultant is in the default pipeline** — haiku, per phase, structured verdict, 2-pass cap, debt protocol. That is the finite loop (see the table under Consultant).

@@ -2,7 +2,7 @@
 
 ## Product
 
-`dhs` is an SE harness for coding assistants: skills, agents, rule packs, and a small CLI (`dhs`). The npm package and the binary are both `dhs`. There is no `dev-harness` name.
+`dhs` is an SE harness for coding assistants: skills, agents, rule packs, and a small CLI (`dhs`). The npm package and the binary are both `dhs`.
 
 Behaviour is defined in `docs/prd.md`. That file wins over old agent files and chat history. `docs/implementation-plan.md` is the build order, not a second spec.
 
@@ -11,8 +11,6 @@ CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never
 ## Package directories
 
 Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, and `src/` (CLI). `dhs install` copies the first six into a consuming repo as `.dhs/<same-name>/` and writes `.dhs/VERSION`. Write files in those directories; do not invent a parallel tree and rename on copy.
-
-There is no `samples/` tree. Do not recreate it.
 
 ## Deferred (not a backlog)
 

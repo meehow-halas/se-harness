@@ -20,7 +20,6 @@ Related small extras the PRD groups as “and the like” if they are required f
 - Implementing `/dhs-setup` (phase 5) or product agents (phase 4).
 - Jira MCP calls.
 - Rewriting this repo’s own [AGENTS.md](../../AGENTS.md) into the consumer template (the consumer template is for **consuming** projects).
-- Editing `samples/`.
 - Status/Jira helper scripts.
 
 ## Inputs
@@ -66,11 +65,10 @@ Do not put credentials in the skeleton. Jira token lives in a local ignored file
 
 ## Done when
 
-- `references/AGENTS.md` exists and contains no `dev-harness` name and no interpolated base branch or status literals presented as the only allowed values.
+- `references/AGENTS.md` exists and contains no interpolated base branch or status literals presented as the only allowed values.
 - Config skeleton lists the keys above.
 - Spec, prompt, and log shapes match the Artifact contract.
-- `BLOCKED` template matches PRD Stops, not the sample `rule=` line.
-- `samples/` unchanged.
+- `BLOCKED` template matches PRD Stops, not a `rule=` line.
 
 ## Handoff
 

@@ -1,6 +1,6 @@
 # Implementation plan
 
-Build order for `dhs` v1. **Not a second spec.** Behaviour is defined in [prd.md](prd.md). When this plan, `samples/`, old agent files, or chat history disagree with the PRD, the PRD wins.
+Build order for `dhs` v1. **Not a second spec.** Behaviour is defined in [prd.md](prd.md). When this plan, old agent files, or chat history disagree with the PRD, the PRD wins.
 
 An agent implementing a phase must read **this file and that phase file**. Do not implement other phases in the same pass unless the user names them. The Phase index **Status** column is the record of which slices have landed; later phases read it as a dependency check, not chat history.
 
@@ -19,13 +19,13 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 4 | [04-agents.md](implementation-plan/04-agents.md) | [04-agents.prompt.md](implementation-plan/04-agents.prompt.md) |
 | Phase 5 | [05-dhs-setup.md](implementation-plan/05-dhs-setup.md) | [05-dhs-setup.prompt.md](implementation-plan/05-dhs-setup.prompt.md) |
 | Phase 6 | [06-work-skills.md](implementation-plan/06-work-skills.md) | [06-work-skills.prompt.md](implementation-plan/06-work-skills.prompt.md) |
-| Phase 7 | [07-brainstorm-and-teardown.md](implementation-plan/07-brainstorm-and-teardown.md) | [07-brainstorm-and-teardown.prompt.md](implementation-plan/07-brainstorm-and-teardown.prompt.md) |
+| Phase 7 | [07-brainstorm.md](implementation-plan/07-brainstorm.md) | [07-brainstorm.prompt.md](implementation-plan/07-brainstorm.prompt.md) |
 
 Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longest because `/dhs-setup` and the work-skill pipeline are large; they still point at the PRD rather than restating it.
 
 ## Product invariants
 
-- The product name, npm package, and CLI binary are all **`dhs`**. There is no `dev-harness` name in published files, comments, or frontmatter.
+- The product name, npm package, and CLI binary are all **`dhs`**.
 - CLI in v1: `dhs install` and `dhs uninstall` only. No `dhs agent`, `dhs git`, status, or Jira subcommand. Never `npm install -g`.
 - Never write skills, templates, or a CLI to `~/.claude/` or any other machine-wide path. Run only in the target project.
 - There is no `/dhs-init` or `/dhs-config`. Setup is `/dhs-setup`.
@@ -37,7 +37,6 @@ Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longe
 - `dhs install` writes `.dhs/VERSION`. `/dhs-setup` writes `dhs.generatedFrom` in `harness.config.json`. Work skills stop when config is missing or those two values differ.
 - Do not invent a test suite. `npm test` stays a stub unless a later task asks for tests.
 - Do not commit unless the user asks.
-- **Do not create, edit, move, or delete anything under `samples/`** except in phase 7, which **deletes** `samples/` (and any leftover `docs/samples/`) after published sources exist. Until then: read samples, rewrite elsewhere.
 
 ## Package layout
 
@@ -74,7 +73,7 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 
 Examples in the PRD (Stops): install missing, setup not run, VERSION mismatch, approval missing, open blocker task, merge not confirmed, dirty checkout, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
 
-Sample agents used a `BLOCKED: rule=<id> …` shape. That is leftover. Published product uses the PRD line above.
+Do not use a `BLOCKED: rule=<id>` shape. Published product uses the PRD line above.
 
 A git/`gh` script that refuses ends with a `BLOCKED:` line. The agent copies it into its report, stops that path, and does not work around it with raw `git` or `gh`.
 
@@ -88,7 +87,7 @@ Implementing agents do not bake these into markdown as literals. Templates say t
 
 ## Repo state before phase 1
 
-Present: [prd.md](prd.md), [packs/](../packs/) (usable but still tagged `dev-harness` in comments), [samples/](../samples/) (read-only reference), stub [package.json](../package.json) (no `bin`, no `src/`).
+Present: [prd.md](prd.md), [packs/](../packs/), stub [package.json](../package.json) (no `bin`, no `src/`).
 
 Missing: `src/`, `agents/`, `skills/`, `brainstorm/`, `references/`, `scripts/`.
 
@@ -104,7 +103,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 4 | Four product agents | 3 (runtime-config rule) | done |
 | 5 | `/dhs-setup` | 1–4 (`packs/` already at root) | done |
 | 6 | Work skills | 5 | done |
-| 7 | Brainstorm, pack leftover cleanup, delete `samples/` | 5–6 | done |
+| 7 | Brainstorm | 5–6 | done |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.dhs/VERSION`.
 
@@ -112,9 +111,7 @@ Phase 1 may leave payload directories thin. Later phases fill them. Install must
 
 A phase is done when its phase file checklist is true **and**:
 
-- No `dev-harness` name in files that phase added or was allowed to edit.
 - No new CLI subcommands, global install, or machine-wide paths.
-- `samples/` untouched unless this is phase 7 deleting it.
 - PRD non-goals and Deferred items were not implemented “while here”.
 
 Then set that phase’s **Status** to `done` in the Phase index. That write is part of finishing the phase, not a later-phase cleanup.

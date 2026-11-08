@@ -26,7 +26,6 @@ Scripts read `harness.config.json` (including `agents.baseBranch`). They do not 
 - Rebase, reset, force, or merging the GitHub PR.
 - Windows (`sh` hosts only in v1). If the host cannot run `sh`, callers stop; the script should still be POSIX `sh`.
 - LLM procedure (phases, Consultant, review checklist).
-- Editing `samples/`.
 - Agent markdown (phase 4) or skills that call these (phases 5–6).
 
 ## Inputs
@@ -74,7 +73,6 @@ Scripts run in a consuming project after install, so they read **project** `harn
 - Success path prints `OK` or `UNCHANGED` plus `key: value`.
 - No rebase/reset/force/`gh pr merge` in the scripts.
 - `dhs install` (phase 1) would copy them to `.dhs/scripts/` under the same names.
-- `samples/` unchanged.
 
 ## Handoff
 

@@ -7,7 +7,7 @@ description: First-time dhs setup and later parameter changes. Use when the user
 
 Finish first-time setup, or later change the same config. The CLI does not configure the project. There is no `/dhs-init` or `/dhs-config`.
 
-Generate from `.dhs/` only. Do not read `samples/`. Do not invent CLI commands. Do not `npm install -g`. Do not write to `~/.claude/` or any other machine-wide path. Do not commit.
+Generate from `.dhs/` only. Do not invent CLI commands. Do not `npm install -g`. Do not write to `~/.claude/` or any other machine-wide path. Do not commit.
 
 Ask **one question at a time**. Wait. Do not dump a questionnaire. Stops (not questions) are one line:
 
@@ -163,7 +163,7 @@ Decline on first run: `jiraOffer: "declined"`. Do not ask again until a later ru
 
 ## Generation
 
-Sources are always `.dhs/`, never `samples/`. Live agent bodies must **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time.
+Sources are always `.dhs/`. Live agent bodies must **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time.
 
 ### Live agents
 

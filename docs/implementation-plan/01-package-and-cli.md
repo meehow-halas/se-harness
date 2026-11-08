@@ -20,7 +20,6 @@ Without this, nothing else is a product: there is no binary, no `.dhs/`, no inst
 - Generating live agents, work skills, rule packs, or `harness.config.json`.
 - Writing into `~/.claude/` or any machine-wide path.
 - Filling agent/skill/script/reference bodies (phases 2–7).
-- Editing or deleting `samples/`.
 - Finishing project setup (that is `/dhs-setup`).
 - Inventing a test suite.
 
@@ -28,7 +27,7 @@ Without this, nothing else is a product: there is no binary, no `.dhs/`, no inst
 
 - PRD: Package source layout; Binding user flow (Bootstrap, Remove); How it runs; What `dhs install` writes; CLI (v1); Decisions 1–4, 11, 15, 18.
 - [package.json](../../package.json) as it exists (stub).
-- Do not treat `samples/` as install payload.
+- Install payload is `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` at the package root.
 
 ## Outputs
 
@@ -91,7 +90,6 @@ Removes `.dhs/` and the install-owned `/dhs-setup` skill. Does **not** delete `h
 - A second install does not duplicate trees or invent extra CLI output files.
 - `dhs uninstall` removes `.dhs/` and that skill and leaves a pre-existing `harness.config.json` (if you placed one for the check) in place.
 - No other subcommands are accepted as product commands.
-- `samples/` unchanged.
 
 ## Handoff
 

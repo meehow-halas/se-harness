@@ -2,7 +2,7 @@
 
 ## Goal
 
-Publish Architect, Implementer, Consultant, and Reviewer under package `agents/`. Rewrite patterns from `samples/agents/` against the PRD. Consultant has no sample: write it from the PRD. Facilitator is **not** an agent.
+Publish Architect, Implementer, Consultant, and Reviewer under package `agents/`, written against the PRD. Facilitator is **not** an agent.
 
 ## In scope
 
@@ -17,22 +17,17 @@ Bodies must instruct: **read** `harness.config.json` for base branch, statuses, 
 
 ## Out of scope
 
-- Putting `samples/agents/brainstorm-facilitator.md` into `agents/`. Facilitator templates belong in `brainstorm/` (phase 7).
+- Putting facilitator templates into `agents/`. Facilitator templates belong in `brainstorm/` (phase 7).
 - Generating live copies into `.claude/agents/` (phase 5 `/dhs-setup`).
 - Interpolating `agents.baseBranch`, status strings, Jira maps, `fetchFields`, content language, or product line into the template body as the project’s values.
 - Worktrees, merging PRs, a fifth role.
 - Architect writing file-by-file / line-level implementation recipes.
-- Editing `samples/`.
 - User-facing Consultant skill.
 
 ## Inputs
 
 - PRD: Agents (all four); Consultant loop, caps, debt protocol; Reviewer acceptance and git order; Artifact contract; Statuses; Modes; Git; Decisions 5–10, 17.
-- Read only:
-  - [samples/agents/architect.md](../../samples/agents/architect.md)
-  - [samples/agents/implementer.md](../../samples/agents/implementer.md)
-  - [samples/agents/reviewer.md](../../samples/agents/reviewer.md)
-- Drop sample-only behaviour the PRD does not name (worktrees, `dev-harness` product line, baked “It’s a test repo…”, `BLOCKED: rule=` shape, Reviewer-as-style-review if the sample still says quality/consistency as primary).
+- Do not bake a product-line sentence or a `BLOCKED: rule=` shape. Reviewer is spec-only.
 
 ## Outputs
 
@@ -105,10 +100,9 @@ Loop, hard caps, anti-thrash, and debt protocol: copy the rules from PRD Consult
 ## Done when
 
 - Four files in `agents/`; no facilitator there.
-- No `dev-harness` string, no baked product line from samples, no interpolated runtime config values.
+- No baked product line, no interpolated runtime config values.
 - Consultant exists with the PRD report shape, 2-pass cap, debt protocol.
 - Implementer calls `start-task` and launches Consultant per phase; Reviewer calls the other five scripts in the PRD order.
-- `samples/` unchanged.
 
 ## Handoff
 
