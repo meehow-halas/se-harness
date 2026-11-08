@@ -3,8 +3,6 @@ paths:
   - "**/*.py"
 ---
 
-<!-- dev-harness:pack:django -->
-
 # Django
 
 - Follow the app layout that is already there. Do not invent a second settings module or a new project package.

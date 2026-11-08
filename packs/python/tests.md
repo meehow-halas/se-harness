@@ -4,8 +4,6 @@ paths:
   - "**/*_test.py"
 ---
 
-<!-- dev-harness:pack:python -->
-
 # Python tests
 
 - Use the test runner the project already uses. Do not introduce a second one.

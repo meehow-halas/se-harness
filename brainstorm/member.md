@@ -1,5 +1,3 @@
-<!-- dev-harness:brainstorm -->
-
 # {{id}}
 
 {{description}}

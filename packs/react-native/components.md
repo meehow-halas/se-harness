@@ -3,8 +3,6 @@ paths:
   - "**/*.tsx"
 ---
 
-<!-- dev-harness:pack:react-native -->
-
 # React Native components
 
 - One component per file. A small helper used only by that component may stay in the same file.

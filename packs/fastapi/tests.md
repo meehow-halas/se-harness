@@ -4,8 +4,6 @@ paths:
   - "**/*_test.py"
 ---
 
-<!-- dev-harness:pack:fastapi -->
-
 # FastAPI tests
 
 - Call the app through the project's existing client, `TestClient` or an async HTTPX client. Do not introduce the other one.

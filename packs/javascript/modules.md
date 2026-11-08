@@ -6,8 +6,6 @@ paths:
   - "**/*.cjs"
 ---
 
-<!-- dev-harness:pack:javascript -->
-
 # JavaScript
 
 - Stay in JavaScript. Do not add TypeScript syntax to a `.js` file.

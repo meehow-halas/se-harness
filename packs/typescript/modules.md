@@ -4,8 +4,6 @@ paths:
   - "**/*.tsx"
 ---
 
-<!-- dev-harness:pack:typescript -->
-
 # TypeScript
 
 - Follow the compiler settings the project already has. Do not weaken `strict`.

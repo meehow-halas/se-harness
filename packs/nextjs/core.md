@@ -4,8 +4,6 @@ paths:
   - "**/*.tsx"
 ---
 
-<!-- dev-harness:pack:nextjs -->
-
 # Next.js
 
 - Internal navigation uses `next/link`. Content images use `next/image`.

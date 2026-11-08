@@ -4,8 +4,6 @@ paths:
   - "**/pages/**/*.tsx"
 ---
 
-<!-- dev-harness:pack:nextjs -->
-
 # Next.js Pages Router
 
 - This tree is the Pages Router. Do not import `next/navigation` here.
