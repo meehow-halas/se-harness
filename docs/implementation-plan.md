@@ -99,7 +99,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | Phase | Slice | Depends on | Status |
 |-------|--------|------------|--------|
 | 1 | Package + CLI install/uninstall | — | done |
-| 2 | POSIX git/`gh` scripts | 1 (copy target `scripts/` exists) | todo |
+| 2 | POSIX git/`gh` scripts | 1 (copy target `scripts/` exists) | done |
 | 3 | References and config templates | 1 | todo |
 | 4 | Four product agents | 3 (runtime-config rule) | todo |
 | 5 | `/dhs-setup` | 1–4 (`packs/` already at root) | todo |

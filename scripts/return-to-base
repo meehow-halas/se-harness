@@ -1,0 +1,28 @@
+#!/bin/sh
+# return-to-base
+# git checkout agents.baseBranch. Does not delete the task branch or merge a PR.
+
+. "$(dirname "$0")/lib.sh"
+
+require_git
+if [ $# -ne 0 ]; then
+  blocked "unexpected arguments" "usage: return-to-base"
+fi
+
+read_base_branch
+base=$DHS_BASE_BRANCH
+
+if ! local_branch_exists "$base"; then
+  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /dhs-setup"
+fi
+
+cur=$(current_branch)
+if [ "$cur" = "$base" ]; then
+  unchanged "branch: $base"
+fi
+
+if ! out=$(git checkout "$base" 2>&1); then
+  blocked "could not check out $base ($out)" "commit or stash the working tree, then retry return-to-base"
+fi
+
+ok "branch: $base"
