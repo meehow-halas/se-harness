@@ -2,13 +2,13 @@
 
 ## Goal
 
-Make `dhs` an npx-runnable package whose only commands are `install` and `uninstall`, and whose install writes the project-local bootstrap the PRD requires.
+Make `dev-harness-layer` an npx-runnable package whose CLI binary is `dhs`, whose only commands are `install` and `uninstall`, and whose install writes the project-local bootstrap the PRD requires.
 
 Without this, nothing else is a product: there is no binary, no `.dhs/`, no install-owned `/dhs-setup`.
 
 ## In scope
 
-- `package.json`: name `dhs`, `bin` pointing at the CLI, version used as `.dhs/VERSION`, `files` (or equivalent) so npm/GitHub installs include payload dirs + `src/` entry.
+- `package.json`: name `dev-harness-layer`, `bin.dhs` pointing at the CLI, version used as `.dhs/VERSION`, `files` (or equivalent) so npm/GitHub installs include payload dirs + `src/` entry.
 - `src/`: implement `dhs install` and `dhs uninstall` only.
 - Create payload directories if they do not exist so the copy contract is real: `agents/`, `skills/`, `brainstorm/`, `references/`, `scripts/` (`packs/` already exists).
 - A **thin** `skills/` stub for `/dhs-setup` if install requires a source file (placeholder is allowed; the real skill is phase 5).
@@ -33,7 +33,7 @@ Without this, nothing else is a product: there is no binary, no `.dhs/`, no inst
 
 | Path | What |
 |------|------|
-| `package.json` | `name`: `dhs`; `bin.dhs` → CLI entry; version is the stamp written to `.dhs/VERSION`; include payload dirs in the published package |
+| `package.json` | `name`: `dev-harness-layer`; `bin.dhs` → CLI entry; version is the stamp written to `.dhs/VERSION`; include payload dirs in the published package |
 | `src/` | CLI implementation (`install` / `uninstall`) |
 | Payload dirs | Exist at package root with the six names install copies (may be empty or stubbed except existing `packs/`) |
 | `skills/…` | Enough that install can write the live `/dhs-setup` skill (stub OK) |
@@ -47,10 +47,10 @@ Exact CLI file names inside `src/` are the implementer’s choice. The binary na
 Both sources are first-class:
 
 ```text
-npx dhs install
-npx -p github:<owner>/<repo> dhs install
-npx -p github:<owner>/<repo>#<ref> dhs install
-npx -p https://github.com/<owner>/<repo> dhs install
+npx -p dev-harness-layer dhs install
+npx -p github:nbmh/dev-harness-layer dhs install
+npx -p github:nbmh/dev-harness-layer#<ref> dhs install
+npx -p https://github.com/nbmh/dev-harness-layer dhs install
 ```
 
 Uninstall uses the **same source** as install. The CLI runs only in the target project directory.

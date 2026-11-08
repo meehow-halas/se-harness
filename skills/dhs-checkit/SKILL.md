@@ -26,7 +26,7 @@ Before any work. Compare `.dhs/VERSION` and `dhs.generatedFrom` after trimming w
 1. If `.dhs/` or `.dhs/VERSION` is missing:
 
 ```text
-BLOCKED: dhs install has not been run here — run dhs install (npx dhs install or npx -p github:<owner>/<repo> dhs install), then /dhs-setup
+BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harness-layer dhs install or npx -p github:nbmh/dev-harness-layer dhs install), then /dhs-setup
 ```
 
 2. If `harness.config.json` is missing:

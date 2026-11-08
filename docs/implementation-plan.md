@@ -25,7 +25,7 @@ Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longe
 
 ## Product invariants
 
-- The product name, npm package, and CLI binary are all **`dhs`**.
+- The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-layer`**.
 - CLI in v1: `dhs install` and `dhs uninstall` only. No `dhs agent`, `dhs git`, status, or Jira subcommand. Never `npm install -g`.
 - Never write skills, templates, or a CLI to `~/.claude/` or any other machine-wide path. Run only in the target project.
 - There is no `/dhs-init` or `/dhs-config`. Setup is `/dhs-setup`.
@@ -58,7 +58,7 @@ Published sources live at the package root. Do not invent a wrapping `templates/
 
 The only supported adoption path:
 
-1. **Bootstrap** — `npx dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill. Setup is not done. Work skills must not exist yet and must not be offered.
+1. **Bootstrap** — `npx -p dev-harness-layer dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill. Setup is not done. Work skills must not exist yet and must not be offered.
 2. **Finish setup** — `/dhs-setup` only. CLI does not configure the project.
 3. **Work** — `/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`, or later `/dhs-setup`.
 4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config.json` and files `/dhs-setup` generated.

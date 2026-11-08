@@ -22,7 +22,7 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 1. If `.dhs/` is missing, or this `/dhs-setup` skill is not present in the project host skills directory (typically `.claude/skills/dhs-setup`):
 
 ```text
-BLOCKED: dhs install has not been run here — run dhs install (npx dhs install or npx -p github:<owner>/<repo> dhs install), then /dhs-setup again
+BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harness-layer dhs install or npx -p github:nbmh/dev-harness-layer dhs install), then /dhs-setup again
 ```
 
 2. If `.dhs/VERSION` is missing: same stop.
@@ -116,7 +116,7 @@ After writing config and generating files (and after the agents-file step), offe
 If `.dhs/VERSION` is missing:
 
 ```text
-BLOCKED: dhs install has not been run here — run dhs install (npx dhs install or npx -p github:<owner>/<repo> dhs install), then /dhs-setup again
+BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harness-layer dhs install or npx -p github:nbmh/dev-harness-layer dhs install), then /dhs-setup again
 ```
 
 If `.dhs/VERSION` (trimmed) does not equal `dhs.generatedFrom`: regenerate live agents, work skills, and rule packs from `.dhs/` (same copy rules as first run), set `dhs.generatedFrom` to `.dhs/VERSION`, and tell the user the installed package templates changed. Then continue below.

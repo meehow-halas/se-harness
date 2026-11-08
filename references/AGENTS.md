@@ -2,13 +2,13 @@
 
 This project uses **dhs**. Read `harness.config.json` at run time for the one-line product, doc paths, base git branch, file-tracker status strings, content language, tracker maps, `fetchFields`, and role models. Do not bake those values into agent files. Do not guess `main`, `master`, or the current checkout as the base branch.
 
-The product name, npm package, and CLI binary are all `dhs`. Run the CLI only in this project. Never `npm install -g`. Never write skills, templates, or a CLI to `~/.claude/` or any other machine-wide path.
+The product and CLI binary are `dhs`. The npm package is `dev-harness-layer`. Run the CLI only in this project. Never `npm install -g`. Never write skills, templates, or a CLI to `~/.claude/` or any other machine-wide path.
 
 ## Binding flow
 
 The only supported adoption path:
 
-1. **Bootstrap** — `npx dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill. Setup is not done. Do not offer work skills yet.
+1. **Bootstrap** — `npx -p dev-harness-layer dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill. Setup is not done. Do not offer work skills yet.
 2. **Finish setup** — `/dhs-setup` only. The CLI does not configure the project.
 3. **Work** — `/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`, or later `/dhs-setup`.
 4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config.json` and files `/dhs-setup` generated.

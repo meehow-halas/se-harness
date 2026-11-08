@@ -2,7 +2,7 @@
 
 A layer for software engineering work in an AI coding assistant (Claude Code first). It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
 
-The product name, the npm package, and the CLI binary are all **`dhs`**.
+The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-layer`**.
 
 ## Requirements
 
@@ -16,8 +16,8 @@ The product name, the npm package, and the CLI binary are all **`dhs`**.
 From the project directory, pick one source and reuse it later for uninstall:
 
 ```text
-npx dhs install
-npx -p github:nbmh/dhs dhs install
+npx -p dev-harness-layer dhs install
+npx -p github:nbmh/dev-harness-layer dhs install
 ```
 
 npm and GitHub are equivalent. Result: `.dhs/` and the project skill `/dhs-setup`. Setup is **not** done. Work skills (`/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`) do not exist yet.
@@ -46,8 +46,8 @@ You merge the GitHub PR. Close is `/dhs-checkit` after you confirm the merge.
 Same source as install:
 
 ```text
-npx dhs uninstall
-npx -p github:nbmh/dhs dhs uninstall
+npx -p dev-harness-layer dhs uninstall
+npx -p github:nbmh/dev-harness-layer dhs uninstall
 ```
 
 Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config.json` and files `/dhs-setup` already generated.

@@ -2,7 +2,7 @@
 
 A layer for software engineering work in an AI coding assistant (Claude Code first; Cursor later if the same skill/agent shape applies). It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
 
-The product name, the npm package, and the CLI binary are all **`dhs`**.
+The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-layer`**.
 
 This PRD wins whenever old agent files or chat history disagree.
 
@@ -36,15 +36,15 @@ Exactly one of:
 
 ```text
 # npm
-npx dhs install
+npx -p dev-harness-layer dhs install
 
 # GitHub (the dhs repo; #ref is an optional tag, branch, or commit)
-npx -p github:<owner>/<repo> dhs install
-npx -p github:<owner>/<repo>#<ref> dhs install
-npx -p https://github.com/<owner>/<repo> dhs install
+npx -p github:nbmh/dev-harness-layer dhs install
+npx -p github:nbmh/dev-harness-layer#<ref> dhs install
+npx -p https://github.com/nbmh/dev-harness-layer dhs install
 ```
 
-`<owner>/<repo>` is the GitHub repository that publishes `dhs`. A git HTTPS URL is the same as `github:<owner>/<repo>`. npm and GitHub are first-class and equivalent.
+`nbmh/dev-harness-layer` is the GitHub repository that publishes the `dev-harness-layer` package (`dhs` CLI). A git HTTPS URL is the same as `github:nbmh/dev-harness-layer`. npm and GitHub are first-class and equivalent.
 
 **Required result:** `.dhs/` and the project skill `/dhs-setup`. Setup is **not** done. `/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, and `/dhs-brainstorm` do not exist yet and must not be offered. `/dhs-setup` is the skill that finishes first-time setup and later changes the same config.
 
@@ -78,8 +78,8 @@ The user merges the GitHub PR. Close is `/dhs-checkit` after they confirm the me
 Same source as step 1:
 
 ```text
-npx dhs uninstall
-npx -p github:<owner>/<repo> dhs uninstall
+npx -p dev-harness-layer dhs uninstall
+npx -p github:nbmh/dev-harness-layer dhs uninstall
 ```
 
 Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config.json` and files `/dhs-setup` generated.
@@ -88,7 +88,7 @@ Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config
 
 `dhs` is **never** installed globally (`npm install -g` is out). **Never** write skills, templates, or a CLI to `~/.claude/` or any other machine-wide location.
 
-The product name, the npm package, and the CLI binary are all **`dhs`**. Run the CLI only in the target project. Pick one source in step 1 and reuse it in step 4.
+The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-layer`**. Run the CLI only in the target project. Pick one source in step 1 and reuse it in step 4.
 
 These two commands are the entire `dhs` CLI in v1. They are idempotent.
 
@@ -448,7 +448,7 @@ There is no user-facing Consultant skill.
 
 ### `/dhs-setup` (detail)
 
-**Entry.** If `dhs install` has not been run in this project (`.dhs/` or the `/dhs-setup` skill is missing), stop and tell the user to run `dhs install` here from npm (`npx dhs install`) or from GitHub (`npx -p github:<owner>/<repo> dhs install`), then `/dhs-setup` again.
+**Entry.** If `dhs install` has not been run in this project (`.dhs/` or the `/dhs-setup` skill is missing), stop and tell the user to run `dhs install` here from npm (`npx -p dev-harness-layer dhs install`) or from GitHub (`npx -p github:nbmh/dev-harness-layer dhs install`), then `/dhs-setup` again.
 
 If `harness.config.json` is missing: first-run path below. If it is present: later-run path below. Do not overwrite keys the user did not confirm. Do not regenerate generated files as a silent first-run repeat. A later-run template mismatch (`.dhs/VERSION` ≠ `dhs.generatedFrom`) is not a first-run repeat: regenerate live agents, work skills, and rules, then continue the later-run path.
 
@@ -591,7 +591,7 @@ Quality during implementation is **Consultant + the project’s own test command
 
 | Command | Purpose |
 |---------|---------|
-| `dhs install` | This project: `.dhs/` (including `scripts/` and `.dhs/VERSION`) plus the `/dhs-setup` skill. From npm (`npx dhs install`) or GitHub (`npx -p github:<owner>/<repo> dhs install`). Does not generate live agents, work skills, or rule packs. |
+| `dhs install` | This project: `.dhs/` (including `scripts/` and `.dhs/VERSION`) plus the `/dhs-setup` skill. From npm (`npx -p dev-harness-layer dhs install`) or GitHub (`npx -p github:nbmh/dev-harness-layer dhs install`). Does not generate live agents, work skills, or rule packs. |
 | `dhs uninstall` | Reverse of install in this project. Same source as install. |
 
 Everything else is a skill, a `.dhs/scripts/` helper, or a normal project command (including the project’s own test/lint). Git/`gh` on the allowlist is invoked by those scripts, not by a `dhs` subcommand.
@@ -610,7 +610,7 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does n
 
 ## Decisions
 
-1. **The name is `dhs`.** Package, binary, product.
+1. **The product and CLI binary are `dhs`.** The npm package and GitHub repo are `dev-harness-layer`.
 2. **Worktrees and extra wrappers are not product.** There is no agent-wrapper CLI. Worktrees are not a dhs feature. Ship only what this PRD names.
 3. **The binding user flow is the only adoption path:** `dhs install` (npm or GitHub) → `/dhs-setup` → work skills. Reverse of install is `dhs uninstall` with the same source. No extra CLI for setup or config, no global install, no skip of `/dhs-setup`.
 4. **CLI is only install/uninstall, always in the current project.** Install writes `.dhs/` (including `scripts/` and `.dhs/VERSION`) and `/dhs-setup`. It does not generate live agents, work skills, or rule packs. Generation of those is `/dhs-setup`. Verify is the project’s script. Git/`gh` on the allowlist is invoked by `.dhs/scripts/`.
