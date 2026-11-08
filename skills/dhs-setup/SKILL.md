@@ -1,10 +1,229 @@
 ---
 name: dhs-setup
-description: First-time dhs setup and later parameter changes. Use when the user runs /dhs-setup or needs to configure this project's dhs install.
+description: First-time dhs setup and later parameter changes. Use when the user runs /dhs-setup or needs to configure this project's dhs install, models, base branch, packs, AGENTS.md, or Jira tracker.
 ---
 
-Placeholder for `/dhs-setup`. The full skill is not in this package yet.
+# /dhs-setup
 
-If `.dhs/` or `.dhs/VERSION` is missing, tell the user to run `dhs install` in this project (`npx dhs install` or `npx -p github:<owner>/<repo> dhs install`), then `/dhs-setup` again.
+Finish first-time setup, or later change the same config. The CLI does not configure the project. There is no `/dhs-init` or `/dhs-config`.
 
-Do not generate live agents, work skills, rule packs, or `harness.config.json` from this placeholder.
+Generate from `.dhs/` only. Do not read `samples/`. Do not invent CLI commands. Do not `npm install -g`. Do not write to `~/.claude/` or any other machine-wide path. Do not commit.
+
+Ask **one question at a time**. Wait. Do not dump a questionnaire. Stops (not questions) are one line:
+
+```text
+BLOCKED: <what stopped> — <what the user or another skill must do>
+```
+
+---
+
+## Entry
+
+1. If `.dhs/` is missing, or this `/dhs-setup` skill is not present in the project host skills directory (typically `.claude/skills/dhs-setup`):
+
+```text
+BLOCKED: dhs install has not been run here — run dhs install (npx dhs install or npx -p github:<owner>/<repo> dhs install), then /dhs-setup again
+```
+
+2. If `.dhs/VERSION` is missing: same stop.
+
+3. If `harness.config.json` is **missing** → **First run**. If it is **present** → **Later run**.
+
+Do not overwrite keys the user did not confirm. Do not regenerate generated files as a silent first-run repeat. A later-run template mismatch (`.dhs/VERSION` ≠ `dhs.generatedFrom`) is not a first-run repeat: regenerate live agents, work skills, and rules, then continue the later-run path.
+
+---
+
+## First run
+
+`harness.config.json` is missing.
+
+### 1. Read the repo
+
+Read the tree (README, manifests, existing docs, default-branch clues, `AGENTS.md` / `CLAUDE.md` / `.claude/`). State inferred choices so the user can object. Do not silently take `main`, `master`, or the current checkout as the base branch.
+
+### 2. Project PRD
+
+Look for an existing product requirements document (typical `docs/prd.md`, or a path the repo already treats as the PRD).
+
+- If one exists: **use it. Do not rewrite it.** Put that path in `agents.docs`.
+- If none exists: gather product facts from the repo. Ask one question at a time only for facts the repo does not contain. Then write `docs/prd.md`. Put that path in `agents.docs`.
+
+Config stores a one-line `product` plus doc paths, **not** the PRD body.
+
+### 3. Questions (one at a time)
+
+Do not write `harness.config.json` or generate live files until these are confirmed.
+
+**Roles.** Only architect, implementer, consultant, reviewer. Suggest models `opus` / `sonnet` / `haiku` / `sonnet`. No other roles. No brainstorm-facilitator model question.
+
+**`agents.contentLanguage`.** Language of files and tracker text. Ask once. Suggest the conversation language.
+
+**`agents.baseBranch`.** The git branch `.dhs/scripts/` cut task branches from, open PRs against, merge into a task branch on **update**, and return to after PR or **close**. Ask once. Suggested default is `dev`. If the repo already names a default branch, state that inference so the user can object. Without this key, the scripts have no base and must not guess one. Do not write this value into generated agent markdown.
+
+**Project rule (optional).** One question, after models, content language, and base branch. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. Store it on the roles (`rules`; reviewer `checklist` when it is a review constraint). **Skip is the default:** empty is fine. Do not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
+
+**Packs.** After detection (below), state which packs you will generate. Honour `packsIgnored` if the user names packs to skip.
+
+Start the live config from `.dhs/references/harness.config.json`. Fill answers. Leave `agents.statuses` at the skeleton defaults unless the user confirmed other strings. Leave `jiraOffer` `null` until the Jira offer. Omit `agents.tracker`. Set `dhs.generatedFrom` to the trimmed contents of `.dhs/VERSION`. Do not put credentials in config.
+
+### 4. Generate from `.dhs/`
+
+Then write `harness.config.json` and generate live files (see **Generation**).
+
+### 5. `AGENTS.md` / `CLAUDE.md`
+
+After writing config and generating files, **always** inspect project-root `AGENTS.md` and `CLAUDE.md`. Every combination is in scope: neither, only `AGENTS.md`, only `CLAUDE.md`, or both. Do not skip a file that exists.
+
+The dhs source is `.dhs/references/AGENTS.md`.
+
+Treat a symlink as the target’s body, read once. If `CLAUDE.md` already links to `AGENTS.md` (or the reverse), that is one existing document, not two. If a named path exists but the symlink is broken, treat that path as missing and use the other file if it exists.
+
+Build the **proposed** `AGENTS.md` in this order; **do not write yet**:
+
+| What exists at project root | Merge input (then always merge with the dhs template) |
+|-----------------------------|--------------------------------------------------------|
+| Neither | dhs template only |
+| Only `AGENTS.md` | that file, then the dhs template |
+| Only `CLAUDE.md` | that file, then the dhs template |
+| Both (two regular files) | merge `AGENTS.md` with `CLAUDE.md` first (keep project-specific instructions, drop duplicated paragraphs), then merge that with the dhs template |
+| Both, already the same via symlink | the single target body, then the dhs template |
+
+Do not replace an existing project file with a raw copy of the template. Show the user the **full** proposed markdown and wait for acceptance. Required on first run in every row, including “neither”. If they reject it, take their edits (one question) and show the body again until they accept.
+
+After acceptance, the **result is always** a regular project-root `AGENTS.md` with the accepted body — even when the project originally had only `CLAUDE.md`.
+
+Then `CLAUDE.md` when the project **originally** had a `.claude/` directory **and/or** a `CLAUDE.md`. If neither was there, do not create `CLAUDE.md`.
+
+| Originally | After the write |
+|------------|-----------------|
+| No `.claude/`, no `CLAUDE.md` | `AGENTS.md` only |
+| No `.claude/`, `CLAUDE.md` existed | `AGENTS.md` plus `CLAUDE.md` |
+| `.claude/` present, no `CLAUDE.md` | `AGENTS.md` plus `CLAUDE.md` |
+| `.claude/` present, `CLAUDE.md` existed | `AGENTS.md` plus `CLAUDE.md` |
+
+When `CLAUDE.md` is required: prefer a relative file symlink `CLAUDE.md` → `AGENTS.md`. If it is already that symlink, leave it. If it was a regular file, replace it with the symlink (content is already in `AGENTS.md`). Detect the host OS and create the link the way that OS expects (Unix: `ln -s AGENTS.md CLAUDE.md`; Windows: a file symlink such as `mklink CLAUDE.md AGENTS.md` — not a directory junction). **Having `CLAUDE.md` when it is required matters more than the link.** If the symlink cannot be created for any reason, write `CLAUDE.md` as an **independent regular file** with the same accepted body as `AGENTS.md`. Tell the user they are two files because the link failed. Do not stop setup. Do not omit `CLAUDE.md` when `.claude/` was present or when `CLAUDE.md` already existed.
+
+### 6. Jira offer
+
+After writing config and generating files (and after the agents-file step), offer Jira **once**. See **Tracker**. Decline → set `jiraOffer` to `declined`. Do not commit.
+
+---
+
+## Later run
+
+`harness.config.json` is present.
+
+If `.dhs/VERSION` is missing:
+
+```text
+BLOCKED: dhs install has not been run here — run dhs install (npx dhs install or npx -p github:<owner>/<repo> dhs install), then /dhs-setup again
+```
+
+If `.dhs/VERSION` (trimmed) does not equal `dhs.generatedFrom`: regenerate live agents, work skills, and rule packs from `.dhs/` (same copy rules as first run), set `dhs.generatedFrom` to `.dhs/VERSION`, and tell the user the installed package templates changed. Then continue below.
+
+Then **one change at a time**. Show current and new value, wait for confirmation, then write. Do not overwrite keys the user did not confirm.
+
+| Change | Effect |
+|--------|--------|
+| Role `model` | Rewrite that live agent’s **frontmatter** `model:` only. Do not regenerate the body. |
+| `packsIgnored` or detected frameworks | Regenerate rule packs. |
+| `agents.baseBranch` | `harness.config.json` only. |
+| Statuses, tracker maps, `fetchFields`, content language, product line | Config only. Do **not** regenerate agent bodies. |
+
+- Do not touch `agents.brainstorm` (that is `/dhs-brainstorm`).
+- Do not create or rewrite the project PRD.
+- Do not remake or re-merge `AGENTS.md`.
+- Do not commit.
+
+If `.claude/` is present and `CLAUDE.md` is still missing: create the symlink the same way as on first run; if the link fails, write `CLAUDE.md` as an independent file with the current `AGENTS.md` body. If `CLAUDE.md` already exists as a regular file on a later run, do not overwrite it and do not re-run the first-run merge.
+
+If the user names another config key (model, base branch, …), do that key first, then the tracker offer only when there is still no tracker and the offer was not declined — unless they explicitly asked to add/change/remove Jira, in which case do the tracker path even after a decline.
+
+---
+
+## Tracker (Jira)
+
+First-run offer and every later run. Do not invent a `dhs` CLI for Jira. Use Jira MCP and write config. Switching does **not** migrate old tasks. Token never in chat or git.
+
+Credentials: the user puts the token in a project-local ignored file `harness.credentials.local.json` (`{"jiraToken":"…"}`). Add that filename to `.gitignore` if needed. Never paste the token in chat. Never write it into `harness.config.json`.
+
+| Intent | What happens |
+|--------|----------------|
+| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in `harness.credentials.local.json`. Fetch that project’s statuses, issue types and custom fields via Jira MCP. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that project’s real list (numbered), or skip = `null`. Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker` from `.dhs/references/harness.tracker.json` plus answers (`statuses`, `issueTypes`, `fields`, `fetchFields` as needed, `url`, `user`, `projectKey`). Agents must not pick a Jira status that is not in this map. |
+| **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named; keep the token unless they rotate it in the credentials file. |
+| **Remove** | Confirm, drop `agents.tracker` from config, delete or clear `harness.credentials.local.json`. Project is files-only again. `jiraOffer` does not block a later **Add**. |
+
+`null` on a tracker status means that step does not transition. There is no file fallback and no invented name.
+
+After a tracker change, write the mapping into `harness.config.json`. Do not regenerate agent markdown for `fetchFields` or the task key pattern.
+
+Decline on first run: `jiraOffer: "declined"`. Do not ask again until a later run **Add** (explicit, or the later-run offer rule above).
+
+---
+
+## Generation
+
+Sources are always `.dhs/`, never `samples/`. Live agent bodies must **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time.
+
+### Live agents
+
+Copy `.dhs/agents/` files into the host agent directory (typically `.claude/agents/`). **Copies, not symlinks.**
+
+| Source | Live file | Role key |
+|--------|-----------|----------|
+| `.dhs/agents/architect.md` | `.claude/agents/architect.md` | `architect` |
+| `.dhs/agents/implementer.md` | `.claude/agents/implementer.md` | `implementer` |
+| `.dhs/agents/consultant.md` | `.claude/agents/consultant.md` | `consultant` |
+| `.dhs/agents/reviewer.md` | `.claude/agents/reviewer.md` | `reviewer` |
+
+Set frontmatter `model:` from `agents.roles.<key>.model`. Leave `name`, `description`, and `tools` as in the template. Do not add a fifth agent. Do not copy brainstorm templates from `.dhs/brainstorm/` into `agents/`.
+
+On VERSION mismatch regeneration: replace those four live files from `.dhs/agents/` and re-apply `model:` from **current** config.
+
+On a confirmed role `model` change only: rewrite that one file’s `model:` line.
+
+### Work skills
+
+Install writes **only** `/dhs-setup` live. This skill generates the rest.
+
+Copy these directories from `.dhs/skills/` to the host skills directory (typically `.claude/skills/`), if they exist in `.dhs/skills/`:
+
+- `dhs-planit`
+- `dhs-doit`
+- `dhs-checkit`
+- `dhs-feature`
+- `dhs-brainstorm` (when present)
+
+Do **not** overwrite the install-owned `/dhs-setup` skill from this copy step. If a listed template is missing, still copy the others; the copied stub (when present) stops with `BLOCKED:` until a later package fills the body.
+
+### Rule packs
+
+Detect frameworks from the repo. Generate from `.dhs/packs/`. Monorepo: pack only on trees that use it (scope that pack’s `paths:` globs to those trees). Honour `packsIgnored` (skip those pack directory names).
+
+| Pack id (`.dhs/packs/<id>/`) | Detect when |
+|------------------------------|-------------|
+| `javascript` | JS sources or a JS package without TypeScript as the primary language |
+| `typescript` | `tsconfig.json`, TypeScript in the manifest, or `.ts` / `.tsx` |
+| `react-native` | `react-native` / Expo in the manifest or RN app config |
+| `angular` | `angular.json` or `@angular/core` |
+| `nextjs` | `next` in the manifest or `next.config.*` |
+| `python` | `pyproject.toml`, `requirements.txt`, `Pipfile`, or `.py` |
+| `django` | Django manifest / `manage.py` / Django settings |
+| `fastapi` | `fastapi` in the Python manifest or imports |
+
+A tree may match more than one pack (e.g. TypeScript + Next.js). State the set so the user can object.
+
+Write live rules under `.claude/rules/` as regular files named `dhs-<packId>-<basename>.md` (keep each pack file’s `paths:` frontmatter, rewritten for monorepo trees). On regenerate: delete existing `.claude/rules/dhs-*.md` that this skill wrote, then write the current filtered set. Do not delete rule files that are not `dhs-` prefixed.
+
+---
+
+## Do not
+
+- Commit.
+- Write credentials, tokens, or secrets into chat, git, or `harness.config.json`.
+- Generate live agents, work skills, or rule packs via `dhs install` (install already did its job).
+- Repeat first-run PRD / `AGENTS.md` work on a later run.
+- Guess `main`, `master`, or the current checkout as `agents.baseBranch`.
+- Interpolate runtime config into agent markdown bodies.
+- Add CLI subcommands or a global install.
+- Use a product name other than `dhs`.
