@@ -286,7 +286,7 @@ Two axes. Do not mix them.
 
 ### Interaction
 
-From **intent**, not a required slash flag. Default: `interactive`. You may name the mode in the request so every agent in a `/dhs-shipit` run shares it; you do not assemble it like a CLI flag.
+From **intent**, not a required slash flag. Default: `interactive`. Architect, Implementer, and Reviewer take `Mode:` on launch. `/dhs-planit`, `/dhs-doit`, and `/dhs-checkit` pass that mode to the role they launch. You may name the mode in the request so every agent in a `/dhs-shipit` run shares it; you do not assemble it like a CLI flag. Consultant does not take `Mode:`.
 
 | Mode | Ask the user |
 |------|----------------|
@@ -306,7 +306,7 @@ Consultant never talks to the user; the Implementer does, if the debt protocol r
 
 ### Reviewer variants
 
-Not interaction modes. `/dhs-checkit` runs **one** of: `review` (default) | `update` | `close`.
+These are **not** a substitute for interaction modes. Reviewer still receives `Mode:` from `/dhs-checkit` (same default). That skill also picks **one** variant for the whole invocation: `review` (default) | `update` | `close`. Both apply together (for example `autonomous` + `update`).
 
 ## Trackers and statuses
 
