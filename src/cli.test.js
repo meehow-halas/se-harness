@@ -89,6 +89,8 @@ describe("dhs install", () => {
       fs.mkdirSync(project);
       makePackageRoot(pkg);
       fs.writeFileSync(path.join(pkg, "scripts", "start-task.test.js"), "test\n");
+      fs.writeFileSync(path.join(pkg, "scripts", "start-task.test.mjs"), "test\n");
+      fs.writeFileSync(path.join(pkg, "scripts", "start-task.test.cjs"), "test\n");
       fs.writeFileSync(path.join(pkg, "agents", "architect.test.js"), "test\n");
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
@@ -96,6 +98,14 @@ describe("dhs install", () => {
       assert.equal(exists(path.join(project, ".dhs", "scripts", "marker.txt")), true);
       assert.equal(
         exists(path.join(project, ".dhs", "scripts", "start-task.test.js")),
+        false
+      );
+      assert.equal(
+        exists(path.join(project, ".dhs", "scripts", "start-task.test.mjs")),
+        false
+      );
+      assert.equal(
+        exists(path.join(project, ".dhs", "scripts", "start-task.test.cjs")),
         false
       );
       assert.equal(
@@ -170,6 +180,8 @@ describe("dhs install", () => {
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
       assert.match(result.stdout, /Run \/dhs-setup to apply the new templates/);
+      assert.equal(read(path.join(project, ".dhs", "VERSION")), "1.2.3\n");
+      assert.equal(exists(path.join(project, ".dhs", "agents", "marker.txt")), true);
       assert.equal(exists(path.join(project, ".claude", "agents")), false);
       assert.equal(
         read(path.join(project, "harness.config.json")),
@@ -233,6 +245,8 @@ describe("dhs uninstall", () => {
       assert.equal(runCli(["uninstall"], { cwd: project, packageRoot: pkg }).status, 0);
       const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
+      assert.equal(exists(path.join(project, ".dhs")), false);
+      assert.equal(exists(path.join(project, ".claude")), false);
     });
   });
 });

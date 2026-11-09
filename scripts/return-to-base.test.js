@@ -2,6 +2,8 @@
 
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("fs");
+const path = require("path");
 
 const {
   assertBlocked,
@@ -13,13 +15,19 @@ const {
   runScript,
   startTask,
   withTempDir,
+  writeFile,
 } = require("../test/helpers");
 
 describe("return-to-base", () => {
   test("rejects extra arguments", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertBlocked(runScript("return-to-base", ["nope"], { cwd }));
+      assertOk(startTask(cwd, "001-feature"));
+      assertBlocked(
+        runScript("return-to-base", ["nope"], { cwd }),
+        /unexpected arguments/
+      );
+      assert.equal(currentBranch(cwd), "001-feature");
     });
   });
 
@@ -39,6 +47,27 @@ describe("return-to-base", () => {
       initGitRepo(cwd);
       const result = runScript("return-to-base", [], { cwd });
       assertUnchanged(result);
+      assert.equal(currentBranch(cwd), "dev");
+    });
+  });
+
+  test("BLOCKED when the working tree is dirty and checkout cannot switch", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      writeFile(cwd, "README.md", "task version\n");
+      git(cwd, ["add", "README.md"]);
+      git(cwd, ["commit", "-m", "task edit"]);
+      writeFile(cwd, "README.md", "dirty on task\n");
+      assertBlocked(
+        runScript("return-to-base", [], { cwd }),
+        /could not check out dev/
+      );
+      assert.equal(currentBranch(cwd), "001-feature");
+      assert.equal(
+        fs.readFileSync(path.join(cwd, "README.md"), "utf8"),
+        "dirty on task\n"
+      );
     });
   });
 });

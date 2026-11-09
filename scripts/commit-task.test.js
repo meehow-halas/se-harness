@@ -2,11 +2,14 @@
 
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("fs");
 
 const {
   assertBlocked,
   assertOk,
   assertUnchanged,
+  currentBranch,
+  failingEditor,
   git,
   initGitRepo,
   runScript,
@@ -20,7 +23,10 @@ describe("commit-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
-      assertBlocked(runScript("commit-task", ["001-feature"], { cwd }));
+      assertBlocked(
+        runScript("commit-task", ["001-feature"], { cwd }),
+        /no paths listed/
+      );
     });
   });
 
@@ -28,7 +34,10 @@ describe("commit-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
-      assertBlocked(runScript("commit-task", ["001-feature", "nope.txt"], { cwd }));
+      assertBlocked(
+        runScript("commit-task", ["001-feature", "nope.txt"], { cwd }),
+        /path nope\.txt does not exist/
+      );
     });
   });
 
@@ -36,7 +45,22 @@ describe("commit-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       writeFile(cwd, "a.txt", "a\n");
-      assertBlocked(runScript("commit-task", ["001-feature", "a.txt"], { cwd }));
+      assertBlocked(
+        runScript("commit-task", ["001-feature", "a.txt"], { cwd }),
+        /checkout is dev, not task branch 001-feature/
+      );
+    });
+  });
+
+  test("BLOCKED for an unknown option", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      writeFile(cwd, "a.txt", "a\n");
+      assertBlocked(
+        runScript("commit-task", ["001-feature", "--amend", "a.txt"], { cwd }),
+        /unknown option --amend/
+      );
     });
   });
 
@@ -51,8 +75,12 @@ describe("commit-task", () => {
       assert.match(result.stdout, /commit: /);
       const msg = git(cwd, ["log", "-1", "--pretty=%s"]).stdout.trim();
       assert.equal(msg, "001-feature");
-      const cached = git(cwd, ["ls-files", "--others", "--exclude-standard"]).stdout;
-      assert.match(cached, /skip\.txt/);
+      const committed = git(cwd, ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"])
+        .stdout;
+      assert.match(committed, /keep\.txt/);
+      assert.equal(/skip\.txt/.test(committed), false);
+      const untracked = git(cwd, ["ls-files", "--others", "--exclude-standard"]).stdout;
+      assert.match(untracked, /skip\.txt/);
     });
   });
 
@@ -94,14 +122,31 @@ describe("commit-task", () => {
       git(cwd, ["commit", "-m", "base"]);
       git(cwd, ["checkout", "001-feature"]);
       git(cwd, ["merge", "--no-commit", "--no-ff", "dev"]);
+      const editor = failingEditor(cwd);
       const result = runScript(
         "commit-task",
         ["001-feature", "task-only.txt", "base-only.txt"],
-        { cwd }
+        { cwd, env: editor.env }
       );
       assertOk(result);
-      const parents = git(cwd, ["rev-list", "--parents", "-n", "1", "HEAD"]).stdout.trim().split(" ");
+      assert.equal(fs.existsSync(editor.stamp), false);
+      const parents = git(cwd, ["rev-list", "--parents", "-n", "1", "HEAD"])
+        .stdout.trim()
+        .split(" ");
       assert.ok(parents.length >= 3);
+      const msg = git(cwd, ["log", "-1", "--pretty=%s"]).stdout.trim();
+      assert.match(msg, /Merge branch ['"]dev['"]/);
+      assert.notEqual(msg, "001-feature");
+    });
+  });
+
+  test("stays on the task branch after a successful commit", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      writeFile(cwd, "a.txt", "a\n");
+      assertOk(runScript("commit-task", ["001-feature", "a.txt"], { cwd }));
+      assert.equal(currentBranch(cwd), "001-feature");
     });
   });
 });

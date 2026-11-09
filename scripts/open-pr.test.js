@@ -2,20 +2,29 @@
 
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("fs");
 const path = require("path");
 
 const {
+  argvLogLines,
   assertBlocked,
   assertOk,
   assertUnchanged,
   initGitRepo,
-  pathWithoutCommand,
+  pathHidingCommand,
   runScript,
   startTask,
   withTempDir,
   writeGhStub,
 } = require("../test/helpers");
+
+function withGh(cwd, stubOpts) {
+  const bin = path.join(cwd, ".bin");
+  const { logFile } = writeGhStub(bin, stubOpts);
+  return {
+    logFile,
+    env: { PATH: `${bin}${path.delimiter}${process.env.PATH}` },
+  };
+}
 
 describe("open-pr", () => {
   test("BLOCKED when gh is not on PATH", () => {
@@ -24,9 +33,9 @@ describe("open-pr", () => {
       assertOk(startTask(cwd, "001-feature"));
       const result = runScript("open-pr", ["001-feature"], {
         cwd,
-        env: { PATH: pathWithoutCommand("gh") },
+        env: { PATH: pathHidingCommand(cwd, "gh") },
       });
-      assertBlocked(result);
+      assertBlocked(result, /gh is not available/);
     });
   });
 
@@ -34,18 +43,22 @@ describe("open-pr", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
-      const bin = path.join(cwd, ".bin");
-      const { logFile } = writeGhStub(bin, {
+      const { env, logFile } = withGh(cwd, {
         existingUrl: "https://example.com/pr/9",
       });
-      const result = runScript("open-pr", ["001-feature"], {
-        cwd,
-        env: { PATH: `${bin}${path.delimiter}${process.env.PATH}` },
-      });
+      const result = runScript("open-pr", ["001-feature"], { cwd, env });
       assertUnchanged(result);
       assert.match(result.stdout, /url: https:\/\/example.com\/pr\/9/);
-      const log = fs.readFileSync(logFile, "utf8");
-      assert.equal(log.includes("pr merge"), false);
+      const log = argvLogLines(logFile);
+      assert.ok(log.some((line) => line.startsWith("pr view 001-feature")));
+      assert.equal(
+        log.some((line) => line.startsWith("pr create")),
+        false
+      );
+      assert.equal(
+        log.some((line) => /\bpr merge\b/.test(line)),
+        false
+      );
     });
   });
 
@@ -53,39 +66,54 @@ describe("open-pr", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
-      const bin = path.join(cwd, ".bin");
-      const { logFile } = writeGhStub(bin);
-      const result = runScript("open-pr", ["001-feature"], {
-        cwd,
-        env: { PATH: `${bin}${path.delimiter}${process.env.PATH}` },
-      });
+      const { env, logFile } = withGh(cwd);
+      const result = runScript("open-pr", ["001-feature"], { cwd, env });
       assertOk(result);
       assert.match(result.stdout, /url: https:\/\/example.com\/pr\/1/);
-      const log = fs.readFileSync(logFile, "utf8");
-      assert.match(log, /pr create --base dev --head 001-feature --fill/);
-      assert.equal(log.includes("pr merge"), false);
+      const log = argvLogLines(logFile);
+      assert.ok(log.includes("pr create --base dev --head 001-feature --fill"));
+      assert.equal(
+        log.some((line) => line.startsWith("pr create") && /\b--title\b|\b--body\b/.test(line)),
+        false
+      );
+      assert.equal(
+        log.some((line) => /\bpr merge\b/.test(line)),
+        false
+      );
     });
   });
 
-  test("passes --title and --body when provided", () => {
+  test("passes --title and --body when provided and does not add --fill", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
-      const bin = path.join(cwd, ".bin");
-      const { logFile } = writeGhStub(bin);
+      const { env, logFile } = withGh(cwd);
       const result = runScript("open-pr", [
         "001-feature",
         "--title",
         "T",
         "--body",
         "B",
-      ], {
-        cwd,
-        env: { PATH: `${bin}${path.delimiter}${process.env.PATH}` },
-      });
+      ], { cwd, env });
       assertOk(result);
-      const log = fs.readFileSync(logFile, "utf8");
-      assert.match(log, /pr create --base dev --head 001-feature --title T --body B/);
+      const log = argvLogLines(logFile);
+      assert.ok(log.includes("pr create --base dev --head 001-feature --title T --body B"));
+      assert.equal(
+        log.some((line) => line.startsWith("pr create") && /\b--fill\b/.test(line)),
+        false
+      );
+    });
+  });
+
+  test("BLOCKED when extra arguments are passed", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      const { env } = withGh(cwd);
+      assertBlocked(
+        runScript("open-pr", ["001-feature", "extra"], { cwd, env }),
+        /unexpected arguments/
+      );
     });
   });
 });

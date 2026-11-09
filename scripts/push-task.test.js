@@ -3,42 +3,67 @@
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
+const path = require("path");
 
 const {
   addBareOrigin,
+  argvLogLines,
   assertBlocked,
   assertOk,
   assertUnchanged,
+  cloneFrom,
   git,
   initGitRepo,
+  revParse,
   runScript,
   startTask,
   withTempDir,
   writeFile,
+  writeGitLogger,
 } = require("../test/helpers");
+
+function pushEnv(cwd) {
+  const bin = path.join(cwd, ".bin");
+  const { logFile } = writeGitLogger(bin);
+  return {
+    logFile,
+    env: { PATH: `${bin}${path.delimiter}${process.env.PATH}` },
+  };
+}
 
 describe("push-task", () => {
   test("pushes only the task branch without --force", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       const bare = addBareOrigin(cwd);
+      const originDev = revParse(bare, "refs/heads/dev");
+      git(cwd, ["checkout", "dev"]);
+      writeFile(cwd, "base-ahead.txt", "local base\n");
+      git(cwd, ["add", "base-ahead.txt"]);
+      git(cwd, ["commit", "-m", "local base ahead of origin"]);
+      const localDev = revParse(cwd, "dev");
+      assert.notEqual(localDev, originDev);
       assertOk(startTask(cwd, "001-feature"));
       writeFile(cwd, "push.txt", "ahead\n");
       git(cwd, ["add", "push.txt"]);
       git(cwd, ["commit", "-m", "ahead"]);
-      const result = runScript("push-task", ["001-feature"], { cwd });
+      const { env, logFile } = pushEnv(cwd);
+      const result = runScript("push-task", ["001-feature"], { cwd, env });
       assertOk(result);
       assert.match(result.stdout, /remote: origin/);
       const heads = git(bare, ["show-ref"]).stdout;
       assert.match(heads, /refs\/heads\/001-feature/);
-      fs.rmSync(bare, { recursive: true, force: true });
+      assert.equal(revParse(bare, "refs/heads/dev"), originDev);
+      const pushLines = argvLogLines(logFile).filter((line) => line.startsWith("push "));
+      assert.equal(pushLines.length, 1);
+      assert.equal(pushLines[0], "push --porcelain origin 001-feature");
     });
   });
 
   test("UNCHANGED when the remote is already up to date", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      const bare = addBareOrigin(cwd);
+      addBareOrigin(cwd);
       assertOk(startTask(cwd, "001-feature"));
       writeFile(cwd, "push.txt", "ahead\n");
       git(cwd, ["add", "push.txt"]);
@@ -46,7 +71,6 @@ describe("push-task", () => {
       assertOk(runScript("push-task", ["001-feature"], { cwd }));
       const result = runScript("push-task", ["001-feature"], { cwd });
       assertUnchanged(result);
-      fs.rmSync(bare, { recursive: true, force: true });
     });
   });
 
@@ -54,7 +78,22 @@ describe("push-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
-      assertBlocked(runScript("push-task", ["001-feature"], { cwd }));
+      assertBlocked(
+        runScript("push-task", ["001-feature"], { cwd }),
+        /no git remote named origin/
+      );
+    });
+  });
+
+  test("BLOCKED when extra arguments are passed", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      addBareOrigin(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      assertBlocked(
+        runScript("push-task", ["001-feature", "extra"], { cwd }),
+        /unexpected arguments/
+      );
     });
   });
 
@@ -66,10 +105,62 @@ describe("push-task", () => {
       writeFile(cwd, "push.txt", "ahead\n");
       git(cwd, ["add", "push.txt"]);
       git(cwd, ["commit", "-m", "ahead"]);
-      const result = runScript("push-task", ["001-feature"], { cwd });
+      const { env, logFile } = pushEnv(cwd);
+      const result = runScript("push-task", ["001-feature"], { cwd, env });
       assertOk(result);
       assert.match(result.stdout, /remote: upstream/);
-      fs.rmSync(bare, { recursive: true, force: true });
+      git(bare, ["show-ref", "--verify", "refs/heads/001-feature"]);
+      const pushLines = argvLogLines(logFile).filter((line) => line.startsWith("push "));
+      assert.equal(pushLines[0], "push --porcelain upstream 001-feature");
+    });
+  });
+
+  test("BLOCKED when two remotes exist and neither is origin", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const bare = addBareOrigin(cwd, "upstream");
+      git(cwd, ["remote", "add", "fork", bare]);
+      assertOk(startTask(cwd, "001-feature"));
+      assertBlocked(
+        runScript("push-task", ["001-feature"], { cwd }),
+        /no git remote named origin/
+      );
+    });
+  });
+
+  test("BLOCKED on a diverged remote instead of force-pushing", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const bare = addBareOrigin(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      writeFile(cwd, "push.txt", "ahead\n");
+      git(cwd, ["add", "push.txt"]);
+      git(cwd, ["commit", "-m", "ahead"]);
+      assertOk(runScript("push-task", ["001-feature"], { cwd }));
+
+      const other = path.join(cwd, ".other");
+      cloneFrom(bare, other);
+      git(other, ["checkout", "-B", "001-feature", "origin/001-feature"]);
+      writeFile(other, "other.txt", "remote side\n");
+      git(other, ["add", "other.txt"]);
+      git(other, ["commit", "-m", "remote ahead"]);
+      git(other, ["push", "origin", "001-feature"]);
+
+      writeFile(cwd, "local-only.txt", "local side\n");
+      git(cwd, ["add", "local-only.txt"]);
+      git(cwd, ["commit", "-m", "local ahead"]);
+
+      const { env, logFile } = pushEnv(cwd);
+      assertBlocked(
+        runScript("push-task", ["001-feature"], { cwd, env }),
+        /push of 001-feature to origin failed/
+      );
+      const pushLines = argvLogLines(logFile).filter((line) => line.startsWith("push "));
+      assert.ok(pushLines.some((line) => line === "push --porcelain origin 001-feature"));
+      assert.equal(
+        pushLines.some((line) => /--force|\s-f\b/.test(line)),
+        false
+      );
     });
   });
 });

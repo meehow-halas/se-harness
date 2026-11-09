@@ -32,6 +32,7 @@ function withTempDir(fn) {
     return fn(dir);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(`${dir}-bare.git`, { recursive: true, force: true });
   }
 }
 
@@ -83,6 +84,14 @@ function git(cwd, args, extraEnv) {
   return result;
 }
 
+function which(cmd, env = process.env) {
+  const result = spawnSync("sh", ["-c", 'command -v "$1"', "sh", cmd], {
+    encoding: "utf8",
+    env,
+  });
+  return (result.stdout || "").trim();
+}
+
 function writeHarnessConfig(cwd, baseBranch) {
   const body = JSON.stringify(
     { agents: { baseBranch } },
@@ -119,11 +128,39 @@ function runScript(name, args, { cwd, env } = {}) {
   };
 }
 
-function pathWithoutCommand(command) {
-  return (process.env.PATH || "")
+function pathHidingCommand(cwd, command) {
+  const shimDir = path.join(cwd, `.dhs-hide-${command}`);
+  fs.mkdirSync(shimDir, { recursive: true });
+  const essentials = [
+    "git",
+    "sh",
+    "node",
+    "python3",
+    "tr",
+    "wc",
+    "grep",
+    "sed",
+    "dirname",
+    "basename",
+    "uname",
+  ];
+  for (const name of essentials) {
+    if (name === command) {
+      continue;
+    }
+    const found = which(name);
+    if (!found) {
+      continue;
+    }
+    const dest = path.join(shimDir, name);
+    if (!fs.existsSync(dest)) {
+      fs.symlinkSync(found, dest);
+    }
+  }
+  const kept = (process.env.PATH || "")
     .split(path.delimiter)
-    .filter((dir) => dir && !fs.existsSync(path.join(dir, command)))
-    .join(path.delimiter);
+    .filter((dir) => dir && !fs.existsSync(path.join(dir, command)));
+  return [shimDir, ...kept].join(path.delimiter);
 }
 
 function writeGhStub(binDir, { existingUrl } = {}) {
@@ -155,6 +192,56 @@ exit 1
   return { gh, logFile };
 }
 
+function writeGitLogger(binDir) {
+  fs.mkdirSync(binDir, { recursive: true });
+  const realGit = which("git");
+  if (!realGit) {
+    throw new Error("git is not on PATH");
+  }
+  const logFile = path.join(binDir, "git-argv.log");
+  const gitBin = path.join(binDir, "git");
+  fs.writeFileSync(
+    gitBin,
+    `#!/bin/sh
+printf '%s\\n' "$*" >> ${JSON.stringify(logFile)}
+exec ${JSON.stringify(realGit)} "$@"
+`
+  );
+  fs.chmodSync(gitBin, 0o755);
+  return { logFile };
+}
+
+function failingEditor(cwd) {
+  const editor = path.join(cwd, ".dhs-editor-fail");
+  const stamp = path.join(cwd, ".dhs-editor-called");
+  fs.writeFileSync(
+    editor,
+    `#!/bin/sh
+printf 'called\\n' > ${JSON.stringify(stamp)}
+exit 1
+`
+  );
+  fs.chmodSync(editor, 0o755);
+  return {
+    stamp,
+    env: {
+      GIT_EDITOR: editor,
+      EDITOR: editor,
+      VISUAL: editor,
+      GIT_SEQUENCE_EDITOR: editor,
+    },
+  };
+}
+
+function envWithGh(cwd, stubOpts) {
+  const bin = path.join(cwd, ".bin");
+  const stub = writeGhStub(bin, stubOpts);
+  return {
+    ...stub,
+    env: { PATH: `${bin}${path.delimiter}${process.env.PATH}` },
+  };
+}
+
 function makePackageRoot(dir, { payload, setupSkill = true, version = "1.2.3" } = {}) {
   const names = payload || PAYLOAD_DIRS;
   fs.writeFileSync(
@@ -173,11 +260,24 @@ function makePackageRoot(dir, { payload, setupSkill = true, version = "1.2.3" } 
   }
 }
 
-function assertBlocked(result) {
+function blockedMessage(result) {
+  const text = `${result.stdout}\n${result.stderr}`;
+  const idx = text.indexOf("BLOCKED: ");
+  if (idx === -1) {
+    return "";
+  }
+  return text.slice(idx).trim();
+}
+
+function assertBlocked(result, expected) {
   assert.equal(result.status, 1, result.stdout + result.stderr);
-  const text = (result.stdout || result.stderr).trim();
-  assert.match(text, /^BLOCKED: /);
-  assert.match(text, / — /);
+  const message = blockedMessage(result);
+  assert.ok(message, `expected a BLOCKED line, got: ${result.stdout}\n${result.stderr}`);
+  assert.match(message, /^BLOCKED: /);
+  assert.match(message, / — /);
+  if (expected !== undefined) {
+    assert.match(message, expected);
+  }
 }
 
 function assertOk(result) {
@@ -192,6 +292,10 @@ function assertUnchanged(result) {
 
 function currentBranch(cwd) {
   return git(cwd, ["rev-parse", "--abbrev-ref", "HEAD"]).stdout.trim();
+}
+
+function revParse(cwd, rev) {
+  return git(cwd, ["rev-parse", rev]).stdout.trim();
 }
 
 function writeFile(cwd, rel, body) {
@@ -217,23 +321,53 @@ function addBareOrigin(repoDir, remoteName = "origin") {
   return bare;
 }
 
+function cloneFrom(bare, dest) {
+  const cloned = spawnSync("git", ["clone", bare, dest], {
+    env: { ...process.env, ...GIT_ENV },
+    encoding: "utf8",
+  });
+  if (cloned.status !== 0) {
+    throw new Error(`git clone failed: ${cloned.stderr || cloned.stdout}`);
+  }
+  git(dest, ["config", "user.name", "dhs-test"]);
+  git(dest, ["config", "user.email", "dhs-test@example.com"]);
+  return dest;
+}
+
+function argvLogLines(logFile) {
+  if (!fs.existsSync(logFile)) {
+    return [];
+  }
+  return fs
+    .readFileSync(logFile, "utf8")
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter(Boolean);
+}
+
 module.exports = {
   PAYLOAD_DIRS,
   REPO_ROOT,
   addBareOrigin,
+  argvLogLines,
   assertBlocked,
   assertOk,
   assertUnchanged,
+  cloneFrom,
   currentBranch,
+  envWithGh,
+  failingEditor,
   git,
   initGitRepo,
   makePackageRoot,
-  pathWithoutCommand,
+  pathHidingCommand,
+  revParse,
   runCli,
   runScript,
   startTask,
   withTempDir,
   writeFile,
   writeGhStub,
+  writeGitLogger,
   writeHarnessConfig,
 };

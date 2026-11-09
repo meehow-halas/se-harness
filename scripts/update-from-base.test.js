@@ -9,6 +9,8 @@ const {
   assertBlocked,
   assertOk,
   assertUnchanged,
+  currentBranch,
+  failingEditor,
   git,
   initGitRepo,
   runScript,
@@ -39,9 +41,20 @@ describe("update-from-base", () => {
       git(cwd, ["add", "base.txt"]);
       git(cwd, ["commit", "-m", "base moved"]);
       git(cwd, ["checkout", "001-feature"]);
-      const result = runScript("update-from-base", ["001-feature"], { cwd });
+      const editor = failingEditor(cwd);
+      const result = runScript("update-from-base", ["001-feature"], {
+        cwd,
+        env: editor.env,
+      });
       assertOk(result);
       assert.equal(fs.existsSync(path.join(cwd, "base.txt")), true);
+      assert.equal(fs.existsSync(path.join(cwd, "task.txt")), true);
+      assert.equal(fs.existsSync(editor.stamp), false);
+      const parents = git(cwd, ["rev-list", "--parents", "-n", "1", "HEAD"])
+        .stdout.trim()
+        .split(" ");
+      assert.ok(parents.length >= 3, "expected a merge commit, not a rebase");
+      assert.equal(currentBranch(cwd), "001-feature");
     });
   });
 
@@ -58,9 +71,21 @@ describe("update-from-base", () => {
       git(cwd, ["commit", "-m", "base"]);
       git(cwd, ["checkout", "001-feature"]);
       const result = runScript("update-from-base", ["001-feature"], { cwd });
-      assertBlocked(result);
+      assertBlocked(result, /merge of dev into 001-feature has conflicts/);
       const unmerged = git(cwd, ["diff", "--name-only", "--diff-filter=U"]).stdout;
       assert.match(unmerged, /README.md/);
+      assert.equal(currentBranch(cwd), "001-feature");
+    });
+  });
+
+  test("BLOCKED when extra arguments are passed", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      assertBlocked(
+        runScript("update-from-base", ["001-feature", "extra"], { cwd }),
+        /unexpected arguments/
+      );
     });
   });
 });
