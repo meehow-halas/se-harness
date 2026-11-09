@@ -15,6 +15,19 @@ const PAYLOAD_DIRS = [
 ];
 const SETUP_SKILL = "dhs-setup";
 const HOSTS_FILE = "hosts.json";
+const GITIGNORE_ENTRIES = [
+  {
+    line: ".dhs/",
+    alreadyPresent: new Set([".dhs", ".dhs/", "/.dhs", "/.dhs/"]),
+  },
+  {
+    line: "harness.credentials.local.json",
+    alreadyPresent: new Set([
+      "harness.credentials.local.json",
+      "/harness.credentials.local.json",
+    ]),
+  },
+];
 
 function usage() {
   return "Usage: dhs <install|uninstall>";
@@ -81,6 +94,42 @@ function copyTree(src, dest) {
   });
 }
 
+function gitignorePattern(line) {
+  const trimmed = String(line).trim();
+  if (trimmed === "" || trimmed.startsWith("#")) {
+    return "";
+  }
+  return trimmed;
+}
+
+function gitignoreHasEntry(contents, alreadyPresent) {
+  return String(contents)
+    .split(/\r?\n/)
+    .some((line) => alreadyPresent.has(gitignorePattern(line)));
+}
+
+function gitignoreOwnedBody() {
+  return GITIGNORE_ENTRIES.map((entry) => `${entry.line}\n`).join("");
+}
+
+function ensureGitignore(cwd) {
+  const gitignorePath = path.join(cwd, ".gitignore");
+  if (!fs.existsSync(gitignorePath)) {
+    fs.writeFileSync(gitignorePath, gitignoreOwnedBody());
+    return;
+  }
+  const contents = fs.readFileSync(gitignorePath, "utf8");
+  const missing = GITIGNORE_ENTRIES.filter(
+    (entry) => !gitignoreHasEntry(contents, entry.alreadyPresent)
+  );
+  if (missing.length === 0) {
+    return;
+  }
+  const prefix = contents.length === 0 || contents.endsWith("\n") ? "" : "\n";
+  const added = missing.map((entry) => `${entry.line}\n`).join("");
+  fs.writeFileSync(gitignorePath, `${contents}${prefix}${added}`);
+}
+
 function pruneEmptyAncestors(startDir, cwd) {
   const root = path.resolve(cwd);
   let dir = path.resolve(startDir);
@@ -125,6 +174,8 @@ function install(ctx) {
   for (const host of hosts) {
     copyTree(skillSrc, setupSkillDir(cwd, host));
   }
+
+  ensureGitignore(cwd);
 
   if (fs.existsSync(path.join(cwd, "harness.config.json"))) {
     console.log(

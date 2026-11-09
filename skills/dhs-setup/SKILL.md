@@ -171,7 +171,7 @@ If the user names another config key (model, base branch, …), do that key firs
 
 First-run offer and every later run. Do not invent a `dhs` CLI for Jira. Use Jira MCP and write config. Switching does **not** migrate old tasks. Token never in chat or git.
 
-Credentials: the user puts the token in a project-local ignored file `harness.credentials.local.json` (`{"jiraToken":"…"}`). Add that filename to `.gitignore` if needed. Never paste the token in chat. Never write it into `harness.config.json`.
+Credentials: the user puts the token in a project-local ignored file `harness.credentials.local.json` (`{"jiraToken":"…"}`). `dhs install` already ignores that filename. Never paste the token in chat. Never write it into `harness.config.json`.
 
 | Intent | What happens |
 |--------|----------------|

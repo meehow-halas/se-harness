@@ -103,6 +103,8 @@ Into **this project only**:
 
 That is the full install-owned set. After install, `/dhs-setup` is invocable. Live agents, the other skills, rule packs, and `harness.config.json` do **not** exist yet. Install does not generate those live files. If this project already has `harness.config.json` (a later install, for example after a package update), install may print that the user should run `/dhs-setup` to apply the new templates. It still does not generate them itself.
 
+Install also ensures the project-root `.gitignore` contains `.dhs/` and `harness.credentials.local.json` (creates the file if missing). This is not uninstall-owned: `dhs uninstall` does not edit `.gitignore`.
+
 `dhs uninstall` removes that same set (`.dhs/` and the install-owned `/dhs-setup` skill in every `skillsDir`). It does not delete `harness.config.json` or files `/dhs-setup` already generated.
 
 ### What `/dhs-setup` does
@@ -190,7 +192,7 @@ While Jira is the tracker, `agents.statuses` is not written. After Remove, file-
 
 `depends` / `relates`: issue links when the project allows them. If linking fails, comment that fact; do not write a feature file and do not block the task.
 
-Unmapped Jira fields are ignored. Credentials stay out of git and out of chat (local ignored file). Project key and field mapping live in `harness.config.json`.
+Unmapped Jira fields are ignored. Credentials stay out of git and out of chat (`harness.credentials.local.json`). Project key and field mapping live in `harness.config.json`.
 
 ---
 
@@ -501,7 +503,7 @@ If `.dhs/VERSION` is missing, stop and tell the user to run `dhs install` here, 
 
 | Intent | What happens |
 |--------|----------------|
-| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in the local ignored credentials file; never paste it in chat. Fetch that project’s statuses, issue types and custom fields. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that list (or skip = `null`). Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker.statuses` (and the rest) into config. Agents must not pick a Jira status that is not in this map. |
+| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in `harness.credentials.local.json`; never paste it in chat. Fetch that project’s statuses, issue types and custom fields. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that list (or skip = `null`). Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker.statuses` (and the rest) into config. Agents must not pick a Jira status that is not in this map. |
 | **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named; keep the token unless they rotate it in the credentials file. |
 | **Remove** | Confirm, drop tracker from config, delete or clear the local credentials file. Project is files-only again. `jiraOffer` does not block a later **Add**. |
 

@@ -252,6 +252,111 @@ describe("dhs install", () => {
       );
     });
   });
+
+  test("creates .gitignore with .dhs/ and credentials when the file is missing", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(
+        read(path.join(project, ".gitignore")),
+        ".dhs/\nharness.credentials.local.json\n"
+      );
+    });
+  });
+
+  test("appends missing gitignore entries without rewriting other lines", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      fs.writeFileSync(path.join(project, ".gitignore"), "node_modules/\n*.log");
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(
+        read(path.join(project, ".gitignore")),
+        "node_modules/\n*.log\n.dhs/\nharness.credentials.local.json\n"
+      );
+    });
+  });
+
+  test("appends credentials when .gitignore already ignores .dhs", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+
+      for (const existing of [".dhs", ".dhs/", "/.dhs", "/.dhs/"]) {
+        const body = `node_modules/\n${existing}\n`;
+        fs.writeFileSync(path.join(project, ".gitignore"), body);
+        const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(
+          read(path.join(project, ".gitignore")),
+          `${body}harness.credentials.local.json\n`,
+          existing
+        );
+      }
+    });
+  });
+
+  test("appends .dhs/ when .gitignore already ignores credentials", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      const body = "node_modules/\nharness.credentials.local.json\n";
+      fs.writeFileSync(path.join(project, ".gitignore"), body);
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(read(path.join(project, ".gitignore")), `${body}.dhs/\n`);
+    });
+  });
+
+  test("does not duplicate credentials when already ignored with a leading slash", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      const body = "node_modules/\n/harness.credentials.local.json\n";
+      fs.writeFileSync(path.join(project, ".gitignore"), body);
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(read(path.join(project, ".gitignore")), `${body}.dhs/\n`);
+    });
+  });
+
+  test("does not rewrite .gitignore when both owned entries are already present", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      const body = "/.dhs/\n/harness.credentials.local.json\nnode_modules/\n";
+      fs.writeFileSync(path.join(project, ".gitignore"), body);
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(read(path.join(project, ".gitignore")), body);
+    });
+  });
 });
 
 describe("dhs uninstall", () => {
@@ -310,6 +415,10 @@ describe("dhs uninstall", () => {
       assert.equal(
         read(path.join(project, "harness.config.json")),
         `${JSON.stringify({ keep: true })}\n`
+      );
+      assert.equal(
+        read(path.join(project, ".gitignore")),
+        ".dhs/\nharness.credentials.local.json\n"
       );
     });
   });

@@ -67,6 +67,8 @@ Copies into **this project only**:
 
 That is the full install-owned set.
 
+Install also ensures the project-root `.gitignore` contains `.dhs/` and `harness.credentials.local.json` (creates the file if missing). This is not uninstall-owned: `dhs uninstall` does not edit `.gitignore`.
+
 - Do **not** generate live agents, work skills, rule packs, or `harness.config.json`.
 - After install, `/dhs-setup` is invocable. `/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm` do not exist yet and must not be written by install.
 - Idempotent: a second install refreshes `.dhs/` from the package and the install-owned `/dhs-setup` skill. It still does not generate live files.
