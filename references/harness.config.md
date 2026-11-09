@@ -6,6 +6,8 @@ Parseable defaults: `harness.config.json` in this directory. Jira object shape: 
 
 `dhs.generatedFrom` is set by setup to the contents of `.dhs/VERSION`. `agents.baseBranch` has no value until setup asks (suggested default `dev`). Optional role `rules`; reviewer may use `checklist`. `jiraOffer` is `declined` when they decline the first offer (`null` until then). `agents.brainstorm.consult` is `any` | `significant` (default if unset) | `broad`. Members themselves are not this template’s job.
 
+Supported hosts are **not** in this config. They live in `hosts.json` in this directory (`.dhs/references/hosts.json` after install). Install and `/dhs-setup` always write every row. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format). A Codex adapter (TOML agents, `.codex/` or `.agents/skills`) is out of this version. One `agents.roles.<role>.model` string is copied to every live agent file.
+
 ```json
 {
   "dhs": { "generatedFrom": "" },

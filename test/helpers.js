@@ -259,6 +259,10 @@ function makePackageRoot(dir, { payload, setupSkill = true, version = "1.2.3" } 
     fs.mkdirSync(skill, { recursive: true });
     fs.writeFileSync(path.join(skill, "SKILL.md"), "# setup\n");
   }
+  const hostsSrc = path.join(REPO_ROOT, "references", "hosts.json");
+  const refsDir = path.join(dir, "references");
+  fs.mkdirSync(refsDir, { recursive: true });
+  fs.copyFileSync(hostsSrc, path.join(refsDir, "hosts.json"));
 }
 
 function blockedMessage(result) {

@@ -39,7 +39,7 @@ BLOCKED: setup is incomplete — run /dhs-setup
 BLOCKED: generated files do not match the installed templates — run /dhs-setup
 ```
 
-If the live Architect file is missing (typically `.claude/agents/architect.md`):
+If the live Architect file is missing from **this host’s** `agentsDir` in `.dhs/references/hosts.json`:
 
 ```text
 BLOCKED: live agents are missing — run /dhs-setup
@@ -57,7 +57,7 @@ The user may give a sentence, an existing basename, or a Jira key. Pass that to 
 
 ## Launch Architect once
 
-Follow the live Architect file (typically `.claude/agents/architect.md` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`). Do not duplicate that procedure here.
+Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.dhs/references/hosts.json` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`). Do not duplicate that procedure here.
 
 Pass at least:
 

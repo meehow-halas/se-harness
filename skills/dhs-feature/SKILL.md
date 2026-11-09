@@ -43,7 +43,7 @@ BLOCKED: setup is incomplete — run /dhs-setup
 BLOCKED: generated files do not match the installed templates — run /dhs-setup
 ```
 
-If a live agent this stage needs is missing (typically `.claude/agents/architect.md`, `implementer.md`, `reviewer.md`):
+If a live agent this stage needs is missing from **this host’s** `agentsDir` in `.dhs/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`):
 
 ```text
 BLOCKED: live agents are missing — run /dhs-setup
@@ -83,7 +83,7 @@ Start at the first missing stage. Skip stages that are already done.
 
 ### 1. No spec or prompt → Architect
 
-Follow the live Architect file (typically `.claude/agents/architect.md`). Do not duplicate it.
+Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.dhs/references/hosts.json`). Do not duplicate it.
 
 Pass `Mode:`, the request, conversation language when known.
 
@@ -97,7 +97,7 @@ On success, status stays `todo`. Continue to stage 2 without pausing.
 
 No implementation means status is still the configured `todo` string (Architect does not advance past `todo`).
 
-Follow the live Implementer file (typically `.claude/agents/implementer.md`). Consultant inside each phase; do not launch Consultant as a skill.
+Follow the live Implementer file for this host (`<agentsDir>/implementer.md`). Consultant inside each phase; do not launch Consultant as a skill.
 
 Pass the same `Mode:` and the task key. Implementer calls `.dhs/scripts/start-task`.
 
@@ -109,7 +109,7 @@ On success, status stays `in progress`. Continue to stage 3 without pausing.
 
 Implementation exists when status is the configured `in progress` or `code review` string (or the log shows implementation and there is no open ❌ handled in stage 4).
 
-Follow the live Reviewer file (typically `.claude/agents/reviewer.md`). One review round: `Variant: review`.
+Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round: `Variant: review`.
 
 Pass the same `Mode:` and the task key. Do not merge.
 
@@ -142,4 +142,4 @@ The user merges on GitHub. Close is `/dhs-checkit` after they confirm, not this 
 - Conversation language when known
 - Stage 4: the ❌ list only
 
-Live files are copies from `/dhs-setup` (typically under `.claude/agents/`), not symlinks to `.dhs/agents/`.
+Live files are copies from `/dhs-setup` under every `agentsDir` in `.dhs/references/hosts.json`, not symlinks to `.dhs/agents/`. In this session use the copy this host loaded.

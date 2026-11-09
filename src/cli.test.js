@@ -91,6 +91,14 @@ describe("dhs install", () => {
         read(path.join(project, ".claude", "skills", "dhs-setup", "SKILL.md")),
         "# setup\n"
       );
+      assert.equal(
+        read(path.join(project, ".cursor", "skills", "dhs-setup", "SKILL.md")),
+        "# setup\n"
+      );
+      assert.equal(
+        exists(path.join(project, ".dhs", "references", "hosts.json")),
+        true
+      );
     });
   });
 
@@ -145,6 +153,21 @@ describe("dhs install", () => {
     });
   });
 
+  test("fails when references/hosts.json is missing", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      fs.rmSync(path.join(pkg, "references", "hosts.json"));
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /missing package file at references\/hosts\.json/);
+    });
+  });
+
   test("fails when skills/dhs-setup is missing", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
@@ -196,6 +219,7 @@ describe("dhs install", () => {
       assert.equal(read(path.join(project, ".dhs", "VERSION")), "1.2.3\n");
       assert.equal(exists(path.join(project, ".dhs", "agents", "marker.txt")), true);
       assert.equal(exists(path.join(project, ".claude", "agents")), false);
+      assert.equal(exists(path.join(project, ".cursor", "agents")), false);
       assert.equal(
         read(path.join(project, "harness.config.json")),
         `${JSON.stringify({ agents: { baseBranch: "dev" } })}\n`
@@ -231,7 +255,7 @@ describe("dhs install", () => {
 });
 
 describe("dhs uninstall", () => {
-  test("removes .dhs and the setup skill, keeps config and other .claude files, prunes empty dirs", () => {
+  test("removes .dhs and the setup skill, keeps config and other host files, prunes empty dirs", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -252,6 +276,15 @@ describe("dhs uninstall", () => {
         path.join(project, ".claude", "skills", "other-skill", "SKILL.md"),
         "keep\n"
       );
+      fs.mkdirSync(path.join(project, ".cursor", "skills", "other-skill"), {
+        recursive: true,
+      });
+      fs.writeFileSync(
+        path.join(project, ".cursor", "skills", "other-skill", "SKILL.md"),
+        "keep-cursor\n"
+      );
+      fs.mkdirSync(path.join(project, ".cursor", "agents"), { recursive: true });
+      fs.writeFileSync(path.join(project, ".cursor", "agents", "kept.md"), "live\n");
 
       const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
@@ -261,10 +294,19 @@ describe("dhs uninstall", () => {
         false
       );
       assert.equal(
+        exists(path.join(project, ".cursor", "skills", "dhs-setup")),
+        false
+      );
+      assert.equal(
         read(path.join(project, ".claude", "skills", "other-skill", "SKILL.md")),
         "keep\n"
       );
+      assert.equal(
+        read(path.join(project, ".cursor", "skills", "other-skill", "SKILL.md")),
+        "keep-cursor\n"
+      );
       assert.equal(exists(path.join(project, ".claude", "agents", "kept.md")), true);
+      assert.equal(exists(path.join(project, ".cursor", "agents", "kept.md")), true);
       assert.equal(
         read(path.join(project, "harness.config.json")),
         `${JSON.stringify({ keep: true })}\n`
@@ -272,7 +314,7 @@ describe("dhs uninstall", () => {
     });
   });
 
-  test("prunes empty .claude after removing the only skill", () => {
+  test("prunes empty host dirs after removing the only skill", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -284,6 +326,7 @@ describe("dhs uninstall", () => {
       const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
       assert.equal(exists(path.join(project, ".claude")), false);
+      assert.equal(exists(path.join(project, ".cursor")), false);
     });
   });
 
@@ -300,6 +343,7 @@ describe("dhs uninstall", () => {
       assert.equal(result.status, 0, result.stderr);
       assert.equal(exists(path.join(project, ".dhs")), false);
       assert.equal(exists(path.join(project, ".claude")), false);
+      assert.equal(exists(path.join(project, ".cursor")), false);
     });
   });
 });

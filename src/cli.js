@@ -14,7 +14,7 @@ const PAYLOAD_DIRS = [
   "scripts",
 ];
 const SETUP_SKILL = "dhs-setup";
-const HOST_SKILL_REL = path.join(".claude", "skills", SETUP_SKILL);
+const HOSTS_FILE = "hosts.json";
 
 function usage() {
   return "Usage: dhs <install|uninstall>";
@@ -33,6 +33,40 @@ function packageVersion(packageRoot) {
   return String(pkg.version);
 }
 
+function posixJoin(rel) {
+  return path.join(...String(rel).split("/").filter(Boolean));
+}
+
+function loadHosts(packageRoot) {
+  const hostsPath = path.join(packageRoot, "references", HOSTS_FILE);
+  if (!fs.existsSync(hostsPath)) {
+    console.error("dhs: missing package file at references/hosts.json");
+    process.exit(1);
+  }
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(hostsPath, "utf8"));
+  } catch {
+    console.error("dhs: invalid JSON at references/hosts.json");
+    process.exit(1);
+  }
+  if (!Array.isArray(data.hosts) || data.hosts.length === 0) {
+    console.error("dhs: references/hosts.json has no hosts");
+    process.exit(1);
+  }
+  for (const host of data.hosts) {
+    if (!host || typeof host.skillsDir !== "string" || host.skillsDir === "") {
+      console.error("dhs: references/hosts.json host is missing skillsDir");
+      process.exit(1);
+    }
+  }
+  return data.hosts;
+}
+
+function setupSkillDir(cwd, host) {
+  return path.join(cwd, posixJoin(host.skillsDir), SETUP_SKILL);
+}
+
 function isPackageTestFile(filePath) {
   return /\.test\.[cm]?js$/.test(filePath);
 }
@@ -47,18 +81,26 @@ function copyTree(src, dest) {
   });
 }
 
-function pruneEmpty(dir) {
-  if (!fs.existsSync(dir)) {
-    return;
-  }
-  const entries = fs.readdirSync(dir);
-  if (entries.length === 0) {
+function pruneEmptyAncestors(startDir, cwd) {
+  const root = path.resolve(cwd);
+  let dir = path.resolve(startDir);
+  while (dir.startsWith(root + path.sep) && dir !== root) {
+    if (!fs.existsSync(dir)) {
+      dir = path.dirname(dir);
+      continue;
+    }
+    const entries = fs.readdirSync(dir);
+    if (entries.length > 0) {
+      break;
+    }
     fs.rmdirSync(dir);
+    dir = path.dirname(dir);
   }
 }
 
 function install(ctx) {
   const { cwd, packageRoot } = resolveCtx(ctx);
+  const hosts = loadHosts(packageRoot);
   const dhsDir = path.join(cwd, ".dhs");
   fs.mkdirSync(dhsDir, { recursive: true });
 
@@ -80,7 +122,9 @@ function install(ctx) {
     );
     process.exit(1);
   }
-  copyTree(skillSrc, path.join(cwd, HOST_SKILL_REL));
+  for (const host of hosts) {
+    copyTree(skillSrc, setupSkillDir(cwd, host));
+  }
 
   if (fs.existsSync(path.join(cwd, "harness.config.json"))) {
     console.log(
@@ -90,11 +134,14 @@ function install(ctx) {
 }
 
 function uninstall(ctx) {
-  const { cwd } = resolveCtx(ctx);
+  const { cwd, packageRoot } = resolveCtx(ctx);
+  const hosts = loadHosts(packageRoot);
   fs.rmSync(path.join(cwd, ".dhs"), { recursive: true, force: true });
-  fs.rmSync(path.join(cwd, HOST_SKILL_REL), { recursive: true, force: true });
-  pruneEmpty(path.join(cwd, ".claude", "skills"));
-  pruneEmpty(path.join(cwd, ".claude"));
+  for (const host of hosts) {
+    const skillDir = setupSkillDir(cwd, host);
+    fs.rmSync(skillDir, { recursive: true, force: true });
+    pruneEmptyAncestors(path.dirname(skillDir), cwd);
+  }
 }
 
 function main(argv, ctx) {
@@ -129,4 +176,4 @@ if (require.main === module) {
   main(process.argv.slice(2));
 }
 
-module.exports = { main, install, uninstall, PAYLOAD_DIRS };
+module.exports = { main, install, uninstall, PAYLOAD_DIRS, loadHosts };

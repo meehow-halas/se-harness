@@ -1,0 +1,22 @@
+{
+  "hosts": [
+    {
+      "id": "claude-code",
+      "skillsDir": ".claude/skills",
+      "agentsDir": ".claude/agents",
+      "rulesDir": ".claude/rules",
+      "rulesExt": ".md",
+      "brainstormDir": ".claude/brainstorm",
+      "projectAgentsFile": "CLAUDE.md"
+    },
+    {
+      "id": "cursor",
+      "skillsDir": ".cursor/skills",
+      "agentsDir": ".cursor/agents",
+      "rulesDir": ".cursor/rules",
+      "rulesExt": ".mdc",
+      "brainstormDir": ".cursor/brainstorm",
+      "projectAgentsFile": null
+    }
+  ]
+}
