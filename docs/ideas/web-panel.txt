@@ -1,0 +1,43 @@
+Aplikacja www do sterowania procesem lifecycle zadań
+
+Nazwa: Monitor dev-harness-layer
+
+General
+Należy pamiętać że wszystko co jest poniżej zapisane dzieje się w scope projektu, katalogu w którym jest używany dhs
+i z którego otwieramy monitor.
+
+Sposób otworzenia
+Są 2 możliwości:
+- z sesji agenta np. poprzez skill (np. /dhs-monitor)
+- z polecenia terminala
+  - dla przykładu dhs install może dodawać do package.json (o ile istnieje, projekt nie musi być typu npm) 
+  nowy skrypt "monitor" i przez wywowałeni w teminalu polecenia `npm run monitor` otwiera się monitor www
+
+Cel
+Jest to aplikacja związana silnie z dev-harness-layer. Nie służy ona do zastąpienia harness jak np. Claude Code. 
+Silnie związna z dhs to znaczy że w pełni wspiera flow życia zadań czyli obsługę skilli służących do zarządzania nimi.
+
+UI
+Aplikacja ma układ 2 kolumn na całym dostępnym obszarze okna. Lewa to resizowalna 
+kolumna (min: 350px; max: 25% szerokości strony). Można zmieniać jej rozmiar przez drag granicy pomiędzy 
+kolumnami (ustawiana szerokość jest zapisywana w local storage aby w przyszłości do niej wrócić). 
+
+W lewej kolumnie mamy listę zadań nad którymi obecnie pracujemy (lista nazw ze statusem w jakim się znajdują, todo itd.).
+Listę można filtrować np po statusach, nazwie itd. Podstawowy filtr ukrywa statusy done. FIiltry są również 
+zapamiętywane. Powinien się tam znajdować przuciś "dodaj" otwierający obsługę nowego zadania.
+
+Prawa kolumna to tresć rozmowy z agentem we flow pracy nad zadaniem. 
+na dole jest pole tekstowe (z przyciskiem wyślij, ale reaguje tez na Enter) gdzie user wpisuje swoje polecenia 
+i rozmowę z agentem. Powyżej jest przewijalna rozmowa która automatycznie scrolluje się w górę. Jeżeli user sam 
+przesunie rozmowę wyżej, pojawi się przycisk/ikona umożliwiająca automatyczne przewinięcie do najnowszej wypowiedzi.
+Powinna być obsługa oczekiwania na odpowiedź w postaci loadera. Prawa kolumna powinna zajmować resztę szerokości 
+od lewej kolumny w prawo. Jednak sama treść rozmowy w środku, razem z polem tekstowym jest szerokości podobnej 
+w innych harness jak Claude Code (znajdź jaka to szerokość)
+
+O co chodzi
+Nie jest potrzebne nic poza wymaganiami stawianymi przez skille umożliwiające zarządzanie taskami jak:
+- dhs-shipit
+- dhs-planit
+- dhs-doit
+- dhs-checkit
+- dhs-brainstorm
