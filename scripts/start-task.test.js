@@ -60,9 +60,12 @@ describe("start-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
+      const sha = revParse(cwd, "HEAD");
       const result = startTask(cwd, "001-feature");
       assertUnchanged(result);
       assert.match(result.stdout, /created: no/);
+      assert.equal(currentBranch(cwd), "001-feature");
+      assert.equal(revParse(cwd, "HEAD"), sha);
     });
   });
 

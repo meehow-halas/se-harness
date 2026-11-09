@@ -7,7 +7,7 @@ const path = require("path");
 
 const {
   addBareOrigin,
-  argvLogLines,
+  argvLogArgv,
   assertBlocked,
   assertOk,
   assertUnchanged,
@@ -54,23 +54,25 @@ describe("push-task", () => {
       const heads = git(bare, ["show-ref"]).stdout;
       assert.match(heads, /refs\/heads\/001-feature/);
       assert.equal(revParse(bare, "refs/heads/dev"), originDev);
-      const pushLines = argvLogLines(logFile).filter((line) => line.startsWith("push "));
+      const pushLines = argvLogArgv(logFile).filter((args) => args[0] === "push");
       assert.equal(pushLines.length, 1);
-      assert.equal(pushLines[0], "push --porcelain origin 001-feature");
+      assert.deepEqual(pushLines[0], ["push", "--porcelain", "origin", "001-feature"]);
     });
   });
 
   test("UNCHANGED when the remote is already up to date", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      addBareOrigin(cwd);
+      const bare = addBareOrigin(cwd);
       assertOk(startTask(cwd, "001-feature"));
       writeFile(cwd, "push.txt", "ahead\n");
       git(cwd, ["add", "push.txt"]);
       git(cwd, ["commit", "-m", "ahead"]);
       assertOk(runScript("push-task", ["001-feature"], { cwd }));
+      const remoteSha = revParse(bare, "refs/heads/001-feature");
       const result = runScript("push-task", ["001-feature"], { cwd });
       assertUnchanged(result);
+      assert.equal(revParse(bare, "refs/heads/001-feature"), remoteSha);
     });
   });
 
@@ -110,8 +112,8 @@ describe("push-task", () => {
       assertOk(result);
       assert.match(result.stdout, /remote: upstream/);
       git(bare, ["show-ref", "--verify", "refs/heads/001-feature"]);
-      const pushLines = argvLogLines(logFile).filter((line) => line.startsWith("push "));
-      assert.equal(pushLines[0], "push --porcelain upstream 001-feature");
+      const pushLines = argvLogArgv(logFile).filter((args) => args[0] === "push");
+      assert.deepEqual(pushLines[0], ["push", "--porcelain", "upstream", "001-feature"]);
     });
   });
 
@@ -155,10 +157,17 @@ describe("push-task", () => {
         runScript("push-task", ["001-feature"], { cwd, env }),
         /push of 001-feature to origin failed/
       );
-      const pushLines = argvLogLines(logFile).filter((line) => line.startsWith("push "));
-      assert.ok(pushLines.some((line) => line === "push --porcelain origin 001-feature"));
+      const pushLines = argvLogArgv(logFile).filter((args) => args[0] === "push");
+      assert.ok(
+        pushLines.some((args) =>
+          args.length === 4 &&
+          args[1] === "--porcelain" &&
+          args[2] === "origin" &&
+          args[3] === "001-feature"
+        )
+      );
       assert.equal(
-        pushLines.some((line) => /--force|\s-f\b/.test(line)),
+        pushLines.some((args) => args.includes("--force") || args.includes("-f") || args.includes("--force-with-lease")),
         false
       );
     });

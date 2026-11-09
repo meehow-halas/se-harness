@@ -40,6 +40,20 @@ const ALL_SCRIPTS = [
   ["update-from-base", ["001-feature"]],
   ["return-to-base", []],
 ];
+const TASK_SCRIPTS = ALL_SCRIPTS.filter(([name]) => name !== "return-to-base");
+const ON_TASK_SCRIPTS = [
+  ["commit-task", ["001-feature", "a.txt"]],
+  ["update-from-base", ["001-feature"]],
+];
+const GIT_FLAGS = String.raw`(?:\s+-c\s+\S+|\s+-[^\s]+)`;
+
+function gitSubcommand(name) {
+  return new RegExp(String.raw`\bgit${GIT_FLAGS}*\s+${name}\b`);
+}
+
+function withTask(args, task) {
+  return [task, ...args.slice(1)];
+}
 
 function runAllowlisted(cwd, name, args) {
   const { env } = envWithGh(cwd);
@@ -49,19 +63,19 @@ function runAllowlisted(cwd, name, args) {
 describe("scripts source allowlist", () => {
   test("helpers do not rebase, reset, force-push, or merge PRs", () => {
     const dir = path.join(REPO_ROOT, "scripts");
+    const forcePush = new RegExp(
+      String.raw`\bgit${GIT_FLAGS}*\s+push\b[^\n]*(?:--force(?:-with-lease)?|\s-f\b)`
+    );
+    const prMerge = /\bgh(?:\s+-[^\s]+)*\s+pr\s+merge\b/;
     for (const name of fs.readdirSync(dir)) {
       if (name.endsWith(".test.js") || !fs.statSync(path.join(dir, name)).isFile()) {
         continue;
       }
       const body = sourceWithoutComments(fs.readFileSync(path.join(dir, name), "utf8"));
-      assert.equal(/\bgit\s+rebase\b/.test(body), false, name);
-      assert.equal(/\bgit\s+reset\b/.test(body), false, name);
-      assert.equal(
-        /\bgit\s+push\b[^\n]*(?:--force(?:-with-lease)?|\s-f\b)/.test(body),
-        false,
-        name
-      );
-      assert.equal(/\bgh\s+pr\s+merge\b/.test(body), false, name);
+      assert.equal(gitSubcommand("rebase").test(body), false, name);
+      assert.equal(gitSubcommand("reset").test(body), false, name);
+      assert.equal(forcePush.test(body), false, name);
+      assert.equal(prMerge.test(body), false, name);
     }
   });
 });
@@ -90,59 +104,56 @@ describe("shared refusals", () => {
     });
   }
 
-  test("empty task name is BLOCKED", () => {
-    withTempDir((cwd) => {
-      initGitRepo(cwd);
-      assertBlocked(runScript("start-task", [], { cwd }), /missing task branch name/);
-      assertBlocked(runScript("push-task", [], { cwd }), /missing task branch name/);
-      assertBlocked(
-        runScript("update-from-base", [], { cwd }),
-        /missing task branch name/
-      );
+  for (const [name, args] of TASK_SCRIPTS) {
+    test(`${name}: empty task name is BLOCKED`, () => {
+      withTempDir((cwd) => {
+        initGitRepo(cwd);
+        assertBlocked(runAllowlisted(cwd, name, []), /missing task branch name/);
+      });
     });
-  });
 
-  test("task name starting with - is BLOCKED", () => {
-    withTempDir((cwd) => {
-      initGitRepo(cwd);
-      assertBlocked(startTask(cwd, "-foo"), /invalid task branch name/);
+    test(`${name}: task name starting with - is BLOCKED`, () => {
+      withTempDir((cwd) => {
+        initGitRepo(cwd);
+        assertBlocked(
+          runAllowlisted(cwd, name, withTask(args, "-foo")),
+          /invalid task branch name/
+        );
+      });
     });
-  });
 
-  test("task equal to base branch is BLOCKED", () => {
-    withTempDir((cwd) => {
-      initGitRepo(cwd, { baseBranch: "dev" });
-      assertBlocked(
-        startTask(cwd, "dev"),
-        /task branch dev is the configured base branch/
-      );
-      assertBlocked(
-        runScript("push-task", ["dev"], { cwd }),
-        /task branch dev is the configured base branch/
-      );
+    test(`${name}: task equal to base branch is BLOCKED`, () => {
+      withTempDir((cwd) => {
+        initGitRepo(cwd, { baseBranch: "dev" });
+        assertBlocked(
+          runAllowlisted(cwd, name, withTask(args, "dev")),
+          /task branch dev is the configured base branch/
+        );
+      });
     });
-  });
+  }
 
-  test("outside a git repository is BLOCKED", () => {
-    withTempDir((cwd) => {
-      writeHarnessConfig(cwd, "dev");
-      assertBlocked(
-        startTask(cwd, "001-feature"),
-        /this directory is not a git repository/
-      );
+  for (const [name, args] of ALL_SCRIPTS) {
+    test(`${name}: outside a git repository is BLOCKED`, () => {
+      withTempDir((cwd) => {
+        writeHarnessConfig(cwd, "dev");
+        assertBlocked(
+          runAllowlisted(cwd, name, args),
+          /this directory is not a git repository/
+        );
+      });
     });
-  });
+  }
 
-  test("detached HEAD is BLOCKED for require_on_task", () => {
-    withTempDir((cwd) => {
-      initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
-      git(cwd, ["checkout", "--detach", "HEAD"]);
-      writeFile(cwd, "a.txt", "x\n");
-      assertBlocked(
-        runScript("commit-task", ["001-feature", "a.txt"], { cwd }),
-        /detached HEAD/
-      );
+  for (const [name, args] of ON_TASK_SCRIPTS) {
+    test(`${name}: detached HEAD is BLOCKED`, () => {
+      withTempDir((cwd) => {
+        initGitRepo(cwd);
+        assertOk(startTask(cwd, "001-feature"));
+        git(cwd, ["checkout", "--detach", "HEAD"]);
+        writeFile(cwd, "a.txt", "x\n");
+        assertBlocked(runAllowlisted(cwd, name, args), /detached HEAD/);
+      });
     });
-  });
+  }
 });

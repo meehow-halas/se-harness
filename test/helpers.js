@@ -8,14 +8,7 @@ const path = require("path");
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 const CLI_PATH = path.join(REPO_ROOT, "src", "cli.js");
-const PAYLOAD_DIRS = [
-  "agents",
-  "packs",
-  "skills",
-  "brainstorm",
-  "references",
-  "scripts",
-];
+const { PAYLOAD_DIRS } = require("../src/cli");
 
 const GIT_ENV = {
   GIT_CONFIG_GLOBAL: "/dev/null",
@@ -163,6 +156,10 @@ function pathHidingCommand(cwd, command) {
   return [shimDir, ...kept].join(path.delimiter);
 }
 
+function argvLogCommand(logFile) {
+  return `node -e 'require("fs").appendFileSync(process.argv[1], JSON.stringify(process.argv.slice(2)) + "\\n")' -- ${JSON.stringify(logFile)} "$@"`;
+}
+
 function writeGhStub(binDir, { existingUrl } = {}) {
   fs.mkdirSync(binDir, { recursive: true });
   const logFile = path.join(binDir, "gh-argv.log");
@@ -171,7 +168,7 @@ function writeGhStub(binDir, { existingUrl } = {}) {
   fs.writeFileSync(
     gh,
     `#!/bin/sh
-printf '%s\\n' "$*" >> ${JSON.stringify(logFile)}
+${argvLogCommand(logFile)}
 if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
   existing=${existing}
   if [ -n "$existing" ]; then
@@ -203,7 +200,7 @@ function writeGitLogger(binDir) {
   fs.writeFileSync(
     gitBin,
     `#!/bin/sh
-printf '%s\\n' "$*" >> ${JSON.stringify(logFile)}
+${argvLogCommand(logFile)}
 exec ${JSON.stringify(realGit)} "$@"
 `
   );
@@ -273,7 +270,6 @@ function assertBlocked(result, expected) {
   assert.equal(result.status, 1, result.stdout + result.stderr);
   const message = blockedMessage(result);
   assert.ok(message, `expected a BLOCKED line, got: ${result.stdout}\n${result.stderr}`);
-  assert.match(message, /^BLOCKED: /);
   assert.match(message, / — /);
   if (expected !== undefined) {
     assert.match(message, expected);
@@ -345,10 +341,15 @@ function argvLogLines(logFile) {
     .filter(Boolean);
 }
 
+function argvLogArgv(logFile) {
+  return argvLogLines(logFile).map((line) => JSON.parse(line));
+}
+
 module.exports = {
   PAYLOAD_DIRS,
   REPO_ROOT,
   addBareOrigin,
+  argvLogArgv,
   argvLogLines,
   assertBlocked,
   assertOk,

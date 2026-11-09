@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const path = require("path");
 
 const {
-  argvLogLines,
+  argvLogArgv,
   assertBlocked,
   assertOk,
   assertUnchanged,
@@ -49,14 +49,14 @@ describe("open-pr", () => {
       const result = runScript("open-pr", ["001-feature"], { cwd, env });
       assertUnchanged(result);
       assert.match(result.stdout, /url: https:\/\/example.com\/pr\/9/);
-      const log = argvLogLines(logFile);
-      assert.ok(log.some((line) => line.startsWith("pr view 001-feature")));
+      const log = argvLogArgv(logFile);
+      assert.ok(log.some((args) => args[0] === "pr" && args[1] === "view" && args[2] === "001-feature"));
       assert.equal(
-        log.some((line) => line.startsWith("pr create")),
+        log.some((args) => args[0] === "pr" && args[1] === "create"),
         false
       );
       assert.equal(
-        log.some((line) => /\bpr merge\b/.test(line)),
+        log.some((args) => args[0] === "pr" && args[1] === "merge"),
         false
       );
     });
@@ -70,14 +70,24 @@ describe("open-pr", () => {
       const result = runScript("open-pr", ["001-feature"], { cwd, env });
       assertOk(result);
       assert.match(result.stdout, /url: https:\/\/example.com\/pr\/1/);
-      const log = argvLogLines(logFile);
-      assert.ok(log.includes("pr create --base dev --head 001-feature --fill"));
+      const log = argvLogArgv(logFile);
+      assert.ok(
+        log.some((args) =>
+          args[0] === "pr" &&
+          args[1] === "create" &&
+          args.includes("--base") &&
+          args[args.indexOf("--base") + 1] === "dev" &&
+          args.includes("--head") &&
+          args[args.indexOf("--head") + 1] === "001-feature" &&
+          args.includes("--fill")
+        )
+      );
       assert.equal(
-        log.some((line) => line.startsWith("pr create") && /\b--title\b|\b--body\b/.test(line)),
+        log.some((args) => args[0] === "pr" && args[1] === "create" && (args.includes("--title") || args.includes("--body"))),
         false
       );
       assert.equal(
-        log.some((line) => /\bpr merge\b/.test(line)),
+        log.some((args) => args[0] === "pr" && args[1] === "merge"),
         false
       );
     });
@@ -96,12 +106,44 @@ describe("open-pr", () => {
         "B",
       ], { cwd, env });
       assertOk(result);
-      const log = argvLogLines(logFile);
-      assert.ok(log.includes("pr create --base dev --head 001-feature --title T --body B"));
+      const log = argvLogArgv(logFile);
+      assert.ok(
+        log.some((args) =>
+          args[0] === "pr" &&
+          args[1] === "create" &&
+          args.includes("--base") &&
+          args[args.indexOf("--base") + 1] === "dev" &&
+          args.includes("--head") &&
+          args[args.indexOf("--head") + 1] === "001-feature" &&
+          args.includes("--title") &&
+          args[args.indexOf("--title") + 1] === "T" &&
+          args.includes("--body") &&
+          args[args.indexOf("--body") + 1] === "B"
+        )
+      );
       assert.equal(
-        log.some((line) => line.startsWith("pr create") && /\b--fill\b/.test(line)),
+        log.some((args) => args[0] === "pr" && args[1] === "create" && args.includes("--fill")),
         false
       );
+    });
+  });
+
+  test("keeps --title and --body as single arguments when they contain spaces", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      const { env, logFile } = withGh(cwd);
+      const result = runScript(
+        "open-pr",
+        ["001-feature", "--title", "Hello world", "--body", "Line two"],
+        { cwd, env }
+      );
+      assertOk(result);
+      const log = argvLogArgv(logFile);
+      const create = log.find((args) => args[0] === "pr" && args[1] === "create");
+      assert.ok(create);
+      assert.equal(create[create.indexOf("--title") + 1], "Hello world");
+      assert.equal(create[create.indexOf("--body") + 1], "Line two");
     });
   });
 

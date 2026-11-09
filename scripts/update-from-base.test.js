@@ -13,6 +13,7 @@ const {
   failingEditor,
   git,
   initGitRepo,
+  revParse,
   runScript,
   startTask,
   withTempDir,
@@ -24,8 +25,11 @@ describe("update-from-base", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
+      const sha = revParse(cwd, "HEAD");
       const result = runScript("update-from-base", ["001-feature"], { cwd });
       assertUnchanged(result);
+      assert.equal(revParse(cwd, "HEAD"), sha);
+      assert.equal(currentBranch(cwd), "001-feature");
     });
   });
 

@@ -129,4 +129,4 @@ if (require.main === module) {
   main(process.argv.slice(2));
 }
 
-module.exports = { main, install, uninstall };
+module.exports = { main, install, uninstall, PAYLOAD_DIRS };

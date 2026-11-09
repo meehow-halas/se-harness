@@ -12,6 +12,7 @@ const {
   currentBranch,
   git,
   initGitRepo,
+  revParse,
   runScript,
   startTask,
   withTempDir,
@@ -45,9 +46,11 @@ describe("return-to-base", () => {
   test("UNCHANGED when already on base", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
+      const sha = revParse(cwd, "HEAD");
       const result = runScript("return-to-base", [], { cwd });
       assertUnchanged(result);
       assert.equal(currentBranch(cwd), "dev");
+      assert.equal(revParse(cwd, "HEAD"), sha);
     });
   });
 

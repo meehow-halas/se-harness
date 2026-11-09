@@ -7,6 +7,7 @@ const path = require("path");
 
 const {
   PAYLOAD_DIRS,
+  REPO_ROOT,
   makePackageRoot,
   runCli,
   withTempDir,
@@ -42,16 +43,22 @@ describe("cli dispatch", () => {
   });
 
   test("extra args print usage on stderr and exit 1", () => {
-    const result = runCli(["install", "extra"]);
-    assert.equal(result.status, 1);
-    assert.equal(result.stderr.trim(), USAGE);
+    withTempDir((cwd) => {
+      const result = runCli(["install", "extra"], { cwd });
+      assert.equal(result.status, 1);
+      assert.equal(result.stderr.trim(), USAGE);
+      assert.equal(exists(path.join(cwd, ".dhs")), false);
+    });
   });
 
   test("unknown command prints error and usage on stderr", () => {
-    const result = runCli(["status"]);
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /Unknown command: status/);
-    assert.match(result.stderr, new RegExp(USAGE));
+    withTempDir((cwd) => {
+      const result = runCli(["status"], { cwd });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /Unknown command: status/);
+      assert.match(result.stderr, new RegExp(USAGE));
+      assert.equal(exists(path.join(cwd, ".dhs")), false);
+    });
   });
 });
 
@@ -189,6 +196,24 @@ describe("dhs install", () => {
       );
     });
   });
+
+  test("copied git helpers stay executable", () => {
+    withTempDir((project) => {
+      const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
+      assert.equal(result.status, 0, result.stderr);
+      for (const name of [
+        "start-task",
+        "commit-task",
+        "push-task",
+        "open-pr",
+        "update-from-base",
+        "return-to-base",
+      ]) {
+        const mode = fs.statSync(path.join(project, ".dhs", "scripts", name)).mode;
+        assert.notEqual(mode & 0o111, 0, name);
+      }
+    });
+  });
 });
 
 describe("dhs uninstall", () => {
@@ -206,11 +231,25 @@ describe("dhs uninstall", () => {
       );
       fs.mkdirSync(path.join(project, ".claude", "agents"), { recursive: true });
       fs.writeFileSync(path.join(project, ".claude", "agents", "kept.md"), "live\n");
+      fs.mkdirSync(path.join(project, ".claude", "skills", "other-skill"), {
+        recursive: true,
+      });
+      fs.writeFileSync(
+        path.join(project, ".claude", "skills", "other-skill", "SKILL.md"),
+        "keep\n"
+      );
 
       const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
       assert.equal(exists(path.join(project, ".dhs")), false);
-      assert.equal(exists(path.join(project, ".claude", "skills")), false);
+      assert.equal(
+        exists(path.join(project, ".claude", "skills", "dhs-setup")),
+        false
+      );
+      assert.equal(
+        read(path.join(project, ".claude", "skills", "other-skill", "SKILL.md")),
+        "keep\n"
+      );
       assert.equal(exists(path.join(project, ".claude", "agents", "kept.md")), true);
       assert.equal(
         read(path.join(project, "harness.config.json")),
