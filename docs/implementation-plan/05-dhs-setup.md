@@ -14,7 +14,7 @@ Cite [prd.md](../prd.md) sections **Skills** and **`/dhs-setup` (detail)** as th
 - Generation of live agents (copies + `model:`), work-skill **files** from `.dhs/skills/` (bodies may still be stubs until phase 6), and rule packs from `.dhs/packs/` filtered by detection and `packsIgnored`.
 - Project PRD create-or-keep.
 - `AGENTS.md` / `CLAUDE.md` merge and write rules.
-- Jira offer / add / change / remove via Jira MCP and config (no dhs Jira CLI).
+- Jira offer / add / change / remove via `.dhs/scripts/jira meta` and config (no dhs Jira CLI, no MCP).
 - `agents.baseBranch` question (suggested default `dev`).
 - Optional one project rule on roles (`rules`; reviewer `checklist` when it is a review constraint).
 

@@ -13,7 +13,7 @@ Publish Architect, Implementer, Consultant, and Reviewer under package `agents/`
 | `agents/consultant.md` | Quality on the phase diff. Structured report. Does not edit product code, does not talk to the user, does not judge spec compliance | haiku |
 | `agents/reviewer.md` | Spec compliance only. Git allowlist after acceptance. Update-from-base and close | sonnet |
 
-Bodies must instruct: **read** `harness.config.json` for base branch, statuses, tracker maps, `fetchFields`, content language, product line; **call** `.dhs/scripts/` for git.
+Bodies must instruct: **read** `harness.config.json` for base branch, statuses, tracker maps, `fetchFields`, content language, product line; **call** `.dhs/scripts/` for git and for Jira.
 
 ## Out of scope
 
@@ -41,7 +41,7 @@ Bodies must instruct: **read** `harness.config.json` for base branch, statuses, 
 - Stops use PRD `BLOCKED:` line.
 - Tracker: write spec, prompt, log, and status **only** on the active tracker (files or Jira). Never both. Never mirror.
 - File tracker paths and basename rules: PRD Feature tracking + Artifact contract.
-- Jira: create/transition/comment only using `agents.tracker` maps; `null` means skip that transition; do not invent status names; Consultant pass is not written on the ticket.
+- Jira: call `.dhs/scripts/jira` (not MCP, not raw `curl`); create/transition/comment only using `agents.tracker` maps; `null` means skip that transition; do not invent status names; Consultant pass is not written on the ticket.
 - Languages: conversation language vs `agents.contentLanguage` from config (read at run time). Status keys stay configured English strings; do not translate them from the conversation.
 - Follow generated rules that load on Read/Write/Edit. Run the **project’s** test/lint/typecheck, not a dhs command.
 

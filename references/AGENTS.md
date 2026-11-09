@@ -49,7 +49,7 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 
 Exactly one tracker: files **or** Jira, never both. Never mirror.
 
-Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, Jira is active: write spec, prompt, log, and status only on the ticket, using that map (`null` means skip that transition). Do not invent Jira status names. Credentials are in a local ignored file, never in git and never in chat.
+Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, Jira is active: write spec, prompt, log, and status only on the ticket through `.dhs/scripts/jira` (Jira Cloud REST; not MCP, not raw `curl`), using that map (`null` means skip that transition). Do not invent Jira status names. Credentials are in a local ignored file, never in git and never in chat.
 
 If `agents.tracker` is absent, the files tracker is active. Same basename for all three files (example: `001-feature-example-name`):
 
@@ -65,7 +65,7 @@ Task key = basename. Branch name = basename. Status strings = `agents.statuses` 
 
 ## Git
 
-Allowlisted git/`gh` operations run through `.dhs/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh` themselves. Scripts read `agents.baseBranch` from `harness.config.json`. No rebase, reset, or force. No merge of the PR (human on GitHub). Implementer and Reviewer always use a git worktree at `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>`. A launch may name `Worktree: <abs>`. Architect does not use worktrees.
+Allowlisted git/`gh` and Jira operations run through `.dhs/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh` or `curl` themselves. Git scripts read `agents.baseBranch` from `harness.config.json`. Jira scripts read `agents.tracker` and `harness.credentials.local.json`. No rebase, reset, or force. No merge of the PR (human on GitHub). Implementer and Reviewer always use a git worktree at `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>`. A launch may name `Worktree: <abs>`. Architect does not use worktrees.
 
 | Script | Who |
 |--------|-----|
@@ -75,8 +75,9 @@ Allowlisted git/`gh` operations run through `.dhs/scripts/`. Agents call those s
 | `open-pr` | Reviewer, after acceptance |
 | `update-from-base` | Reviewer, only when the user asks to update |
 | `return-to-base` | Reviewer, after PR opened or after close (removes the dhs worktree) |
+| `jira` | `/dhs-setup` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `comment` / `set log`); Reviewer (`get`, `transition codeReview` / `inReview` / `done`, `comment`) |
 
-Architect and Consultant: no git writes; they do not call these scripts.
+Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira`.
 
 ## Tests
 
@@ -95,4 +96,4 @@ Not questions and not Consultant `must-fix`. One line:
 BLOCKED: <what stopped> — <what the user or another skill must do>
 ```
 
-If a `.dhs/scripts/` helper refuses, copy that `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git` or `gh`. Shape: `.dhs/references/BLOCKED.md`.
+If a `.dhs/scripts/` helper refuses, copy that `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git`, `gh`, or `curl`. Shape: `.dhs/references/BLOCKED.md`.

@@ -45,7 +45,7 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 
 Shape: `.dhs/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
-If a `.dhs/scripts/` helper refuses, copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git` or `gh`. If the host cannot run `sh`, stop: Windows is out of v1.
+If a `.dhs/scripts/` helper refuses, copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git`, `gh`, or `curl`. If the host cannot run `sh`, stop: Windows is out of v1.
 
 Also stop when: a `depends` task is not `done`; merge is not confirmed on **close**; dirty **task worktree** when `return-to-base` must remove it; PR failed; project tests fail on untouched code; user acceptance missing in interactive; a mapped Jira status is not on that issue type’s workflow (fix mapping in `/dhs-setup`). A dirty **primary** checkout does not block `start-task`.
 
@@ -59,13 +59,13 @@ Exactly one tracker: files **or** Jira, never both. Never mirror. If `agents.tra
 
 ### Jira
 
-No file-tracker writes. Transitions only from `agents.tracker.statuses`: `codeReview` on first review, `inReview` on acceptance, `done` on close; `null` means skip. Review report (✅/❌/⚠️) as a comment. Credentials stay out of git and out of chat. Request `fetchFields` when reading.
+No file-tracker writes. Call `.dhs/scripts/jira`; do not use MCP; do not compose `curl`. Transitions: `jira transition <key> codeReview` on first review, `inReview` on acceptance, `done` on close (`UNCHANGED` when the map is `null`). Review report (✅/❌/⚠️) as `jira comment`. Read with `jira get` (includes `fetchFields`). Credentials stay out of git and out of chat. Check `depends` with `jira get` on those keys.
 
 ## Git
 
 A launch may name `Worktree: <abs>`. All Read/Write/Edit, project tests, and `.dhs/scripts/` calls happen in that directory. Do not edit files in another checkout.
 
-Allowlisted operations go through `.dhs/scripts/`. You do not compose the matching `git`/`gh`. Scripts read `agents.baseBranch`. No rebase, reset, or force. No merge of the PR. Architect and Consultant never call these scripts. Success prints `OK` or `UNCHANGED`. `start-task` prints `worktree:`; `return-to-base` from a dhs worktree removes that worktree and does not switch the user’s primary checkout.
+Allowlisted git/`gh` operations go through `.dhs/scripts/`. You do not compose the matching `git`/`gh` or `curl`. Git scripts read `agents.baseBranch`. No rebase, reset, or force. No merge of the PR. Architect and Consultant never call these scripts. Success prints `OK` or `UNCHANGED`. `start-task` prints `worktree:`; `return-to-base` from a dhs worktree removes that worktree and does not switch the user’s primary checkout.
 
 | When | Script |
 |------|--------|
