@@ -28,10 +28,10 @@ Supported hosts are **not** a tree in this config. They live in `hosts.json` in 
       "done": "done"
     },
     "roles": {
-      "architect": { "model": { "claude-code": "opus", "cursor": "inherit", "opencode": "anthropic/claude-opus-4-5" } },
-      "implementer": { "model": { "claude-code": "sonnet", "cursor": "inherit", "opencode": "anthropic/claude-sonnet-5-5" } },
-      "consultant": { "model": { "claude-code": "haiku", "cursor": "inherit", "opencode": "anthropic/claude-haiku-4-5" } },
-      "reviewer": { "model": { "claude-code": "sonnet", "cursor": "inherit", "opencode": "anthropic/claude-sonnet-5-5" } }
+      "architect": { "model": { "claude-code": "opus", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-opus-4-5" } },
+      "implementer": { "model": { "claude-code": "sonnet", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-sonnet-5-5" } },
+      "consultant": { "model": { "claude-code": "haiku", "cursor": "composer-2.5", "opencode": "anthropic/claude-haiku-4-5" } },
+      "reviewer": { "model": { "claude-code": "sonnet", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-sonnet-5-5" } }
     },
     "brainstorm": { "consult": "significant" }
   }

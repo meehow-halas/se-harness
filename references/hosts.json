@@ -33,11 +33,11 @@
       "hooksShape": "cursor-flat",
       "hooksHostArg": "cursor",
       "modelSuggest": {
-        "architect": "inherit",
-        "implementer": "inherit",
-        "consultant": "inherit",
-        "reviewer": "inherit",
-        "brainstorm": "inherit"
+        "architect": "cursor-grok-4.6-medium",
+        "implementer": "cursor-grok-4.6-medium",
+        "consultant": "composer-2.5",
+        "reviewer": "cursor-grok-4.6-medium",
+        "brainstorm": "cursor-grok-4.6-medium"
       }
     },
     {

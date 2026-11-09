@@ -20,28 +20,28 @@
       "architect": {
         "model": {
           "claude-code": "opus",
-          "cursor": "inherit",
+          "cursor": "cursor-grok-4.6-medium",
           "opencode": "anthropic/claude-opus-4-5"
         }
       },
       "implementer": {
         "model": {
           "claude-code": "sonnet",
-          "cursor": "inherit",
+          "cursor": "cursor-grok-4.6-medium",
           "opencode": "anthropic/claude-sonnet-5-5"
         }
       },
       "consultant": {
         "model": {
           "claude-code": "haiku",
-          "cursor": "inherit",
+          "cursor": "composer-2.5",
           "opencode": "anthropic/claude-haiku-4-5"
         }
       },
       "reviewer": {
         "model": {
           "claude-code": "sonnet",
-          "cursor": "inherit",
+          "cursor": "cursor-grok-4.6-medium",
           "opencode": "anthropic/claude-sonnet-5-5"
         }
       }
