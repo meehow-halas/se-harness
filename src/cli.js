@@ -20,16 +20,31 @@ function usage() {
   return "Usage: dhs <install|uninstall>";
 }
 
-function packageVersion() {
-  const pkgPath = path.join(PACKAGE_ROOT, "package.json");
+function resolveCtx(ctx) {
+  return {
+    cwd: (ctx && ctx.cwd) || process.cwd(),
+    packageRoot: (ctx && ctx.packageRoot) || PACKAGE_ROOT,
+  };
+}
+
+function packageVersion(packageRoot) {
+  const pkgPath = path.join(packageRoot, "package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
   return String(pkg.version);
+}
+
+function isPackageTestFile(filePath) {
+  return /\.test\.[cm]?js$/.test(filePath);
 }
 
 function copyTree(src, dest) {
   fs.rmSync(dest, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.cpSync(src, dest, { recursive: true, force: true });
+  fs.cpSync(src, dest, {
+    recursive: true,
+    force: true,
+    filter: (from) => !isPackageTestFile(from),
+  });
 }
 
 function pruneEmpty(dir) {
@@ -42,23 +57,23 @@ function pruneEmpty(dir) {
   }
 }
 
-function install() {
-  const cwd = process.cwd();
+function install(ctx) {
+  const { cwd, packageRoot } = resolveCtx(ctx);
   const dhsDir = path.join(cwd, ".dhs");
   fs.mkdirSync(dhsDir, { recursive: true });
 
   for (const name of PAYLOAD_DIRS) {
-    const src = path.join(PACKAGE_ROOT, name);
+    const src = path.join(packageRoot, name);
     if (!fs.existsSync(src)) {
       continue;
     }
     copyTree(src, path.join(dhsDir, name));
   }
 
-  const version = packageVersion();
+  const version = packageVersion(packageRoot);
   fs.writeFileSync(path.join(dhsDir, "VERSION"), `${version}\n`);
 
-  const skillSrc = path.join(PACKAGE_ROOT, "skills", SETUP_SKILL);
+  const skillSrc = path.join(packageRoot, "skills", SETUP_SKILL);
   if (!fs.existsSync(skillSrc)) {
     console.error(
       `dhs install: missing package skill at skills/${SETUP_SKILL}`
@@ -74,15 +89,15 @@ function install() {
   }
 }
 
-function uninstall() {
-  const cwd = process.cwd();
+function uninstall(ctx) {
+  const { cwd } = resolveCtx(ctx);
   fs.rmSync(path.join(cwd, ".dhs"), { recursive: true, force: true });
   fs.rmSync(path.join(cwd, HOST_SKILL_REL), { recursive: true, force: true });
   pruneEmpty(path.join(cwd, ".claude", "skills"));
   pruneEmpty(path.join(cwd, ".claude"));
 }
 
-function main(argv) {
+function main(argv, ctx) {
   const command = argv[0];
 
   if (command === undefined || command === "-h" || command === "--help") {
@@ -96,12 +111,12 @@ function main(argv) {
   }
 
   if (command === "install") {
-    install();
+    install(ctx);
     return;
   }
 
   if (command === "uninstall") {
-    uninstall();
+    uninstall(ctx);
     return;
   }
 
@@ -110,4 +125,8 @@ function main(argv) {
   process.exit(1);
 }
 
-main(process.argv.slice(2));
+if (require.main === module) {
+  main(process.argv.slice(2));
+}
+
+module.exports = { main, install, uninstall };

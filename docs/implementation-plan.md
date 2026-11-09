@@ -35,7 +35,7 @@ Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longe
 - One tracker: files **or** Jira, never both. No mirroring.
 - Live agents are **copies** (typically into `.claude/agents/`), not symlinks to `.dhs/agents/`. Bodies do **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time.
 - `dhs install` writes `.dhs/VERSION`. `/dhs-setup` writes `dhs.generatedFrom` in `harness.config.json`. Work skills stop when config is missing or those two values differ.
-- Do not invent a test suite. `npm test` stays a stub unless a later task asks for tests.
+- Tests: `npm test` runs `node:test` for `src/` and `scripts/`. Do not add a second runner.
 - Do not commit unless the user asks.
 
 ## Package layout

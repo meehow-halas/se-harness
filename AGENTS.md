@@ -20,6 +20,6 @@ The plan’s “Repo state before phase 1” is a historical snapshot, not TODO.
 
 ## Commands
 
-- Tests: none yet (`npm test` is a stub). Do not invent a suite unless the task asks for it.
+- Tests: `npm test` (`node:test` next to the units: `src/cli.test.js`, `scripts/*.test.js`). `dhs install` does not copy `*.test.js` into `.dhs/`.
 - Do not commit unless the user asks.
 - Do not edit, “improve”, or sync `README.md` with the PRD, the plan, or the code unless the user explicitly asks to change the README.
