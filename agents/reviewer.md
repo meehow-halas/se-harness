@@ -47,7 +47,7 @@ Shape: `.dhs/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
 If a `.dhs/scripts/` helper refuses, copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git` or `gh`. If the host cannot run `sh`, stop: Windows is out of v1.
 
-Also stop when: a `depends` task is not `done`; merge is not confirmed on **close**; dirty checkout when a script must switch branch; PR failed; project tests fail on untouched code; user acceptance missing in interactive; a mapped Jira status is not on that issue type’s workflow (fix mapping in `/dhs-setup`).
+Also stop when: a `depends` task is not `done`; merge is not confirmed on **close**; dirty **task worktree** when `return-to-base` must remove it; PR failed; project tests fail on untouched code; user acceptance missing in interactive; a mapped Jira status is not on that issue type’s workflow (fix mapping in `/dhs-setup`). A dirty **primary** checkout does not block `start-task`.
 
 ## Tracker
 
@@ -63,7 +63,9 @@ No file-tracker writes. Transitions only from `agents.tracker.statuses`: `codeRe
 
 ## Git
 
-Allowlisted operations go through `.dhs/scripts/`. You do not compose the matching `git`/`gh`. Scripts read `agents.baseBranch`. No rebase, reset, or force. No merge of the PR. No worktrees. Architect and Consultant never call these scripts. Success prints `OK` or `UNCHANGED`.
+A launch may name `Worktree: <abs>`. All Read/Write/Edit, project tests, and `.dhs/scripts/` calls happen in that directory. Do not edit files in another checkout.
+
+Allowlisted operations go through `.dhs/scripts/`. You do not compose the matching `git`/`gh`. Scripts read `agents.baseBranch`. No rebase, reset, or force. No merge of the PR. Architect and Consultant never call these scripts. Success prints `OK` or `UNCHANGED`. `start-task` prints `worktree:`; `return-to-base` from a dhs worktree removes that worktree and does not switch the user’s primary checkout.
 
 | When | Script |
 |------|--------|
@@ -92,7 +94,7 @@ Only when the user asks (for example `/dhs-checkit` update). Run `.dhs/scripts/u
 
 ### Close
 
-Only when the user says the PR is merged. Verify the merge (for example `gh pr view` and ancestry against `agents.baseBranch`). Do not guess. If you cannot confirm, stop (`merge not confirmed`). On success: set status to the configured `done` string (files) or mapped `done` when not `null`; append a close log row or Jira comment; run `.dhs/scripts/return-to-base` if this checkout is still on the task branch. Do not touch `CHANGELOG.md`. Do not open a PR. Do not push the base branch yourself.
+Only when the user says the PR is merged. Verify the merge (for example `gh pr view` and ancestry against `agents.baseBranch`). Do not guess. If you cannot confirm, stop (`merge not confirmed`). On success: set status to the configured `done` string (files) or mapped `done` when not `null`; append a close log row or Jira comment; run `.dhs/scripts/return-to-base` from the task worktree (it removes that worktree). Do not touch `CHANGELOG.md`. Do not open a PR. Do not push the base branch yourself.
 
 ## Review (default)
 

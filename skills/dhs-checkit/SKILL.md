@@ -1,11 +1,11 @@
 ---
 name: dhs-checkit
-description: One Reviewer round (review, update from base, or close after merge). Use when the user runs /dhs-checkit.
+description: One Reviewer round per named task (review, update from base, or close after merge). Use when the user runs /dhs-checkit.
 ---
 
 # /dhs-checkit
 
-One Reviewer round. Parse intent: **review** (default), **update** from base, or **close** after the user confirms merge. Do not chain stages. Do not launch Architect. Do not merge the GitHub PR.
+One Reviewer round per named task. Parse intent: **review** (default), **update** from base, or **close** after the user confirms merge. One variant for the whole invocation. Do not chain stages. Do not launch Architect. Do not merge the GitHub PR.
 
 Prefer reporting ❌ and offering `/dhs-doit`. Do not chain into Implementer unless this invocation is a review ❌ handoff the user **asked to fix here**. `/dhs-feature` owns the fix-round loop.
 
@@ -71,43 +71,46 @@ BLOCKED: merge not confirmed — confirm the GitHub PR is merged, then /dhs-chec
 
 **Update** and **close** rules live in the Reviewer file (`update-from-base`, verify merge, `done`, `return-to-base`). This skill names the variant; it does not compose `git` or `gh`.
 
-## Resolve the task
+## Resolve the tasks
 
-Need an existing spec + prompt on the **active tracker**. User named a basename or issue key → that task. Otherwise the task they clearly mean. If several match, one question in `interactive`; otherwise:
+Need an existing spec + prompt on the **active tracker**. User named one or more basenames or issue keys → those tasks. Otherwise the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
 
 ```text
 BLOCKED: task is ambiguous — name the feature basename or Jira key
 ```
 
-If spec or prompt is missing:
+If spec or prompt is missing for a named task, stop **that** task and continue the others:
 
 ```text
 BLOCKED: spec and prompt are missing — run /dhs-planit or /dhs-feature
 ```
 
-## Launch Reviewer once
+## Launch Reviewer
 
-Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md` from `.dhs/references/hosts.json` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`). Do not duplicate that procedure here.
+This skill is the parent. Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md` from `.dhs/references/hosts.json` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`). Do not duplicate that procedure here.
 
-Pass at least:
+For each resolved task:
 
-- `Mode: <mode>`
-- `Variant: review` or `Variant: update` or `Variant: close`
-- Task key
-- The user request
-- Conversation language when you know it
+1. Run `.dhs/scripts/start-task <task>` from the launch checkout if a worktree is not already printed for it. Copy `worktree:`. Do not compose `git`.
+2. Launch Reviewer with at least:
+   - `Mode: <mode>`
+   - `Variant: review` or `Variant: update` or `Variant: close` (same variant for every task)
+   - Task key
+   - `Worktree: <abs>`
+   - The user request
+   - Conversation language when you know it
 
-One round only. Do not start a second Reviewer round in this invocation. Do not start Implementer after ❌ unless the user asked to fix those items in this same invocation; even then, prefer `/dhs-doit` unless they were explicit. ⚠️ does not start a fix round.
+N>1: in parallel when the runtime allows; otherwise sequential worktrees. Interactive acceptance is **per task**; do not accept the whole list with one yes. A `Q<n>` or `BLOCKED:` on one task does not stop siblings.
 
-Do not merge. After a clean accepted review, the Reviewer may open a PR; this skill reports the URL and stops.
+One round per task in this invocation. Do not start a second Reviewer round for the same task here. Do not start Implementer after ❌ unless the user asked to fix those items in this same invocation; even then, prefer `/dhs-doit` unless they were explicit. ⚠️ does not start a fix round.
 
-If the Reviewer stops with `BLOCKED:` or a question (`Q<n>`), including waiting for interactive acceptance, report that and stop.
+Do not merge. After a clean accepted review, the Reviewer may open a PR; this skill reports each URL and stops.
 
 ## After Reviewer finishes
 
-Report the variant, task key, ✅/⚠️/❌, status, and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
+Report the variant, each task key, ✅/⚠️/❌, status, `worktree:`, and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
 
-- Open ❌ → offer `/dhs-doit` (those items only) or `/dhs-feature`. Do not start them unless the user already asked to fix in this invocation.
+- Open ❌ → offer `/dhs-doit` (those items only, same list) or `/dhs-feature` for a single task. Do not start them unless the user already asked to fix in this invocation.
 - Clean review waiting for merge → the user merges on GitHub; close is a later `/dhs-checkit` after they confirm.
 - Update finished → report; do not review unless they also asked for review (they did not: this invocation was update only).
 - Close finished → report `done`.

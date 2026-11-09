@@ -74,8 +74,8 @@ Say what you want in ordinary language. The assistant matches **intent** to a sk
 |--------|---------|
 | Full path | `/dhs-feature` |
 | Spec only | `/dhs-planit` |
-| Implementation only | `/dhs-doit` |
-| One review / update from base / close after merge | `/dhs-checkit` |
+| Implementation only | `/dhs-doit` (one task or a list) |
+| One review / update from base / close after merge | `/dhs-checkit` (one task or a list; one variant) |
 | Change parameters or Jira | `/dhs-setup` |
 | Personae | `/dhs-brainstorm` |
 
@@ -98,7 +98,7 @@ Run install again from the same source, then `/dhs-setup`, so generated files ma
 
 ## Skills
 
-Consultant is **not** a slash skill. The Implementer launches it. Single-stage skills do not chain; only `/dhs-feature` runs the full path.
+Consultant is **not** a slash skill. The Implementer launches it. Single-stage skills do not chain; only `/dhs-feature` runs the full path, and it is **one task**.
 
 If Architect needs a persona round, work skills **stop and ask** `/dhs-brainstorm`. `/dhs-feature` does not run that round itself.
 
@@ -106,9 +106,9 @@ If Architect needs a persona round, work skills **stop and ask** `/dhs-brainstor
 |-------|------|----------------|---------|
 | `/dhs-setup` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit. See [`/dhs-setup`](#dhs-setup). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" |
 | `/dhs-planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
-| `/dhs-doit` | Spec and prompt already exist | Implementer + Consultant loop; status stays `in progress` | "implement 001-login" · "implement PROJ-12" |
-| `/dhs-checkit` | One Reviewer round | Variants: review (default), update from base, close after **you** confirm merge | "review this" · "update this branch from base" · "the PR is merged, close the task" |
-| `/dhs-feature` | Full path | Starts at the first missing stage; does not merge | "add password reset from spec through PR" |
+| `/dhs-doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. Status stays `in progress` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
+| `/dhs-checkit` | One Reviewer round per named task | Variants: review (default), update from base, close after **you** confirm merge. One variant for the whole invocation; same worktree / parallel rules as `/dhs-doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" · "the PR is merged, close the task" |
+| `/dhs-feature` | Full path, **one task** | Starts at the first missing stage; does not merge. A list of keys is a stop — spec with `/dhs-planit`, then `/dhs-doit`. Implementer and Reviewer still use a worktree | "add password reset from spec through PR" |
 | `/dhs-brainstorm` | Personae | CRUD members, app context, consult round; does not role-play. See [Brainstorm](#brainstorm). | "consult this spec with the personae" · "build the app context" |
 
 ```mermaid
@@ -177,14 +177,14 @@ Exactly four product agents. Brainstorm members are not agents and are not `@`-a
 
 | Agent | Job | Must not |
 |-------|-----|----------|
-| **Architect** | Spec + prompt + first log row on the **active tracker**. Status stays `todo`. Read-only on application code. | Write app code; git; a file-by-file recipe |
-| **Implementer** | Implements the spec (`feature` or `bug`). Own 2–6 phase plan. After each phase, launches Consultant. Calls `.dhs/scripts/start-task`. | Edit `CHANGELOG.md`; open the PR; invent architecture past Questions |
+| **Architect** | Spec + prompt + first log row on the **active tracker**. Status stays `todo`. Read-only on application code. No worktrees. | Write app code; git; a file-by-file recipe |
+| **Implementer** | Implements the spec (`feature` or `bug`). Own 2–6 phase plan. After each phase, launches Consultant. Calls `.dhs/scripts/start-task` (worktree; does not switch your checkout). Works under `Worktree:`. | Edit `CHANGELOG.md`; open the PR; invent architecture past Questions |
 | **Consultant** | Code **quality** on the **phase diff**. Structured `CONSULT` report. Not a user skill. | Edit product code; talk to the user; judge spec compliance |
-| **Reviewer** | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, commit, push, PR, return to base. | Merge the PR; treat Consultant `should-fix` as ❌ |
+| **Reviewer** | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, commit, push, PR from the worktree. `return-to-base` **removes** that worktree; it does not switch your primary checkout. | Merge the PR; treat Consultant `should-fix` as ❌ |
 
 ### Architect
 
-Writes the spec, the implementation prompt, and the first log row. Status stays `todo`; the Implementer moves it later. Read-only on application code; no git writes.
+Writes the spec, the implementation prompt, and the first log row. Status stays `todo`; the Implementer moves it later. Read-only on application code; no git writes; no worktrees.
 
 If a persona round is needed, Architect **stops and asks** `/dhs-brainstorm`. It does not interview personae itself. When that skill returns **PART A**, Architect decides on every blocker, conflict, and gap, then continues the spec. Details: [Brainstorm](#brainstorm).
 
@@ -192,7 +192,7 @@ If a persona round is needed, Architect **stops and asks** `/dhs-brainstorm`. It
 
 Consultant is **not** a slash skill. The Implementer launches it after **each** phase so cheap quality feedback happens during implementation, and Reviewer can stay spec-only.
 
-The Implementer plans 2–6 coherent phases (a slice of behaviour, not one file), runs `.dhs/scripts/start-task`, sets status `in progress`, and does the work. After a phase:
+The Implementer plans 2–6 coherent phases (a slice of behaviour, not one file), runs `.dhs/scripts/start-task` (git worktree; your primary checkout stays put), sets status `in progress`, and does the work under `Worktree:`. After a phase:
 
 ```text
 phase work → Consultant pass 1
@@ -218,7 +218,7 @@ Consultant never talks to the user. In interactive mode, if `must-fix` is still 
 
 A different axis from Consultant: **does this match the spec** (requirements + acceptance criteria), not how the code is written. Leftover Consultant `should-fix` is not ❌. Leftover `must-fix` may be ❌ only when it actually misses an acceptance criterion.
 
-First review while `in progress` sets `code review`. ❌ goes back to the Implementer with those items only. After acceptance: changelog, commit, push, PR, return to base. You merge on GitHub. Max three Reviewer rounds.
+First review while `in progress` sets `code review`. ❌ goes back to the Implementer with those items only. After acceptance: changelog, commit, push, PR from the worktree; `return-to-base` removes that worktree. You merge on GitHub. Max three Reviewer rounds.
 
 ## Brainstorm
 
@@ -359,6 +359,8 @@ You merge on GitHub. Close is `/dhs-checkit` after you confirm.
 
 Base branch is `agents.baseBranch` (first setup; suggested default `dev`). Scripts do not guess `main`, `master`, or the current checkout.
 
+Implementer and Reviewer always work in a git worktree: `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/dhs-worktrees/001-login`). `start-task` does not switch the caller’s checkout. `return-to-base` from a dhs worktree removes it.
+
 Allowlisted git/`gh` goes through `.dhs/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`. No rebase, reset, or force. dhs does not merge the PR.
 
 Replies follow the conversation language. Spec, prompt, log, changelog, and PR text follow `agents.contentLanguage` from config. Status strings stay as configured; do not translate them from the conversation.
@@ -367,4 +369,4 @@ Replies follow the conversation language. Spec, prompt, log, changelog, and PR t
 
 v1 CLI is only `dhs install` and `dhs uninstall`. Everything else is a skill. Install and uninstall loop every host in the **package** `hosts.json` (uninstall still works after `.dhs/` is gone).
 
-No extra product agents. No worktrees. No Linear or GitHub Issues as a tracker. No merging pull requests.
+No extra product agents. No Linear or GitHub Issues as a tracker. No merging pull requests.

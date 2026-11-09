@@ -14,7 +14,7 @@ const {
   initGitRepo,
   revParse,
   runScript,
-  startTask,
+  startWorktree,
   withTempDir,
   writeFile,
 } = require("../test/helpers");
@@ -23,9 +23,9 @@ describe("commit-task", () => {
   test("BLOCKED with no paths", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      const wt = startWorktree(cwd, "001-feature");
       assertBlocked(
-        runScript("commit-task", ["001-feature"], { cwd }),
+        runScript("commit-task", ["001-feature"], { cwd: wt }),
         /no paths listed/
       );
     });
@@ -34,9 +34,9 @@ describe("commit-task", () => {
   test("BLOCKED for a missing untracked path", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      const wt = startWorktree(cwd, "001-feature");
       assertBlocked(
-        runScript("commit-task", ["001-feature", "nope.txt"], { cwd }),
+        runScript("commit-task", ["001-feature", "nope.txt"], { cwd: wt }),
         /path nope\.txt does not exist/
       );
     });
@@ -56,7 +56,7 @@ describe("commit-task", () => {
   test("BLOCKED for an unknown option", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      startWorktree(cwd, "001-feature");
       writeFile(cwd, "a.txt", "a\n");
       assertBlocked(
         runScript("commit-task", ["001-feature", "--amend", "a.txt"], { cwd }),
@@ -68,7 +68,7 @@ describe("commit-task", () => {
   test("BLOCKED when --message has no value", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      startWorktree(cwd, "001-feature");
       writeFile(cwd, "a.txt", "a\n");
       assertBlocked(
         runScript("commit-task", ["001-feature", "--message"], { cwd }),
@@ -80,20 +80,20 @@ describe("commit-task", () => {
   test("adds only listed paths and defaults the message to the task name", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "ABC-12"));
-      writeFile(cwd, "keep.txt", "keep\n");
-      writeFile(cwd, "skip.txt", "skip\n");
-      const result = runScript("commit-task", ["ABC-12", "keep.txt"], { cwd });
+      const wt = startWorktree(cwd, "ABC-12");
+      writeFile(wt, "keep.txt", "keep\n");
+      writeFile(wt, "skip.txt", "skip\n");
+      const result = runScript("commit-task", ["ABC-12", "keep.txt"], { cwd: wt });
       const { fields } = assertOk(result, { branch: "ABC-12" });
       assert.ok(fields.commit);
       assert.notEqual(fields.commit, "none");
-      const msg = git(cwd, ["log", "-1", "--pretty=%s"]).stdout.trim();
+      const msg = git(wt, ["log", "-1", "--pretty=%s"]).stdout.trim();
       assert.equal(msg, "ABC-12");
-      const committed = git(cwd, ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"])
+      const committed = git(wt, ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"])
         .stdout;
       assert.match(committed, /keep\.txt/);
       assert.equal(/skip\.txt/.test(committed), false);
-      const untracked = git(cwd, ["ls-files", "--others", "--exclude-standard"]).stdout;
+      const untracked = git(wt, ["ls-files", "--others", "--exclude-standard"]).stdout;
       assert.match(untracked, /skip\.txt/);
     });
   });
@@ -101,57 +101,55 @@ describe("commit-task", () => {
   test("uses --message when provided", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
-      writeFile(cwd, "a.txt", "a\n");
+      const wt = startWorktree(cwd, "001-feature");
+      writeFile(wt, "a.txt", "a\n");
       const result = runScript(
         "commit-task",
         ["001-feature", "--message", "custom msg", "--", "a.txt"],
-        { cwd }
+        { cwd: wt }
       );
       assertOk(result);
-      assert.equal(git(cwd, ["log", "-1", "--pretty=%s"]).stdout.trim(), "custom msg");
+      assert.equal(git(wt, ["log", "-1", "--pretty=%s"]).stdout.trim(), "custom msg");
     });
   });
 
   test("UNCHANGED when listed paths have no staged diff", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
-      const sha = revParse(cwd, "HEAD");
-      const result = runScript("commit-task", ["001-feature", "README.md"], { cwd });
+      const wt = startWorktree(cwd, "001-feature");
+      const sha = revParse(wt, "HEAD");
+      const result = runScript("commit-task", ["001-feature", "README.md"], { cwd: wt });
       assertUnchanged(result, { branch: "001-feature", commit: "none" });
-      assert.equal(revParse(cwd, "HEAD"), sha);
+      assert.equal(revParse(wt, "HEAD"), sha);
     });
   });
 
   test("finishes a merge with --no-edit when MERGE_HEAD is present", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
-      writeFile(cwd, "task-only.txt", "t\n");
-      git(cwd, ["add", "task-only.txt"]);
-      git(cwd, ["commit", "-m", "task"]);
-      git(cwd, ["checkout", "dev"]);
+      const wt = startWorktree(cwd, "001-feature");
+      writeFile(wt, "task-only.txt", "t\n");
+      git(wt, ["add", "task-only.txt"]);
+      git(wt, ["commit", "-m", "task"]);
       writeFile(cwd, "base-only.txt", "b\n");
       git(cwd, ["add", "base-only.txt"]);
       git(cwd, ["commit", "-m", "base"]);
-      git(cwd, ["checkout", "001-feature"]);
-      git(cwd, ["merge", "--no-commit", "--no-ff", "dev"]);
+      git(wt, ["merge", "--no-commit", "--no-ff", "dev"]);
       const editor = failingEditor(cwd);
       const result = runScript(
         "commit-task",
         ["001-feature", "task-only.txt", "base-only.txt"],
-        { cwd, env: editor.env }
+        { cwd: wt, env: editor.env }
       );
       const { fields } = assertOk(result, { branch: "001-feature" });
       assert.ok(fields.commit);
       assert.notEqual(fields.commit, "none");
       assert.equal(fs.existsSync(editor.stamp), false);
-      const parents = git(cwd, ["rev-list", "--parents", "-n", "1", "HEAD"])
+      const parents = git(wt, ["rev-list", "--parents", "-n", "1", "HEAD"])
         .stdout.trim()
         .split(" ");
       assert.ok(parents.length >= 3);
-      const msg = git(cwd, ["log", "-1", "--pretty=%s"]).stdout.trim();
+      const msg = git(wt, ["log", "-1", "--pretty=%s"]).stdout.trim();
       assert.match(msg, /Merge branch ['"]dev['"]/);
       assert.notEqual(msg, "001-feature");
     });
@@ -160,10 +158,11 @@ describe("commit-task", () => {
   test("stays on the task branch after a successful commit", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
-      writeFile(cwd, "a.txt", "a\n");
-      assertOk(runScript("commit-task", ["001-feature", "a.txt"], { cwd }));
-      assert.equal(currentBranch(cwd), "001-feature");
+      const wt = startWorktree(cwd, "001-feature");
+      writeFile(wt, "a.txt", "a\n");
+      assertOk(runScript("commit-task", ["001-feature", "a.txt"], { cwd: wt }));
+      assert.equal(currentBranch(wt), "001-feature");
+      assert.equal(currentBranch(cwd), "dev");
     });
   });
 });

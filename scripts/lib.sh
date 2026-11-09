@@ -37,6 +37,68 @@ repo_root() {
   git rev-parse --show-toplevel
 }
 
+abs_git_common_dir() {
+  _g=$(git rev-parse --git-common-dir)
+  CDPATH= cd -- "$_g" && pwd
+}
+
+dhs_worktree_path() {
+  printf '%s/dhs-worktrees/%s\n' "$(abs_git_common_dir)" "$1"
+}
+
+# Print the worktree directory that has $1 checked out, or empty.
+worktree_path_for_branch() {
+  git worktree list --porcelain | awk -v want="refs/heads/$1" '
+    $1 == "worktree" {
+      wt = $2
+      for (i = 3; i <= NF; i++) wt = wt " " $i
+    }
+    $1 == "branch" && $2 == want { print wt; exit }
+  '
+}
+
+is_dhs_worktree() {
+  _root=$(repo_root)
+  _prefix="$(abs_git_common_dir)/dhs-worktrees/"
+  case $_root in
+    "$_prefix"*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+link_if_missing() {
+  _src=$1
+  _dst=$2
+  if [ -e "$_dst" ] || [ -L "$_dst" ]; then
+    return 0
+  fi
+  if [ -e "$_src" ] || [ -L "$_src" ]; then
+    ln -s "$_src" "$_dst"
+  fi
+}
+
+sync_launch_files() {
+  _launch=$1
+  _wt=$2
+  _task=$3
+  if [ "$_launch" = "$_wt" ]; then
+    return 0
+  fi
+  for _rel in \
+    "docs/features/${_task}.feature.md" \
+    "docs/prompt/${_task}.prompt.md" \
+    "docs/feature-log/${_task}.log.md"; do
+    if [ -f "$_launch/$_rel" ]; then
+      mkdir -p "$_wt/$(dirname "$_rel")"
+      cp "$_launch/$_rel" "$_wt/$_rel"
+    fi
+  done
+  link_if_missing "$_launch/.dhs" "$_wt/.dhs"
+  link_if_missing "$_launch/harness.config.json" "$_wt/harness.config.json"
+}
+
 current_branch() {
   git rev-parse --abbrev-ref HEAD
 }

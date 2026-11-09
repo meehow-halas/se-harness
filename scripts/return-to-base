@@ -1,6 +1,7 @@
 #!/bin/sh
 # return-to-base
-# git checkout agents.baseBranch. Does not delete the task branch or merge a PR.
+# From a dhs worktree: remove it when clean. From the primary checkout: git checkout base.
+# Does not delete the task branch or merge a PR.
 
 . "$(dirname "$0")/lib.sh"
 
@@ -14,6 +15,22 @@ base=$DHS_BASE_BRANCH
 
 if ! local_branch_exists "$base"; then
   blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /dhs-setup"
+fi
+
+if is_dhs_worktree; then
+  wt=$(repo_root)
+  main=$(CDPATH= cd -- "$(abs_git_common_dir)/.." && pwd)
+  CDPATH= cd -- "$main" || blocked "could not enter the primary checkout" "retry return-to-base from the project directory"
+  if [ -L "$wt/.dhs" ]; then
+    rm "$wt/.dhs"
+  fi
+  if [ -L "$wt/harness.config.json" ]; then
+    rm "$wt/harness.config.json"
+  fi
+  if ! out=$(git worktree remove "$wt" 2>&1); then
+    blocked "could not remove worktree $wt ($out)" "commit or stash the task worktree, then retry return-to-base"
+  fi
+  ok "branch: $base" "worktree: removed" "path: $wt"
 fi
 
 cur=$(current_branch)

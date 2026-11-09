@@ -14,7 +14,7 @@ const {
   initGitRepo,
   revParse,
   runScript,
-  startTask,
+  startWorktree,
   withTempDir,
   writeFile,
 } = require("../test/helpers");
@@ -23,27 +23,28 @@ describe("return-to-base", () => {
   test("rejects extra arguments", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      startWorktree(cwd, "001-feature");
       assertBlocked(
         runScript("return-to-base", ["nope"], { cwd }),
         /unexpected arguments/
       );
-      assert.equal(currentBranch(cwd), "001-feature");
+      assert.equal(currentBranch(cwd), "dev");
     });
   });
 
-  test("checks out the base branch and keeps the task branch", () => {
+  test("removes the dhs worktree and keeps the task branch and primary checkout", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd, { baseBranch: "trunk" });
-      assertOk(startTask(cwd, "ABC-12"));
-      const result = runScript("return-to-base", [], { cwd });
-      assertOk(result, { branch: "trunk" });
+      const wt = startWorktree(cwd, "ABC-12");
+      const result = runScript("return-to-base", [], { cwd: wt });
+      assertOk(result, { branch: "trunk", worktree: "removed", path: wt });
       assert.equal(currentBranch(cwd), "trunk");
+      assert.equal(fs.existsSync(wt), false);
       git(cwd, ["rev-parse", "--verify", "ABC-12"]);
     });
   });
 
-  test("UNCHANGED when already on base", () => {
+  test("UNCHANGED when already on base in the primary checkout", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       const sha = revParse(cwd, "HEAD");
@@ -54,21 +55,29 @@ describe("return-to-base", () => {
     });
   });
 
-  test("BLOCKED when the working tree is dirty and checkout cannot switch", () => {
+  test("checks out base from a primary checkout that is not on base", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
-      writeFile(cwd, "README.md", "task version\n");
-      git(cwd, ["add", "README.md"]);
-      git(cwd, ["commit", "-m", "task edit"]);
-      writeFile(cwd, "README.md", "dirty on task\n");
+      git(cwd, ["checkout", "-b", "other"]);
+      const result = runScript("return-to-base", [], { cwd });
+      assertOk(result, { branch: "dev" });
+      assert.equal(currentBranch(cwd), "dev");
+    });
+  });
+
+  test("BLOCKED when the worktree is dirty and cannot be removed", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const wt = startWorktree(cwd, "001-feature");
+      writeFile(wt, "README.md", "dirty on task\n");
       assertBlocked(
-        runScript("return-to-base", [], { cwd }),
-        /could not check out dev/
+        runScript("return-to-base", [], { cwd: wt }),
+        /could not remove worktree/
       );
-      assert.equal(currentBranch(cwd), "001-feature");
+      assert.equal(currentBranch(wt), "001-feature");
+      assert.equal(currentBranch(cwd), "dev");
       assert.equal(
-        fs.readFileSync(path.join(cwd, "README.md"), "utf8"),
+        fs.readFileSync(path.join(wt, "README.md"), "utf8"),
         "dirty on task\n"
       );
     });
