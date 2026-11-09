@@ -160,11 +160,16 @@ function argvLogCommand(logFile) {
   return `node -e 'require("fs").appendFileSync(process.argv[1], JSON.stringify(process.argv.slice(2)) + "\\n")' -- ${JSON.stringify(logFile)} "$@"`;
 }
 
-function writeGhStub(binDir, { existingUrl } = {}) {
+function writeGhStub(binDir, { existingUrl, createFails = false } = {}) {
   fs.mkdirSync(binDir, { recursive: true });
   const logFile = path.join(binDir, "gh-argv.log");
   const gh = path.join(binDir, "gh");
   const existing = existingUrl ? JSON.stringify(existingUrl) : "''";
+  const createBranch = createFails
+    ? `printf 'gh create failed\\n' >&2
+  exit 1`
+    : `printf '%s\\n' "https://example.com/pr/1"
+  exit 0`;
   fs.writeFileSync(
     gh,
     `#!/bin/sh
@@ -178,8 +183,7 @@ if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
   exit 1
 fi
 if [ "$1" = "pr" ] && [ "$2" = "create" ]; then
-  printf '%s\\n' "https://example.com/pr/1"
-  exit 0
+  ${createBranch}
 fi
 printf 'unexpected gh invocation\\n' >&2
 exit 1
@@ -276,14 +280,44 @@ function assertBlocked(result, expected) {
   }
 }
 
-function assertOk(result) {
-  assert.equal(result.status, 0, result.stderr + result.stdout);
-  assert.equal(result.stdout.split(/\r?\n/)[0], "OK");
+function scriptOutputLines(result) {
+  const lines = result.stdout.split(/\r?\n/);
+  const fields = {};
+  for (const line of lines.slice(1)) {
+    if (!line) {
+      continue;
+    }
+    const idx = line.indexOf(": ");
+    if (idx === -1) {
+      continue;
+    }
+    fields[line.slice(0, idx)] = line.slice(idx + 2);
+  }
+  return { statusLine: lines[0], fields };
 }
 
-function assertUnchanged(result) {
+function assertOk(result, expectedFields) {
   assert.equal(result.status, 0, result.stderr + result.stdout);
-  assert.equal(result.stdout.split(/\r?\n/)[0], "UNCHANGED");
+  const parsed = scriptOutputLines(result);
+  assert.equal(parsed.statusLine, "OK");
+  if (expectedFields) {
+    for (const [key, value] of Object.entries(expectedFields)) {
+      assert.equal(parsed.fields[key], value, result.stdout);
+    }
+  }
+  return parsed;
+}
+
+function assertUnchanged(result, expectedFields) {
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+  const parsed = scriptOutputLines(result);
+  assert.equal(parsed.statusLine, "UNCHANGED");
+  if (expectedFields) {
+    for (const [key, value] of Object.entries(expectedFields)) {
+      assert.equal(parsed.fields[key], value, result.stdout);
+    }
+  }
+  return parsed;
 }
 
 function currentBranch(cwd) {
@@ -365,6 +399,7 @@ module.exports = {
   revParse,
   runCli,
   runScript,
+  scriptOutputLines,
   startTask,
   withTempDir,
   writeFile,

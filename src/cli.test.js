@@ -70,6 +70,8 @@ describe("dhs install", () => {
       fs.mkdirSync(pkg);
       fs.mkdirSync(project);
       makePackageRoot(pkg, { version: "9.8.7" });
+      fs.mkdirSync(path.join(pkg, "agents", "nested"), { recursive: true });
+      fs.writeFileSync(path.join(pkg, "agents", "nested", "deep.txt"), "nested\n");
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
@@ -80,6 +82,10 @@ describe("dhs install", () => {
           `${name}\n`
         );
       }
+      assert.equal(
+        read(path.join(project, ".dhs", "agents", "nested", "deep.txt")),
+        "nested\n"
+      );
       assert.equal(read(path.join(project, ".dhs", "VERSION")), "9.8.7\n");
       assert.equal(
         read(path.join(project, ".claude", "skills", "dhs-setup", "SKILL.md")),
@@ -212,6 +218,14 @@ describe("dhs install", () => {
         const mode = fs.statSync(path.join(project, ".dhs", "scripts", name)).mode;
         assert.notEqual(mode & 0o111, 0, name);
       }
+      assert.equal(
+        exists(path.join(project, ".dhs", "scripts", "start-task.test.js")),
+        false
+      );
+      assert.equal(
+        exists(path.join(project, ".dhs", "scripts", "lib.test.js")),
+        false
+      );
     });
   });
 });

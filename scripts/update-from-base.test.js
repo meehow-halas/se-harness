@@ -27,7 +27,7 @@ describe("update-from-base", () => {
       assertOk(startTask(cwd, "001-feature"));
       const sha = revParse(cwd, "HEAD");
       const result = runScript("update-from-base", ["001-feature"], { cwd });
-      assertUnchanged(result);
+      assertUnchanged(result, { branch: "001-feature", base: "dev" });
       assert.equal(revParse(cwd, "HEAD"), sha);
       assert.equal(currentBranch(cwd), "001-feature");
     });
@@ -35,22 +35,23 @@ describe("update-from-base", () => {
 
   test("merges base with --no-edit when it has moved", () => {
     withTempDir((cwd) => {
-      initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      initGitRepo(cwd, { baseBranch: "trunk" });
+      assertOk(startTask(cwd, "ABC-12"));
       writeFile(cwd, "task.txt", "t\n");
       git(cwd, ["add", "task.txt"]);
       git(cwd, ["commit", "-m", "task"]);
-      git(cwd, ["checkout", "dev"]);
+      git(cwd, ["checkout", "trunk"]);
       writeFile(cwd, "base.txt", "b\n");
       git(cwd, ["add", "base.txt"]);
       git(cwd, ["commit", "-m", "base moved"]);
-      git(cwd, ["checkout", "001-feature"]);
+      git(cwd, ["checkout", "ABC-12"]);
       const editor = failingEditor(cwd);
-      const result = runScript("update-from-base", ["001-feature"], {
+      const result = runScript("update-from-base", ["ABC-12"], {
         cwd,
         env: editor.env,
       });
-      assertOk(result);
+      const { fields } = assertOk(result, { branch: "ABC-12", base: "trunk" });
+      assert.ok(fields.commit);
       assert.equal(fs.existsSync(path.join(cwd, "base.txt")), true);
       assert.equal(fs.existsSync(path.join(cwd, "task.txt")), true);
       assert.equal(fs.existsSync(editor.stamp), false);
@@ -58,7 +59,7 @@ describe("update-from-base", () => {
         .stdout.trim()
         .split(" ");
       assert.ok(parents.length >= 3, "expected a merge commit, not a rebase");
-      assert.equal(currentBranch(cwd), "001-feature");
+      assert.equal(currentBranch(cwd), "ABC-12");
     });
   });
 
@@ -79,6 +80,19 @@ describe("update-from-base", () => {
       const unmerged = git(cwd, ["diff", "--name-only", "--diff-filter=U"]).stdout;
       assert.match(unmerged, /README.md/);
       assert.equal(currentBranch(cwd), "001-feature");
+    });
+  });
+
+  test("BLOCKED when checkout is not the task branch", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd, { baseBranch: "trunk" });
+      assertOk(startTask(cwd, "ABC-12"));
+      assertOk(runScript("return-to-base", [], { cwd }));
+      assertBlocked(
+        runScript("update-from-base", ["ABC-12"], { cwd }),
+        /checkout is trunk, not task branch ABC-12/
+      );
+      assert.equal(currentBranch(cwd), "trunk");
     });
   });
 

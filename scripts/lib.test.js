@@ -64,7 +64,7 @@ describe("scripts source allowlist", () => {
   test("helpers do not rebase, reset, force-push, or merge PRs", () => {
     const dir = path.join(REPO_ROOT, "scripts");
     const forcePush = new RegExp(
-      String.raw`\bgit${GIT_FLAGS}*\s+push\b[^\n]*(?:--force(?:-with-lease)?|\s-f\b)`
+      String.raw`\bgit${GIT_FLAGS}*\s+push\b(?:[^\n]|\\\s*\n)*(?:--force(?:-with-lease)?|\s-f\b)`
     );
     const prMerge = /\bgh(?:\s+-[^\s]+)*\s+pr\s+merge\b/;
     for (const name of fs.readdirSync(dir)) {
@@ -102,6 +102,17 @@ describe("shared refusals", () => {
         );
       });
     });
+
+    test(`${name}: whitespace-only agents.baseBranch is BLOCKED`, () => {
+      withTempDir((cwd) => {
+        initGitRepo(cwd, { config: false });
+        writeHarnessConfig(cwd, "   ");
+        assertBlocked(
+          runAllowlisted(cwd, name, args),
+          /agents\.baseBranch is missing/
+        );
+      });
+    });
   }
 
   for (const [name, args] of TASK_SCRIPTS) {
@@ -124,10 +135,10 @@ describe("shared refusals", () => {
 
     test(`${name}: task equal to base branch is BLOCKED`, () => {
       withTempDir((cwd) => {
-        initGitRepo(cwd, { baseBranch: "dev" });
+        initGitRepo(cwd, { baseBranch: "trunk" });
         assertBlocked(
-          runAllowlisted(cwd, name, withTask(args, "dev")),
-          /task branch dev is the configured base branch/
+          runAllowlisted(cwd, name, withTask(args, "trunk")),
+          /task branch trunk is the configured base branch/
         );
       });
     });

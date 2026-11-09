@@ -47,8 +47,11 @@ describe("open-pr", () => {
         existingUrl: "https://example.com/pr/9",
       });
       const result = runScript("open-pr", ["001-feature"], { cwd, env });
-      assertUnchanged(result);
-      assert.match(result.stdout, /url: https:\/\/example.com\/pr\/9/);
+      assertUnchanged(result, {
+        branch: "001-feature",
+        head: "001-feature",
+        url: "https://example.com/pr/9",
+      });
       const log = argvLogArgv(logFile);
       assert.ok(log.some((args) => args[0] === "pr" && args[1] === "view" && args[2] === "001-feature"));
       assert.equal(
@@ -64,21 +67,25 @@ describe("open-pr", () => {
 
   test("creates a PR with --fill when title and body are omitted", () => {
     withTempDir((cwd) => {
-      initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      initGitRepo(cwd, { baseBranch: "trunk" });
+      assertOk(startTask(cwd, "ABC-12"));
       const { env, logFile } = withGh(cwd);
-      const result = runScript("open-pr", ["001-feature"], { cwd, env });
-      assertOk(result);
-      assert.match(result.stdout, /url: https:\/\/example.com\/pr\/1/);
+      const result = runScript("open-pr", ["ABC-12"], { cwd, env });
+      assertOk(result, {
+        branch: "ABC-12",
+        base: "trunk",
+        head: "ABC-12",
+        url: "https://example.com/pr/1",
+      });
       const log = argvLogArgv(logFile);
       assert.ok(
         log.some((args) =>
           args[0] === "pr" &&
           args[1] === "create" &&
           args.includes("--base") &&
-          args[args.indexOf("--base") + 1] === "dev" &&
+          args[args.indexOf("--base") + 1] === "trunk" &&
           args.includes("--head") &&
-          args[args.indexOf("--head") + 1] === "001-feature" &&
+          args[args.indexOf("--head") + 1] === "ABC-12" &&
           args.includes("--fill")
         )
       );
@@ -155,6 +162,59 @@ describe("open-pr", () => {
       assertBlocked(
         runScript("open-pr", ["001-feature", "extra"], { cwd, env }),
         /unexpected arguments/
+      );
+    });
+  });
+
+  test("BLOCKED when the task branch does not exist", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd, { baseBranch: "trunk" });
+      const { env } = withGh(cwd);
+      assertBlocked(
+        runScript("open-pr", ["ABC-12"], { cwd, env }),
+        /task branch ABC-12 does not exist/
+      );
+    });
+  });
+
+  test("BLOCKED when --title has no value", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      const { env } = withGh(cwd);
+      assertBlocked(
+        runScript("open-pr", ["001-feature", "--title"], { cwd, env }),
+        /missing value for --title/
+      );
+    });
+  });
+
+  test("passes --title without --fill when body is omitted", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd, { baseBranch: "trunk" });
+      assertOk(startTask(cwd, "ABC-12"));
+      const { env, logFile } = withGh(cwd);
+      assertOk(
+        runScript("open-pr", ["ABC-12", "--title", "Only title"], { cwd, env }),
+        { base: "trunk", head: "ABC-12" }
+      );
+      const create = argvLogArgv(logFile).find(
+        (args) => args[0] === "pr" && args[1] === "create"
+      );
+      assert.ok(create);
+      assert.equal(create[create.indexOf("--title") + 1], "Only title");
+      assert.equal(create.includes("--fill"), false);
+    });
+  });
+
+  test("BLOCKED when gh pr create fails", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      const { env } = withGh(cwd, { createFails: true });
+      assertBlocked(
+        runScript("open-pr", ["001-feature"], { cwd, env }),
+        /pull request failed/
       );
     });
   });

@@ -7,6 +7,7 @@ const path = require("path");
 
 const {
   addBareOrigin,
+  argvLogArgv,
   assertBlocked,
   assertOk,
   assertUnchanged,
@@ -18,6 +19,7 @@ const {
   startTask,
   withTempDir,
   writeFile,
+  writeGitLogger,
   writeHarnessConfig,
 } = require("../test/helpers");
 
@@ -39,17 +41,16 @@ describe("start-task", () => {
 
   test("creates a branch from the configured base, not from HEAD", () => {
     withTempDir((cwd) => {
-      initGitRepo(cwd);
+      initGitRepo(cwd, { baseBranch: "trunk" });
       git(cwd, ["checkout", "-b", "other"]);
       writeFile(cwd, "other.txt", "from other\n");
       git(cwd, ["add", "other.txt"]);
       git(cwd, ["commit", "-m", "other work"]);
-      const baseSha = revParse(cwd, "dev");
+      const baseSha = revParse(cwd, "trunk");
       const otherSha = revParse(cwd, "HEAD");
-      const result = startTask(cwd, "001-feature");
-      assertOk(result);
-      assert.match(result.stdout, /created: yes/);
-      assert.equal(currentBranch(cwd), "001-feature");
+      const result = startTask(cwd, "ABC-12");
+      assertOk(result, { branch: "ABC-12", base: "trunk", created: "yes" });
+      assert.equal(currentBranch(cwd), "ABC-12");
       assert.equal(revParse(cwd, "HEAD"), baseSha);
       assert.notEqual(revParse(cwd, "HEAD"), otherSha);
       assert.equal(fs.existsSync(path.join(cwd, "other.txt")), false);
@@ -62,8 +63,7 @@ describe("start-task", () => {
       assertOk(startTask(cwd, "001-feature"));
       const sha = revParse(cwd, "HEAD");
       const result = startTask(cwd, "001-feature");
-      assertUnchanged(result);
-      assert.match(result.stdout, /created: no/);
+      assertUnchanged(result, { branch: "001-feature", base: "dev", created: "no" });
       assert.equal(currentBranch(cwd), "001-feature");
       assert.equal(revParse(cwd, "HEAD"), sha);
     });
@@ -79,8 +79,7 @@ describe("start-task", () => {
       const taskSha = revParse(cwd, "HEAD");
       assertOk(runScript("return-to-base", [], { cwd }));
       const result = startTask(cwd, "001-feature");
-      assertOk(result);
-      assert.match(result.stdout, /created: no/);
+      assertOk(result, { branch: "001-feature", created: "no" });
       assert.equal(currentBranch(cwd), "001-feature");
       assert.equal(revParse(cwd, "HEAD"), taskSha);
       assert.equal(fs.existsSync(path.join(cwd, "task.txt")), true);
@@ -98,11 +97,19 @@ describe("start-task", () => {
       git(cwd, ["push", "-u", "origin", "001-feature"]);
       git(cwd, ["checkout", "dev"]);
       git(cwd, ["branch", "-D", "001-feature"]);
-      const result = startTask(cwd, "001-feature");
-      assertOk(result);
-      assert.match(result.stdout, /created: no/);
+      const bin = path.join(cwd, ".bin");
+      const { logFile } = writeGitLogger(bin);
+      const result = runScript("start-task", ["001-feature"], {
+        cwd,
+        env: { PATH: `${bin}${path.delimiter}${process.env.PATH}` },
+      });
+      assertOk(result, { branch: "001-feature", created: "no" });
       assert.equal(currentBranch(cwd), "001-feature");
       assert.equal(fs.existsSync(path.join(cwd, "task.txt")), true);
+      assert.equal(
+        argvLogArgv(logFile).some((args) => args[0] === "push"),
+        false
+      );
     });
   });
 

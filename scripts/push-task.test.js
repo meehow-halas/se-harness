@@ -34,29 +34,28 @@ function pushEnv(cwd) {
 describe("push-task", () => {
   test("pushes only the task branch without --force", () => {
     withTempDir((cwd) => {
-      initGitRepo(cwd);
+      initGitRepo(cwd, { baseBranch: "trunk" });
       const bare = addBareOrigin(cwd);
-      const originDev = revParse(bare, "refs/heads/dev");
-      git(cwd, ["checkout", "dev"]);
+      const originBase = revParse(bare, "refs/heads/trunk");
+      git(cwd, ["checkout", "trunk"]);
       writeFile(cwd, "base-ahead.txt", "local base\n");
       git(cwd, ["add", "base-ahead.txt"]);
       git(cwd, ["commit", "-m", "local base ahead of origin"]);
-      const localDev = revParse(cwd, "dev");
-      assert.notEqual(localDev, originDev);
-      assertOk(startTask(cwd, "001-feature"));
+      const localBase = revParse(cwd, "trunk");
+      assert.notEqual(localBase, originBase);
+      assertOk(startTask(cwd, "ABC-12"));
       writeFile(cwd, "push.txt", "ahead\n");
       git(cwd, ["add", "push.txt"]);
       git(cwd, ["commit", "-m", "ahead"]);
       const { env, logFile } = pushEnv(cwd);
-      const result = runScript("push-task", ["001-feature"], { cwd, env });
-      assertOk(result);
-      assert.match(result.stdout, /remote: origin/);
+      const result = runScript("push-task", ["ABC-12"], { cwd, env });
+      assertOk(result, { branch: "ABC-12", remote: "origin" });
       const heads = git(bare, ["show-ref"]).stdout;
-      assert.match(heads, /refs\/heads\/001-feature/);
-      assert.equal(revParse(bare, "refs/heads/dev"), originDev);
+      assert.match(heads, /refs\/heads\/ABC-12/);
+      assert.equal(revParse(bare, "refs/heads/trunk"), originBase);
       const pushLines = argvLogArgv(logFile).filter((args) => args[0] === "push");
       assert.equal(pushLines.length, 1);
-      assert.deepEqual(pushLines[0], ["push", "--porcelain", "origin", "001-feature"]);
+      assert.deepEqual(pushLines[0], ["push", "--porcelain", "origin", "ABC-12"]);
     });
   });
 
@@ -71,7 +70,7 @@ describe("push-task", () => {
       assertOk(runScript("push-task", ["001-feature"], { cwd }));
       const remoteSha = revParse(bare, "refs/heads/001-feature");
       const result = runScript("push-task", ["001-feature"], { cwd });
-      assertUnchanged(result);
+      assertUnchanged(result, { branch: "001-feature", remote: "origin" });
       assert.equal(revParse(bare, "refs/heads/001-feature"), remoteSha);
     });
   });
@@ -109,8 +108,7 @@ describe("push-task", () => {
       git(cwd, ["commit", "-m", "ahead"]);
       const { env, logFile } = pushEnv(cwd);
       const result = runScript("push-task", ["001-feature"], { cwd, env });
-      assertOk(result);
-      assert.match(result.stdout, /remote: upstream/);
+      assertOk(result, { branch: "001-feature", remote: "upstream" });
       git(bare, ["show-ref", "--verify", "refs/heads/001-feature"]);
       const pushLines = argvLogArgv(logFile).filter((args) => args[0] === "push");
       assert.deepEqual(pushLines[0], ["push", "--porcelain", "upstream", "001-feature"]);

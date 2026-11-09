@@ -65,17 +65,30 @@ describe("commit-task", () => {
     });
   });
 
-  test("adds only listed paths and defaults the message to the task name", () => {
+  test("BLOCKED when --message has no value", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
+      writeFile(cwd, "a.txt", "a\n");
+      assertBlocked(
+        runScript("commit-task", ["001-feature", "--message"], { cwd }),
+        /missing value for --message/
+      );
+    });
+  });
+
+  test("adds only listed paths and defaults the message to the task name", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "ABC-12"));
       writeFile(cwd, "keep.txt", "keep\n");
       writeFile(cwd, "skip.txt", "skip\n");
-      const result = runScript("commit-task", ["001-feature", "keep.txt"], { cwd });
-      assertOk(result);
-      assert.match(result.stdout, /commit: /);
+      const result = runScript("commit-task", ["ABC-12", "keep.txt"], { cwd });
+      const { fields } = assertOk(result, { branch: "ABC-12" });
+      assert.ok(fields.commit);
+      assert.notEqual(fields.commit, "none");
       const msg = git(cwd, ["log", "-1", "--pretty=%s"]).stdout.trim();
-      assert.equal(msg, "001-feature");
+      assert.equal(msg, "ABC-12");
       const committed = git(cwd, ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"])
         .stdout;
       assert.match(committed, /keep\.txt/);
@@ -106,8 +119,7 @@ describe("commit-task", () => {
       assertOk(startTask(cwd, "001-feature"));
       const sha = revParse(cwd, "HEAD");
       const result = runScript("commit-task", ["001-feature", "README.md"], { cwd });
-      assertUnchanged(result);
-      assert.match(result.stdout, /commit: none/);
+      assertUnchanged(result, { branch: "001-feature", commit: "none" });
       assert.equal(revParse(cwd, "HEAD"), sha);
     });
   });
@@ -131,7 +143,9 @@ describe("commit-task", () => {
         ["001-feature", "task-only.txt", "base-only.txt"],
         { cwd, env: editor.env }
       );
-      assertOk(result);
+      const { fields } = assertOk(result, { branch: "001-feature" });
+      assert.ok(fields.commit);
+      assert.notEqual(fields.commit, "none");
       assert.equal(fs.existsSync(editor.stamp), false);
       const parents = git(cwd, ["rev-list", "--parents", "-n", "1", "HEAD"])
         .stdout.trim()

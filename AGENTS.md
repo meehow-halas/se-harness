@@ -18,8 +18,19 @@ PRD **Deferred** and the plan’s **Out of this v1 plan** are a **scope boundary
 
 The plan’s “Repo state before phase 1” is a historical snapshot, not TODO.
 
+## Tests
+
+Write tests that would fail if the promised behaviour broke, not tests that restate the code.
+
+- Assert what a caller can observe: exit status, the `OK` / `UNCHANGED` / `BLOCKED:` contract, files, git refs, and command argv. Do not assert that the source matches the implementation you just wrote.
+- Vary every input the contract claims to read. If the code must use a configured value, the fixture must not be the value someone would hardcode.
+- Name the invariant, then break it in your head. If a plausible bug (hardcoded default, extra side effect, wrong target) would still pass, the test is incomplete.
+- Exercise the real command. Stub only an external boundary. A scan of the implementation is not a behaviour test.
+
+Run with `npm test`. Keep `*.test.js` next to the unit. `dhs install` must not copy those files into `.dhs/`.
+
 ## Commands
 
-- Tests: `npm test` (`node:test` next to the units: `src/cli.test.js`, `scripts/*.test.js`). `dhs install` does not copy `*.test.js` into `.dhs/`.
+- Tests: `npm test`. See **Tests**.
 - Do not commit unless the user asks.
 - Do not edit, “improve”, or sync `README.md` with the PRD, the plan, or the code unless the user explicitly asks to change the README.

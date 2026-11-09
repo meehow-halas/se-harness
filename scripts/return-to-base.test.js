@@ -34,12 +34,12 @@ describe("return-to-base", () => {
 
   test("checks out the base branch and keeps the task branch", () => {
     withTempDir((cwd) => {
-      initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      initGitRepo(cwd, { baseBranch: "trunk" });
+      assertOk(startTask(cwd, "ABC-12"));
       const result = runScript("return-to-base", [], { cwd });
-      assertOk(result);
-      assert.equal(currentBranch(cwd), "dev");
-      git(cwd, ["rev-parse", "--verify", "001-feature"]);
+      assertOk(result, { branch: "trunk" });
+      assert.equal(currentBranch(cwd), "trunk");
+      git(cwd, ["rev-parse", "--verify", "ABC-12"]);
     });
   });
 
@@ -48,7 +48,7 @@ describe("return-to-base", () => {
       initGitRepo(cwd);
       const sha = revParse(cwd, "HEAD");
       const result = runScript("return-to-base", [], { cwd });
-      assertUnchanged(result);
+      assertUnchanged(result, { branch: "dev" });
       assert.equal(currentBranch(cwd), "dev");
       assert.equal(revParse(cwd, "HEAD"), sha);
     });

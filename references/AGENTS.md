@@ -74,6 +74,15 @@ Allowlisted git/`gh` operations run through `.dhs/scripts/`. Agents call those s
 
 Architect and Consultant: no git writes; they do not call these scripts.
 
+## Tests
+
+Write tests that would fail if the promised behaviour broke, not tests that restate the code.
+
+- Assert what a caller can observe: exit status, output contract, files, git refs, and command argv. Do not assert that the source matches the implementation you just wrote.
+- Vary every input the contract claims to read. If the code must use a configured value, the fixture must not be the value someone would hardcode.
+- Name the invariant, then break it in your head. If a plausible bug (hardcoded default, extra side effect, wrong target) would still pass, the test is incomplete.
+- Exercise the real command. Stub only an external boundary. A scan of the implementation is not a behaviour test.
+
 ## Stops
 
 Not questions and not Consultant `must-fix`. One line:
