@@ -7,7 +7,14 @@
       "rulesDir": ".claude/rules",
       "rulesExt": ".md",
       "brainstormDir": ".claude/brainstorm",
-      "projectAgentsFile": "CLAUDE.md"
+      "projectAgentsFile": "CLAUDE.md",
+      "modelSuggest": {
+        "architect": "opus",
+        "implementer": "sonnet",
+        "consultant": "haiku",
+        "reviewer": "sonnet",
+        "brainstorm": "sonnet"
+      }
     },
     {
       "id": "cursor",
@@ -16,7 +23,14 @@
       "rulesDir": ".cursor/rules",
       "rulesExt": ".mdc",
       "brainstormDir": ".cursor/brainstorm",
-      "projectAgentsFile": null
+      "projectAgentsFile": null,
+      "modelSuggest": {
+        "architect": "inherit",
+        "implementer": "inherit",
+        "consultant": "inherit",
+        "reviewer": "inherit",
+        "brainstorm": "inherit"
+      }
     }
   ]
 }

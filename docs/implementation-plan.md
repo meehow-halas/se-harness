@@ -21,6 +21,7 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 6 | [06-work-skills.md](implementation-plan/06-work-skills.md) | [06-work-skills.prompt.md](implementation-plan/06-work-skills.prompt.md) |
 | Phase 7 | [07-brainstorm.md](implementation-plan/07-brainstorm.md) | [07-brainstorm.prompt.md](implementation-plan/07-brainstorm.prompt.md) |
 | Phase 8 | [08-multi-host.md](implementation-plan/08-multi-host.md) | — |
+| Phase 9 | [09-per-host-models.md](implementation-plan/09-per-host-models.md) | — |
 
 Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longest because `/dhs-setup` and the work-skill pipeline are large; they still point at the PRD rather than restating it.
 
@@ -34,7 +35,7 @@ Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longe
 - Git allowlist helpers are POSIX `sh` files under package `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands. Agents call those scripts; they do not compose the matching `git`/`gh` themselves.
 - Status, log, and Jira writes are agent work against `harness.config.json`. They are not scripts in v1.
 - One tracker: files **or** Jira, never both. No mirroring.
-- Live agents are **copies** into every `agentsDir` in `references/hosts.json`, not symlinks to `.dhs/agents/`. Bodies do **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time.
+- Live agents are **copies** into every `agentsDir` in `references/hosts.json`, not symlinks to `.dhs/agents/`. Bodies do **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time. Role and brainstorm `model` values are maps keyed by host `id`; each live agent copy gets that host’s string only.
 - `dhs install` writes `.dhs/VERSION`. `/dhs-setup` writes `dhs.generatedFrom` in `harness.config.json`. Work skills stop when config is missing or those two values differ.
 - Tests: `npm test` runs `node:test` for `src/` and `scripts/`. Do not add a second runner.
 - Do not commit unless the user asks.
@@ -106,6 +107,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 6 | Work skills | 5 | done |
 | 7 | Brainstorm | 5–6 | done |
 | 8 | Multi-host (Claude Code + Cursor) | 1–7 (`hosts.json`) | done |
+| 9 | Per-host role and brainstorm models | 8 | done |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.dhs/VERSION`.
 
@@ -120,6 +122,6 @@ Then set that phase’s **Status** to `done` in the Phase index. That write is p
 
 ## Out of this v1 plan (PRD Deferred)
 
-Full Codex adapter (TOML agents, `.codex/` / `.agents/skills`); per-host role models; trackers beyond Jira; auto-merge; a user-facing Consultant skill; changing `agents.contentLanguage` mid-task; status/log/Jira helpers in `.dhs/scripts/`; Windows `sh` hosts; symlinking live agents to `.dhs/agents/`.
+Full Codex adapter (TOML agents, `.codex/` / `.agents/skills`); trackers beyond Jira; auto-merge; a user-facing Consultant skill; changing `agents.contentLanguage` mid-task; status/log/Jira helpers in `.dhs/scripts/`; Windows `sh` hosts; symlinking live agents to `.dhs/agents/`.
 
 This list is a **scope boundary**, not a backlog. Do not open tickets from it. Do not implement these items in a v1 phase. A later version may pick items up only after an explicit new scope.

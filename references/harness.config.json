@@ -18,16 +18,28 @@
     },
     "roles": {
       "architect": {
-        "model": "opus"
+        "model": {
+          "claude-code": "opus",
+          "cursor": "inherit"
+        }
       },
       "implementer": {
-        "model": "sonnet"
+        "model": {
+          "claude-code": "sonnet",
+          "cursor": "inherit"
+        }
       },
       "consultant": {
-        "model": "haiku"
+        "model": {
+          "claude-code": "haiku",
+          "cursor": "inherit"
+        }
       },
       "reviewer": {
-        "model": "sonnet"
+        "model": {
+          "claude-code": "sonnet",
+          "cursor": "inherit"
+        }
       }
     },
     "brainstorm": {

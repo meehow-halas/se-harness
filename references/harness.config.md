@@ -6,7 +6,9 @@ Parseable defaults: `harness.config.json` in this directory. Jira object shape: 
 
 `dhs.generatedFrom` is set by setup to the contents of `.dhs/VERSION`. `agents.baseBranch` has no value until setup asks (suggested default `dev`). Optional role `rules`; reviewer may use `checklist`. `jiraOffer` is `declined` when they decline the first offer (`null` until then). `agents.brainstorm.consult` is `any` | `significant` (default if unset) | `broad`. Members themselves are not this template’s job.
 
-Supported hosts are **not** in this config. They live in `hosts.json` in this directory (`.dhs/references/hosts.json` after install). Install and `/dhs-setup` always write every row. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format). A Codex adapter (TOML agents, `.codex/` or `.agents/skills`) is out of this version. One `agents.roles.<role>.model` string is copied to every live agent file.
+Supported hosts are **not** a tree in this config. They live in `hosts.json` in this directory (`.dhs/references/hosts.json` after install). Install and `/dhs-setup` always write every row. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format, `modelSuggest`). A Codex adapter (TOML agents, `.codex/` or `.agents/skills`) is out of this version.
+
+`agents.roles.<role>.model` is a map keyed by host `id`. `/dhs-setup` writes `model:` in that host’s `agentsDir` from that entry only. Do not copy another host’s model. A legacy string is invalid for generation: migrate first (prefill every host, then confirm per host). `agents.brainstorm.model` uses the same map shape and is written by `/dhs-brainstorm`, not `/dhs-setup`.
 
 ```json
 {
@@ -26,10 +28,10 @@ Supported hosts are **not** in this config. They live in `hosts.json` in this di
       "done": "done"
     },
     "roles": {
-      "architect": { "model": "opus" },
-      "implementer": { "model": "sonnet" },
-      "consultant": { "model": "haiku" },
-      "reviewer": { "model": "sonnet" }
+      "architect": { "model": { "claude-code": "opus", "cursor": "inherit" } },
+      "implementer": { "model": { "claude-code": "sonnet", "cursor": "inherit" } },
+      "consultant": { "model": { "claude-code": "haiku", "cursor": "inherit" } },
+      "reviewer": { "model": { "claude-code": "sonnet", "cursor": "inherit" } }
     },
     "brainstorm": { "consult": "significant" }
   }
