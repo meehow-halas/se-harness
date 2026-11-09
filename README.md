@@ -169,7 +169,7 @@ It does **not** touch `agents.brainstorm` (that is `/dhs-brainstorm`), rewrite t
 | `AGENTS.md` | merge + accept | no remake | later: only create missing `CLAUDE.md` if `.claude/` exists |
 | Brainstorm members / model / consult | no | no | `/dhs-brainstorm` |
 
-**Jira.** Add asks URL, user, and project key (one at a time). You put the token in a project-local ignored credentials file — never in chat, git, or `harness.config.json`. Then map each status `todo` → `done` (or skip = `null`), where spec and prompt live, and issue types for `feature` and `bug`. Change keeps the token unless you rotate it in that file. Remove drops the tracker; the project is files-only again. Switching trackers does not migrate old tasks.
+**Jira.** First run offers it once. Later: add, change the mapping, or remove. Details: [Jira tracker](#jira-tracker).
 
 ## Agents
 
@@ -310,9 +310,27 @@ Not interaction modes. `/dhs-checkit` runs **one** of: `review` (default) | `upd
 
 ## Trackers and statuses
 
-**Exactly one tracker:** files **or** Jira, never both. Agents do not mirror. Switching does not migrate leftover files or tickets.
+### One active tracker
 
-**Files (default).** One task = three files, same basename (example `001-feature-example-name`):
+**Exactly one tracker:** files **or** Jira, never both. Agents write spec, prompt, log, and status to the active tracker only. They do not mirror.
+
+Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, Jira is active. If it is absent, the files tracker is active.
+
+Switching does **not** migrate. Connect Jira → new work is tickets only; leftover `docs/features` (etc.) are ignored. Remove Jira → new work is files only; existing tickets are not copied into files.
+
+`CHANGELOG.md` and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
+
+Name a task to a skill with the **active** tracker’s key: a file basename (`001-login`) or a Jira issue key (`PROJ-12`). See [Skills](#skills) for examples.
+
+Same artifact shape on both trackers (markdown files, or mapped Jira fields / description / comments):
+
+- **Spec** — abstract, requirements, acceptance criteria, architectural decisions (choices and why, not a tutorial)
+- **Prompt** — phase-grain order, what not to change; the Implementer still writes their own plan
+- **Log** — `Q<n>` decisions, `C<id>` Consultant items
+
+### Files tracker (default)
+
+One task = three files, same basename (example `001-feature-example-name`):
 
 | Path | Role |
 |------|------|
@@ -322,9 +340,47 @@ Not interaction modes. `/dhs-checkit` runs **one** of: `review` (default) | `upd
 
 Task key = basename. Branch name = basename.
 
-**Jira.** Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log, and status live **only** on the ticket. `/dhs-setup` maps which Jira status each step uses. Credentials stay out of git and out of chat.
+Status lives in the spec file frontmatter. The strings come from `agents.statuses` in config. Do not translate them from the conversation language. Change those strings with `/dhs-setup` (config only).
 
-Same artifact shape on both: spec (abstract, requirements, acceptance criteria, architectural decisions — choices and why, not a tutorial), prompt (phase-grain order, what not to change; the Implementer still writes their own plan), log (`Q<n>` decisions, `C<id>` Consultant items).
+When Implementer or Reviewer starts a worktree, `start-task` copies this task’s three files from the launch working tree into the worktree when they exist there.
+
+### Jira tracker
+
+Connect, change, or remove only through `/dhs-setup` (`"connect Jira"` / the first-run offer). There is no `dhs` CLI for Jira. The host needs **Jira MCP**.
+
+Credentials: you put the token in a project-local ignored file `harness.credentials.local.json`:
+
+```json
+{ "jiraToken": "…" }
+```
+
+`dhs install` already ignores that filename. Never paste the token in chat. Never write it into git or `harness.config.json`. Project key and field mapping live in config under `agents.tracker`.
+
+**Add** (no tracker yet, or you accept the first-run offer). One question at a time: URL, user, project key. Then map each dhs step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from **that project’s** workflow (a numbered list from Jira), or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
+
+`null` means that step does not call a Jira transition. There is no file fallback. If a mapped status is missing from that issue type’s workflow, work stops — fix the mapping in `/dhs-setup`.
+
+**Change** (tracker already there): change the integration (same mapping questions; token stays unless you rotate it in the credentials file) or remove it.
+
+**Remove:** confirm, drop `agents.tracker` from config, delete or clear `harness.credentials.local.json`. The project is files-only again. A first-run decline (`jiraOffer: declined`) does not block a later add.
+
+Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log, and status live **only** on the ticket. Agents do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/` while Jira is active. While Jira is the tracker, `agents.statuses` is not written onto the ticket. After Remove, file-tracker strings from `agents.statuses` apply again.
+
+| When | On the ticket |
+|------|----------------|
+| Architect creates the task | Create issue (`feature` / `bug` type from mapping). Title. Spec and prompt where mapping says. Transition to mapped `todo` when not `null`. |
+| Architect updates spec or prompt | Overwrite the mapped spec/prompt location. |
+| Implementer starts | Transition to mapped `inProgress` when not `null`. |
+| Consultant pass | Nowhere (noise). |
+| User decision `Q<n>` and other log rows | Comment, or the mapped log field if one exists. |
+| Reviewer starts (first round) | Transition to mapped `codeReview` when not `null`. |
+| Reviewer report (✅/❌/⚠️) | Comment. |
+| Acceptance (clean review) | Transition to mapped `inReview` when not `null`. |
+| Close after merge | Transition to mapped `done` when not `null`. |
+
+### Statuses
+
+The five dhs steps are the same on both trackers. On files, the labels are the strings in `agents.statuses`. On Jira, each step uses the mapped `agents.tracker.statuses` name (or is skipped when that key is `null`).
 
 ```text
 todo → in progress → code review → in review → done
