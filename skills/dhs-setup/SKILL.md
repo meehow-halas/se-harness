@@ -169,13 +169,13 @@ If the user names another config key (model, base branch, …), do that key firs
 
 ## Tracker (Jira)
 
-First-run offer and every later run. Do not invent a `dhs` CLI for Jira. Use Jira MCP and write config. Switching does **not** migrate old tasks. Token never in chat or git.
+First-run offer and every later run. Do not invent a `dhs` CLI for Jira. Call `.dhs/scripts/jira meta` (Jira Cloud REST; not MCP, not raw `curl`) and write config. Switching does **not** migrate old tasks. Token never in chat or git.
 
 Credentials: the user puts the token in a project-local ignored file `harness.credentials.local.json` (`{"jiraToken":"…"}`). `dhs install` already ignores that filename. Never paste the token in chat. Never write it into `harness.config.json`.
 
 | Intent | What happens |
 |--------|----------------|
-| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in `harness.credentials.local.json`. Fetch that project’s statuses, issue types and custom fields via Jira MCP. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that project’s real list (numbered), or skip = `null`. Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker` from `.dhs/references/harness.tracker.json` plus answers (`statuses`, `issueTypes`, `fields`, `fetchFields` as needed, `url`, `user`, `projectKey`). Agents must not pick a Jira status that is not in this map. |
+| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in `harness.credentials.local.json`. Write those three keys into `agents.tracker`, then run `.dhs/scripts/jira meta` to fetch that project’s statuses, issue types and custom fields. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that project’s real list (numbered), or skip = `null`. Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker` from `.dhs/references/harness.tracker.json` plus answers (`statuses`, `issueTypes`, `fields`, `fetchFields` as needed, `url`, `user`, `projectKey`). Agents must not pick a Jira status that is not in this map. Do not compose `curl`. If the script prints `BLOCKED:`, copy that line and stop. |
 | **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named; keep the token unless they rotate it in the credentials file. |
 | **Remove** | Confirm, drop `agents.tracker` from config, delete or clear `harness.credentials.local.json`. Project is files-only again. `jiraOffer` does not block a later **Add**. |
 

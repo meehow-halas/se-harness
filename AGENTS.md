@@ -6,7 +6,7 @@
 
 Behaviour is defined in `docs/prd.md`. That file wins over old agent files and chat history. `docs/implementation-plan.md` is the build order, not a second spec.
 
-CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never write to `~/.claude/` or another machine-wide path. Setup is `/dhs-setup`. Git allowlist helpers are POSIX scripts under `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands.
+CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never write to `~/.claude/` or another machine-wide path. Setup is `/dhs-setup`. Git allowlist helpers and Jira Cloud REST (`jira`) are POSIX scripts under `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands.
 
 ## Package directories
 

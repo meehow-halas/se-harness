@@ -129,7 +129,7 @@ Agents run the **project’s own** test/lint/typecheck scripts (from `package.js
 
 - Any `dhs` CLI beyond `install` and `uninstall`. No `dhs agent`, `dhs git`, `dhs check`, or `dhs` status/Jira command. Git allowlist helpers and the session update check are files under `.dhs/scripts/`, not CLI subcommands.
 - Auto-install or auto `/dhs-setup` when a newer GitHub tag exists. The session hook only notifies.
-- Status, log, or Jira helpers as `.dhs/scripts/` in v1. Agents read `harness.config.json` and write the active tracker themselves.
+- Status or log helpers for the **files** tracker as `.dhs/scripts/` in v1. Agents write file-tracker status and log themselves. Jira I/O is `.dhs/scripts/jira` (not a `dhs` CLI subcommand).
 - A second skill for first-time setup or later config changes. `/dhs-setup` does both.
 - Global install (`npm install -g`, machine-wide skills, `~/.claude/`, `~/.cursor/`).
 - Finishing setup by any path other than `/dhs-setup` after `dhs install`.
@@ -164,7 +164,7 @@ Task key = basename. Branch name = basename. Status strings = `agents.statuses`.
 
 ### Jira tracker
 
-Via Jira MCP. Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log and status live **only** on the ticket. Agents do not create or edit `docs/features/`, `docs/prompt/` or `docs/feature-log/` while this tracker is active.
+Via Jira Cloud REST v3 through `.dhs/scripts/jira` (not MCP, not a `dhs` Jira CLI). Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log and status live **only** on the ticket. Agents do not create or edit `docs/features/`, `docs/prompt/` or `docs/feature-log/` while this tracker is active. Agents call that script; they do not compose `curl` or REST themselves.
 
 The five dhs steps are the same as on files. **Which Jira status each step uses is not guessed.** `/dhs-setup` writes `agents.tracker.statuses` from that project’s workflow (names taken from Jira, shown as a numbered list). Agents transition only to those exact strings.
 
@@ -247,7 +247,7 @@ todo → in progress → code review → in review → done
 
 Earlier names: `backlog` → `todo`; `reviewReady` is not a status (stay on `in progress` until the Reviewer starts); `reviewDone` → `in review`.
 
-Agents update status **only** on the active tracker. Files: write the strings from `agents.statuses` (read from `harness.config.json` at run time) into the feature file. Jira: transition to `agents.tracker.statuses.<key>` from that same file. There is no `dhs` CLI for status and no status script in `.dhs/scripts/` in v1.
+Agents update status **only** on the active tracker. Files: write the strings from `agents.statuses` (read from `harness.config.json` at run time) into the feature file. Jira: `.dhs/scripts/jira transition` to `agents.tracker.statuses.<key>` from that same file. There is no `dhs` CLI for status. File-tracker status is not a script in v1.
 
 ---
 
@@ -395,7 +395,7 @@ Allowlisted git/`gh` operations run through POSIX `sh` scripts in `.dhs/scripts/
 
 The scripts are the **how**. Agent markdown is the **when**. A script name is stable across package versions so a later `dhs install` can replace the script body without renaming the call.
 
-**Contract.** Success prints `OK` or `UNCHANGED` and `key: value` lines. Refusal ends with a `BLOCKED:` line (see Stops). The agent copies that line into its report, stops that path, and does not work around it with raw git or `gh`.
+**Contract.** Success prints `OK` or `UNCHANGED` and `key: value` lines. Refusal ends with a `BLOCKED:` line (see Stops). The agent copies that line into its report, stops that path, and does not work around it with raw git, `gh`, or `curl`.
 
 The base git branch is `agents.baseBranch` (set on first `/dhs-setup`, changeable later). Scripts cut task branches from it, open PRs against it, and merge it into a task branch on **update**. Changing that key in config does not require regenerating agents.
 
@@ -413,13 +413,23 @@ Implementer and Reviewer always use a **git worktree** for the task. The path is
 
 Architect and Consultant: no git writes. They do not call these scripts.
 
-These scripts do not cover LLM procedure (phases, Consultant, review checklist, Questions). They do not cover status, log, or Jira in v1.
+These scripts do not cover LLM procedure (phases, Consultant, review checklist, Questions). They do not cover file-tracker status or log writes. Jira Cloud REST goes through `.dhs/scripts/jira` (same `OK` / `UNCHANGED` / `BLOCKED:` contract). Agents do not compose `curl`. Auth is Basic `user:jiraToken` from `harness.credentials.local.json` (token never in argv, stdout, chat, or git). Jira Server/DC is out of v1.
+
+| Script | Who | Reads | Does |
+|--------|-----|-------|------|
+| `jira meta` | `/dhs-setup` Add/Change | `agents.tracker` url, user, projectKey + credentials | List that project’s statuses, issue types, and custom fields (numbered `key: value` lines) for mapping. |
+| `jira get <key>` | Architect, Implementer, Reviewer | tracker maps, `fetchFields` | GET the issue. Print scalars then `BEGIN spec` / `prompt` / `log` bodies from the mapped locations. |
+| `jira create --type feature` or `bug --title <text>` | Architect | `issueTypes`, projectKey | POST issue. Print `key:`. |
+| `jira set <key> spec\|prompt\|log [--file <path>]` | Architect (spec/prompt/log); Implementer/Reviewer (log) | `fields` | PUT the mapped field or description; POST comment when the map is `comment`. Body from `--file` or stdin. Log mapped to a field is appended. |
+| `jira comment <key> [--file <path>]` | Architect, Implementer, Reviewer | — | POST a comment. Body from `--file` or stdin. |
+| `jira transition <key> <todo\|inProgress\|codeReview\|inReview\|done>` | the role that owns that step | `statuses` | `null` → `UNCHANGED` and no HTTP. Else transition only to that exact workflow name. Missing on this issue type → `BLOCKED:` fix mapping in `/dhs-setup`. Already there → `UNCHANGED`. |
+| `jira link <key> depends\|relates <other>` | Architect | — | Create the issue link. If Jira refuses, `BLOCKED:` with that fact (the agent comments it; does not write feature files and does not stop the task). |
 
 ---
 
 ## Runtime config and generated files
 
-`harness.config.json` is the source of truth for project parameters. Generated agent markdown must not contain a literal `agents.baseBranch`, status string, Jira map, `fetchFields` list, content language, or product line. Those files say to **read** `harness.config.json` (and, for git, to **call** `.dhs/scripts/`).
+`harness.config.json` is the source of truth for project parameters. Generated agent markdown must not contain a literal `agents.baseBranch`, status string, Jira map, `fetchFields` list, content language, or product line. Those files say to **read** `harness.config.json` (and, for git and Jira, to **call** `.dhs/scripts/`).
 
 `/dhs-setup` still generates live files from `.dhs/`:
 
@@ -507,11 +517,11 @@ If `.dhs/VERSION` is missing, stop and tell the user to run `dhs install` here, 
 
 | Intent | What happens |
 |--------|----------------|
-| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in `harness.credentials.local.json`; never paste it in chat. Fetch that project’s statuses, issue types and custom fields. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that list (or skip = `null`). Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker.statuses` (and the rest) into config. Agents must not pick a Jira status that is not in this map. |
+| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in `harness.credentials.local.json`; never paste it in chat. Write those three keys into `agents.tracker`, then fetch statuses, issue types and custom fields with `.dhs/scripts/jira meta`. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that list (or skip = `null`). Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker.statuses` (and the rest) into config. Agents must not pick a Jira status that is not in this map. |
 | **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named; keep the token unless they rotate it in the credentials file. |
 | **Remove** | Confirm, drop tracker from config, delete or clear the local credentials file. Project is files-only again. `jiraOffer` does not block a later **Add**. |
 
-Do not invent a `dhs` CLI for Jira. The skill uses Jira MCP and writes config. After a tracker change, write the mapping into `harness.config.json`. Do not regenerate agent markdown for `fetchFields` or the task key pattern: agents read those keys at run time.
+Do not invent a `dhs` CLI for Jira. The skill calls `.dhs/scripts/jira meta` and writes config. After a tracker change, write the mapping into `harness.config.json`. Do not regenerate agent markdown for `fetchFields` or the task key pattern: agents read those keys at run time.
 
 If the user names another config key (model, base branch, …), do that key first, then the tracker offer only when there is still no tracker and the offer was not declined — unless they explicitly asked to add/change/remove Jira, in which case do the tracker path even after a decline.
 
@@ -636,10 +646,10 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does n
 11. **`/dhs-setup` is the only skill install writes** (into every `skillsDir`). It is first-time setup when `harness.config.json` is missing, and later parameter changes when the file already exists. Other skills are generated by `/dhs-setup` into every `skillsDir`. Work skills must not run before `harness.config.json` exists, and must not run when `.dhs/VERSION` does not match `dhs.generatedFrom`.
 12. **First `/dhs-setup` leaves the project with a PRD.** It uses an existing one and does not rewrite it. If none exists, it gathers from the repo, asks for gaps, and writes `docs/prd.md`. Config stores a one-line product plus doc paths, not the PRD body. Later `/dhs-setup` does not rewrite that file.
 13. **Result is always `AGENTS.md`.** First `/dhs-setup` always handles neither, only `AGENTS.md`, only `CLAUDE.md`, or both. It merges whatever exists with the dhs template (`.dhs/references/AGENTS.md`), shows the proposed body, and does not write until the user accepts. The written file is always `AGENTS.md`, even if the project had only `CLAUDE.md`. `CLAUDE.md` exists afterwards when `.claude/` was present and/or `CLAUDE.md` already existed (symlink preferred; independent file with the same body if the link fails). Later `/dhs-setup` does not remake `AGENTS.md`.
-14. **One tracker.** Files or Jira, never both. `/dhs-setup` can add, change, or remove Jira; a switch does not migrate old tasks.
+14. **One tracker.** Files or Jira, never both. `/dhs-setup` can add, change, or remove Jira; a switch does not migrate old tasks. Jira Cloud REST v3 goes through `.dhs/scripts/jira` (not MCP, not a `dhs` Jira CLI). Agents do not compose `curl`. File-tracker status and log remain agent writes.
 15. **Package source layout** — product files live in `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, and `src/` (CLI). Install copies the first six into `.dhs/` under the same names. Do not remap. Facilitator templates stay in `brainstorm/`, not `agents/`. Git helpers stay in `scripts/`, not in the `dhs` binary.
 16. **Base branch is configured, never guessed.** First `/dhs-setup` asks for `agents.baseBranch` (suggested default `dev`). Later `/dhs-setup` can change it. `.dhs/scripts/` use only that value to cut, return, update-from-base, and target PRs. Agent markdown does not interpolate it.
-17. **Runtime config, not baked agent bodies.** Generated agents read `harness.config.json` for `agents.baseBranch`, statuses, tracker maps, `fetchFields`, content language, and product line. They call `.dhs/scripts/` for the git allowlist. Changing those config keys does not require regenerating agents. Role `model` is written into live agent frontmatter because the host loads it from the file. Live agents are copies into **every** `agentsDir` in `.dhs/references/hosts.json`, not symlinks to `.dhs/agents/`. `agents.roles.<role>.model` is a map keyed by host `id`; each live copy gets `model:` from that host’s entry only. `agents.brainstorm.model` uses the same map shape.
+17. **Runtime config, not baked agent bodies.** Generated agents read `harness.config.json` for `agents.baseBranch`, statuses, tracker maps, `fetchFields`, content language, and product line. They call `.dhs/scripts/` for the git allowlist and for Jira. Changing those config keys does not require regenerating agents. Role `model` is written into live agent frontmatter because the host loads it from the file. Live agents are copies into **every** `agentsDir` in `.dhs/references/hosts.json`, not symlinks to `.dhs/agents/`. `agents.roles.<role>.model` is a map keyed by host `id`; each live copy gets `model:` from that host’s entry only. `agents.brainstorm.model` uses the same map shape.
 18. **Template version is stamped.** `dhs install` writes `.dhs/VERSION`. `/dhs-setup` writes `dhs.generatedFrom` in `harness.config.json`. A later `/dhs-setup` regenerates live agents, work skills, and rules when those two differ. Install never generates live files. Work skills stop on that mismatch the same way they stop when config is missing.
 19. **Always write every supported host.** `references/hosts.json` is the host table. Install and `/dhs-setup` write all rows; they do not ask which hosts to use. Adding a host is a new row plus a path/frontmatter adapter. Each row may carry `modelSuggest` (per role and `brainstorm`) as interview defaults; dhs does not translate one host’s model id into another’s. Do not maintain a second template tree per host.
 20. **Worktree always; parallel on `/dhs-doit` and `/dhs-checkit`.** Implementer and Reviewer work in `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>` even for one task. Architect stays on the launch checkout. No fifth agent and no extra skill: `/dhs-doit` and `/dhs-checkit` accept a list; `/dhs-shipit` stays one sequential task. Parallel children when the runtime allows.
@@ -655,6 +665,7 @@ These are **out of v1 on purpose**. The list is a scope boundary, not a backlog:
 - Auto-install when a newer GitHub tag exists.
 - User-facing Consultant skill (it would skip the Implementer).
 - Changing `agents.contentLanguage` mid-task.
-- Status, log, or Jira helpers in `.dhs/scripts/`.
+- Status or log helpers for the files tracker in `.dhs/scripts/`.
+- Jira Server/Data Center (Cloud REST v3 only).
 - Running `.dhs/scripts/` on Windows (`sh` hosts only in v1).
 - Symlinking live agents to `.dhs/agents/` instead of copying them.

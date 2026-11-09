@@ -346,7 +346,7 @@ When Implementer or Reviewer starts a worktree, `start-task` copies this task’
 
 ### Jira tracker
 
-Connect, change, or remove only through `/dhs-setup` (`"connect Jira"` / the first-run offer). There is no `dhs` CLI for Jira. The host needs **Jira MCP**.
+Connect, change, or remove only through `/dhs-setup` (`"connect Jira"` / the first-run offer). There is no `dhs` CLI for Jira. Agents and setup call `.dhs/scripts/jira` (Jira Cloud REST). They do not use MCP and do not compose `curl`.
 
 Credentials: you put the token in a project-local ignored file `harness.credentials.local.json`:
 
@@ -356,7 +356,7 @@ Credentials: you put the token in a project-local ignored file `harness.credenti
 
 `dhs install` already ignores that filename. Never paste the token in chat. Never write it into git or `harness.config.json`. Project key and field mapping live in config under `agents.tracker`.
 
-**Add** (no tracker yet, or you accept the first-run offer). One question at a time: URL, user, project key. Then map each dhs step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from **that project’s** workflow (a numbered list from Jira), or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
+**Add** (no tracker yet, or you accept the first-run offer). One question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.dhs/scripts/jira meta` lists that project’s statuses, issue types, and fields. Map each dhs step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
 
 `null` means that step does not call a Jira transition. There is no file fallback. If a mapped status is missing from that issue type’s workflow, work stops — fix the mapping in `/dhs-setup`.
 
@@ -417,7 +417,7 @@ Base branch is `agents.baseBranch` (first setup; suggested default `dev`). Scrip
 
 Implementer and Reviewer always work in a git worktree: `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/dhs-worktrees/001-login`). `start-task` does not switch the caller’s checkout. `return-to-base` from a dhs worktree removes it.
 
-Allowlisted git/`gh` goes through `.dhs/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`. No rebase, reset, or force. dhs does not merge the PR.
+Allowlisted git/`gh` goes through `.dhs/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`. Jira Cloud REST goes through `.dhs/scripts/jira`. No rebase, reset, or force. dhs does not merge the PR.
 
 Replies follow the conversation language. Spec, prompt, log, changelog, and PR text follow `agents.contentLanguage` from config. Status strings stay as configured; do not translate them from the conversation.
 

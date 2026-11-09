@@ -50,6 +50,8 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 
 Shape: `.dhs/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
+If `.dhs/scripts/jira` refuses (except `jira link`), copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `curl`. `jira link` failure: comment that fact on the ticket and continue.
+
 Stops include: open blocker on `depends`, user approval missing in interactive, a mapped Jira status that is not on that issue type’s workflow (tell the user to fix the mapping in `/dhs-setup`).
 
 ## Tracker
@@ -80,11 +82,20 @@ Older files in those directories that do not use `.feature.md` / `.prompt.md` / 
 
 Task key = issue key. Branch name = that key. Do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/` while Jira is active.
 
-Use Jira MCP. Credentials stay in the local ignored file; never paste them in chat; never write them to git. Create/transition/comment only using `agents.tracker` maps. `null` means skip that transition. Do not invent status names. While Jira is active, do not write `agents.statuses` onto a ticket as file-tracker strings.
+Call `.dhs/scripts/jira`. Do not use MCP. Do not compose `curl` or REST. Credentials stay in the local ignored file; never paste them in chat; never write them to git. Create/transition/comment only using `agents.tracker` maps. `null` means skip that transition (the script prints `UNCHANGED`). Do not invent status names. While Jira is active, do not write `agents.statuses` onto a ticket as file-tracker strings. Success prints `OK` or `UNCHANGED`. If the script prints `BLOCKED:`, copy that line into the report and stop that path — except `jira link`, which you comment onto the ticket and continue.
 
-Create: issue type from `agents.tracker.issueTypes` (`feature` or `bug`). Title. Spec and prompt where `agents.tracker.fields` says (two custom fields, description, or comments). Transition to mapped `todo` when not `null`. Updates overwrite the mapped spec/prompt location. First log row: comment, or the mapped log field if one exists. Request `fetchFields` when reading the issue. Unmapped fields are ignored.
+```text
+.dhs/scripts/jira create --type feature|bug --title <text>
+.dhs/scripts/jira set <key> spec|prompt|log [--file <path>]
+.dhs/scripts/jira comment <key> [--file <path>]
+.dhs/scripts/jira get <key>
+.dhs/scripts/jira transition <key> todo
+.dhs/scripts/jira link <key> depends|relates <other>
+```
 
-`depends` / `relates`: issue links when the project allows them. If linking fails, comment that fact; do not write a feature file and do not block the task.
+Create: `--type` from `feature` or `bug` (the script reads `agents.tracker.issueTypes`). Title. Spec and prompt via `jira set` (mapped custom fields, description, or comments). Then `jira transition <key> todo`. Updates overwrite the mapped spec/prompt location with `jira set`. First log row: `jira set <key> log` or `jira comment`. Read with `jira get` (includes `fetchFields`). Unmapped fields are ignored.
+
+`depends` / `relates`: `jira link`. If linking fails, comment that fact; do not write a feature file and do not block the task.
 
 ## Spec, prompt, log
 

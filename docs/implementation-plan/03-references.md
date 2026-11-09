@@ -18,9 +18,9 @@ Related small extras the PRD groups as “and the like” if they are required f
 ## Out of scope
 
 - Implementing `/dhs-setup` (phase 5) or product agents (phase 4).
-- Jira MCP calls.
+- Jira REST calls (phase 12).
 - Rewriting this repo’s own [AGENTS.md](../../AGENTS.md) into the consumer template (the consumer template is for **consuming** projects).
-- Status/Jira helper scripts.
+- Status/log helper scripts for the files tracker.
 
 ## Inputs
 

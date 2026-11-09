@@ -47,7 +47,7 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 
 Shape: `.dhs/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
-If a `.dhs/scripts/` helper refuses, copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git` or `gh`. If the host cannot run `sh`, stop: Windows is out of v1.
+If a `.dhs/scripts/` helper refuses, copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git`, `gh`, or `curl`. If the host cannot run `sh`, stop: Windows is out of v1.
 
 Also stop when: a basename/key in `depends` is not at the configured `done` status; the **project** test/lint/typecheck fails on code you did not touch (do not label it unrelated and continue); user approval missing in interactive when Questions requires it; a mapped Jira status is not on that issue type’s workflow (fix mapping in `/dhs-setup`).
 
@@ -63,7 +63,7 @@ Same basename: `docs/features/<basename>.feature.md`, `docs/prompt/<basename>.pr
 
 ### Jira
 
-Do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/`. Transition to mapped `inProgress` when not `null`. `null` means skip. Do not invent status names. Consultant pass is **not** written on the ticket. User decisions `Q<n>` and debt lines: comment (or mapped log field). Request `fetchFields` when reading. Credentials stay out of git and out of chat.
+Do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/`. Call `.dhs/scripts/jira`; do not use MCP; do not compose `curl`. `jira transition <key> inProgress` (`UNCHANGED` when the map is `null`). Do not invent status names. Consultant pass is **not** written on the ticket. User decisions `Q<n>` and debt lines: `jira comment` or `jira set <key> log`. Read with `jira get` (includes `fetchFields`). Credentials stay out of git and out of chat. Check `depends` with `jira get` on those keys.
 
 ## Git
 
