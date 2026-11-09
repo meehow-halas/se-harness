@@ -48,7 +48,7 @@ Place under `references/`. Exact filenames are the implementer’s choice except
 - One-line product (not the PRD body) and `agents.docs` (paths).
 - `agents.baseBranch` — no default baked into agents; setup suggests `dev`.
 - `agents.statuses` — default English strings for the five file-tracker statuses (`todo`, `in progress`, `code review`, `in review`, `done`).
-- `agents.roles` — `architect`, `implementer`, `consultant`, `reviewer` with `model` (suggest opus / sonnet / haiku / sonnet). Optional `rules`; reviewer may use `checklist`.
+- `agents.roles` — `architect`, `implementer`, `consultant`, `reviewer` with `model` as a map keyed by `hosts.json` `id` (phase 9; interview defaults from that row’s `modelSuggest`). Optional `rules`; reviewer may use `checklist`.
 - `agents.contentLanguage`.
 - `packsIgnored`.
 - `jiraOffer` (`declined` when they decline the first offer).

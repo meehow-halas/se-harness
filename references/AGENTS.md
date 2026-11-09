@@ -4,7 +4,7 @@ This project uses **dhs**. Read `harness.config.json` at run time for the one-li
 
 The product and CLI binary are `dhs`. The npm package is `dev-harness-layer`. Run the CLI only in this project. Never `npm install -g`. Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, or any other machine-wide path.
 
-Supported hosts are the rows in `.dhs/references/hosts.json`. Live skills, agents, rules, and brainstorm files are copies under **every** listed `skillsDir` / `agentsDir` / `rulesDir` / `brainstormDir`. In this session use the copy this host loaded. Bodies match across copies. Role `model` is one string in `harness.config.json`, written into every live agent file.
+Supported hosts are the rows in `.dhs/references/hosts.json`. Live skills, agents, rules, and brainstorm files are copies under **every** listed `skillsDir` / `agentsDir` / `rulesDir` / `brainstormDir`. In this session use the copy this host loaded. Bodies match across copies. Role `model` is a map keyed by host `id` in `harness.config.json`; this host’s live agent file gets that host’s string only.
 
 ## Binding flow
 
@@ -30,7 +30,7 @@ Exactly four product agents. Live copies live under every `agentsDir` in `.dhs/r
 | Consultant | Code quality on the phase diff. Does not edit product code. Does not talk to the user. Does not judge spec compliance. Not a user-facing skill. |
 | Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, then git allowlist scripts. Does not merge the PR. |
 
-Models and optional role `rules` (reviewer may have `checklist`) come from `agents.roles` in `harness.config.json`.
+Models and optional role `rules` (reviewer may have `checklist`) come from `agents.roles` in `harness.config.json`. Each role’s `model` is keyed by host `id`. Brainstorm turns use `agents.brainstorm.model` for this host the same way.
 
 ## Skills
 

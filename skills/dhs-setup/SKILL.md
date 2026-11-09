@@ -35,7 +35,25 @@ BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harne
 
 3. If `harness.config.json` is **missing** → **First run**. If it is **present** → **Later run**.
 
-Do not overwrite keys the user did not confirm. Do not regenerate generated files as a silent first-run repeat. A later-run template mismatch (`.dhs/VERSION` ≠ `dhs.generatedFrom`) is not a first-run repeat: regenerate live agents, work skills, and rules, then continue the later-run path.
+Do not overwrite keys the user did not confirm. Do not regenerate generated files as a silent first-run repeat. A later-run template mismatch (`.dhs/VERSION` ≠ `dhs.generatedFrom`) is not a first-run repeat: finish incomplete role `model` maps first, then regenerate live agents, work skills, and rules, then continue the later-run path.
+
+---
+
+## Role model maps
+
+`agents.roles.<role>.model` must be an object whose keys are every `id` in `.dhs/references/hosts.json`. Each value is a non-empty string. A JSON string is not a map. Do not copy another host’s model onto a live file.
+
+Interview defaults come from that host row’s `modelSuggest` (`architect` / `implementer` / `consultant` / `reviewer`). If that field is missing, ask without a suggestion. Do not translate one host’s model id into another’s. Do not `if (id === "claude-code")` for suggestion text.
+
+If generation needs a model and `agents.roles.<key>.model[<host.id>]` is missing or empty:
+
+```text
+BLOCKED: role model missing for host <id> — run /dhs-setup
+```
+
+**Legacy string.** If `model` is a string, the map is incomplete. Prefill a map with that string on every host `id`. Show the prefill. Then one question per host (suggest `modelSuggest` for that host when it differs from the prefill). Write the map. Do not stamp live `model:` until the map is confirmed.
+
+**Missing host key.** Same path when the table has an `id` the map does not (for example a new row after upgrade). Prefill only from a legacy string; otherwise ask with `modelSuggest`.
 
 ---
 
@@ -60,7 +78,7 @@ Config stores a one-line `product` plus doc paths, **not** the PRD body.
 
 Do not write `harness.config.json` or generate live files until these are confirmed.
 
-**Roles.** Only architect, implementer, consultant, reviewer. Suggest models `opus` / `sonnet` / `haiku` / `sonnet`. No other roles. No brainstorm-facilitator model question.
+**Roles.** Only architect, implementer, consultant, reviewer. No other roles. No brainstorm-facilitator model question. For **each** host in `.dhs/references/hosts.json` (table order), then for each of those four roles, one question. Write `agents.roles.<role>.model` as a map keyed by host `id`. Suggest that row’s `modelSuggest.<role>` when present. The value must be a non-empty string. Do not translate one host’s model id into another’s.
 
 **`agents.contentLanguage`.** Language of files and tracker text. Ask once. Suggest the conversation language.
 
@@ -125,13 +143,15 @@ If `.dhs/VERSION` is missing:
 BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harness-layer dhs install or npx -p github:nbmh/dev-harness-layer dhs install), then /dhs-setup again
 ```
 
+If any role `model` is still a string, or a map is missing a `hosts.json` `id`, finish **Role model maps** first. Do not regenerate live agents until every role has a complete map.
+
 If `.dhs/VERSION` (trimmed) does not equal `dhs.generatedFrom`: regenerate live agents, work skills, and rule packs from `.dhs/` (same copy rules as first run), set `dhs.generatedFrom` to `.dhs/VERSION`, and tell the user the installed package templates changed. Then continue below.
 
 Then **one change at a time**. Show current and new value, wait for confirmation, then write. Do not overwrite keys the user did not confirm.
 
 | Change | Effect |
 |--------|--------|
-| Role `model` | Rewrite that live agent’s **frontmatter** `model:` only, in **every** `agentsDir`. Do not regenerate the body. |
+| Role `model` cell `(role, host)` | Rewrite that live agent’s **frontmatter** `model:` only, in **that** host’s `agentsDir`. If the user names a role without a host, ask which host. Do not regenerate the body. Do not rewrite other hosts. |
 | `packsIgnored` or detected frameworks | Regenerate rule packs. |
 | `agents.baseBranch` | `harness.config.json` only. |
 | Statuses, tracker maps, `fetchFields`, content language, product line | Config only. Do **not** regenerate agent bodies. |
@@ -184,15 +204,15 @@ Copy `.dhs/agents/` files into **each** `agentsDir`. **Copies, not symlinks.**
 | `.dhs/agents/consultant.md` | `<agentsDir>/consultant.md` | `consultant` |
 | `.dhs/agents/reviewer.md` | `<agentsDir>/reviewer.md` | `reviewer` |
 
-Set frontmatter `model:` from `agents.roles.<key>.model` (the same string in every copy). Leave `name`, `description`, and `tools` as in the template. Hosts that ignore `tools:` still get the field.
+Set frontmatter `model:` from `agents.roles.<key>.model[<host.id>]`. If that entry is missing or empty, stop with `BLOCKED: role model missing for host <id> — run /dhs-setup`. Do not copy another host’s model. Leave `name`, `description`, and `tools` as in the template. Hosts that ignore `tools:` still get the field.
 
 When the host `id` is `cursor` and the role is `consultant`, also set `readonly: true`. Do not set `readonly` on architect, implementer, or reviewer.
 
 Do not add a fifth agent. Do not copy brainstorm templates from `.dhs/brainstorm/` into any `agentsDir`.
 
-On VERSION mismatch regeneration: replace those four live files in **every** `agentsDir` from `.dhs/agents/` and re-apply `model:` (and Cursor `readonly` on consultant) from **current** config.
+On VERSION mismatch regeneration: replace those four live files in **every** `agentsDir` from `.dhs/agents/` and re-apply `model:` from `agents.roles.<key>.model[<host.id>]` (and Cursor `readonly` on consultant) from **current** config.
 
-On a confirmed role `model` change only: rewrite that one file’s `model:` line in **every** `agentsDir`.
+On a confirmed role `model` cell change only: rewrite that one file’s `model:` line in **that** host’s `agentsDir`.
 
 ### Work skills
 
@@ -247,4 +267,5 @@ On regenerate: in **each** `rulesDir`, delete existing `dhs-*` files this skill 
 - Add CLI subcommands or a global install.
 - Use a product name other than `dhs`.
 - Ask the user which hosts to write. Write every row in `hosts.json`.
+- Copy one host’s role `model` onto another host’s live agent file.
 - Invent a Codex or `.agents/` tree in this version.

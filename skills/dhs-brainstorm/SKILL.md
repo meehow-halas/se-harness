@@ -45,6 +45,16 @@ BLOCKED: generated files do not match the installed templates — run /dhs-setup
 
 ---
 
+## This host
+
+Read `.dhs/references/hosts.json`. This session’s host `id` is the row whose `skillsDir` contains the `/dhs-brainstorm` skill that loaded. Use that row’s `agentsDir` and `brainstormDir`. If no row matches:
+
+```text
+BLOCKED: this skill is not in a hosts.json skillsDir — run /dhs-setup
+```
+
+---
+
 ## Intent
 
 From the user message. Ask **one question** if it is unclear. Do not dump a menu.
@@ -67,10 +77,22 @@ This skill does not start because `/dhs-feature` decided to. Feature never start
 | Key | Role |
 |-----|------|
 | `consult` | `any` \| `significant` (default if unset) \| `broad` |
-| `model` | One model for every persona turn and the facilitator. No per-persona model. Suggest `sonnet` when asking. |
+| `model` | Map keyed by host `id`. One string per host for every persona turn and the facilitator. No per-persona model. Suggest that host’s `modelSuggest.brainstorm` when asking. |
 | `members` | Array of `{ id, description, identity, cares, dislikes }`. `identity` / `cares` / `dislikes` are string lists. |
 
 Do not add a facilitator (or any brainstorm runner) to `agents.roles`.
+
+`agents.brainstorm.model` must have a non-empty string for every `id` in `hosts.json`. A JSON string is not a map. Do not copy another host’s model.
+
+**Legacy string.** If `model` is a string, prefill every host `id` with that string, show the prefill, then one question per host (suggest `modelSuggest.brainstorm` when it differs). Write the map before a round.
+
+**Missing host key.** Same path when the table has an `id` the map does not.
+
+If a round needs a model and `agents.brainstorm.model[<host.id>]` is missing or empty:
+
+```text
+BLOCKED: brainstorm model missing for host <id> — finish model map in /dhs-brainstorm
+```
 
 ---
 
@@ -81,9 +103,9 @@ Live files: `<brainstormDir>/members/<id>.md` for **every** `brainstormDir` in `
 **Create — first member in this project** (no `members` yet, or the array is empty). Ask once, one question at a time:
 
 1. Consult threshold (`any` / `significant` / `broad`). Default if they skip: `significant`. Write `agents.brainstorm.consult`.
-2. Model for persona and facilitator turns. Suggest `sonnet`. Write `agents.brainstorm.model`.
+2. Model for persona and facilitator turns. For **each** host in `.dhs/references/hosts.json` (table order), one question. Suggest that row’s `modelSuggest.brainstorm` when present. Write `agents.brainstorm.model` as a map keyed by host `id`. If `model` is already a complete map, reuse it. If it is a legacy string or missing a host `id`, migrate as above before continuing.
 
-Later creates reuse those keys. Do not ask again unless the user is changing them here (not in `/dhs-setup`).
+Later creates reuse those keys. Do not ask again unless the user is changing them here (not in `/dhs-setup`). A model change is one cell `(host)` unless the map is incomplete.
 
 Then ask for `id`, `description`, `identity`, `cares`, `dislikes` (one question at a time). Append to `members` and write the markdown.
 
@@ -147,8 +169,8 @@ material (spec or question)
 ```
 
 1. Ready app context (or stop and finish it).
-2. **Persona turns.** Isolated one-shot per member. Parallel when the runtime allows. Launch prompt = this host’s member file (`<brainstormDir>/members/<id>.md`) + `.dhs/brainstorm/persona-output-format.md` + this host’s app context + material. Name `Conversation language: <name>` when you know it. Model: `agents.brainstorm.model`. Tools: Read only. No git. No spec edits. Personae do not see each other, Architect notes, `Q<n>` leanings, or a “corrected” spec.
-3. **Facilitator** when two or more members were asked: isolated one-shot from `.dhs/brainstorm/facilitator.md`. Input = persona replies + `.dhs/brainstorm/report-template.md`. Same model. Read only. Do not write a file. Do not read the spec to correct anyone. One member → that reply **is** PART A; skip the facilitator.
+2. **Persona turns.** Isolated one-shot per member. Parallel when the runtime allows. Launch prompt = this host’s member file (`<brainstormDir>/members/<id>.md`) + `.dhs/brainstorm/persona-output-format.md` + this host’s app context + material. Name `Conversation language: <name>` when you know it. Model: `agents.brainstorm.model[<host.id>]` for this host (see **This host**). If that key is missing, stop with the brainstorm-model `BLOCKED:` above. Tools: Read only. No git. No spec edits. Personae do not see each other, Architect notes, `Q<n>` leanings, or a “corrected” spec.
+3. **Facilitator** when two or more members were asked: isolated one-shot from `.dhs/brainstorm/facilitator.md`. Input = persona replies + `.dhs/brainstorm/report-template.md`. Same model (`agents.brainstorm.model[<host.id>]`). Read only. Do not write a file. Do not read the spec to correct anyone. One member → that reply **is** PART A; skip the facilitator.
 4. **Architect** with **PART A only** plus the material. Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.dhs/references/hosts.json`). Do not pass persona transcripts. Pass `Mode:` from intent (default `interactive`). Architect decides on every blocker, conflict, and gap. Agreement among personae is not required and is not proof. A persona opinion is not user approval.
 5. Show the Architect’s decisions. The user resolves leftover conflicts. Do **not** hide a blocker the Architect rejected.
 6. **Interactive:** write `docs/brainstorm/<slug>-<YYYY-MM-DD>.md` only after the user confirms the round. Use the settled-record section of the report template. Leave out persona replies and PART A. **Critical/autonomous:** Architect consumes PART A; do **not** write that file.
@@ -167,6 +189,7 @@ Settled records stay files under `docs/brainstorm/`. They are not the task track
 - Interview personae from Architect, Implementer, Consultant, or Reviewer.
 - Hand-edit generated member markdown.
 - Touch `agents.roles` for a brainstorm model.
+- Copy one host’s brainstorm `model` onto another host’s launch.
 - Write persona transcripts into the settled record.
 - Start a second round unless the user asks.
 - Commit.

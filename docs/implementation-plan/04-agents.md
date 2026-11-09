@@ -106,4 +106,4 @@ Loop, hard caps, anti-thrash, and debt protocol: copy the rules from PRD Consult
 
 ## Handoff
 
-Phase 5 copies these into the host agent directory and writes `model:` from `agents.roles`. Changing base branch or statuses later must not require regenerating agent **bodies**.
+Phase 5 copies these into each host `agentsDir`. Phase 9 writes `model:` from `agents.roles.<role>.model[<host.id>]`. Changing base branch or statuses later must not require regenerating agent **bodies**.

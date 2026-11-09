@@ -1,6 +1,6 @@
 # dhs
 
-A layer for software engineering work in an AI coding assistant (Claude Code first). It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
+A layer for software engineering work in an AI coding assistant. Supported hosts in this version are **Claude Code** and **Cursor Agent**. It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
 
 One path: request → spec → implementation with quality feedback → review against the spec.
 
@@ -11,8 +11,33 @@ The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-laye
 - Node.js 18 or later
 - Run commands in **this project’s directory**, with the assistant open on that project
 - Do **not** `npm install -g`
-- Do **not** install skills, templates, or a CLI into `~/.claude/` or any other machine-wide path
+- Do **not** install skills, templates, or a CLI into `~/.claude/`, `~/.cursor/`, or any other machine-wide path
 - Git helpers need `sh` (Windows is out of v1)
+
+## Hosts
+
+A **host** is the coding assistant (harness) you run dhs in. This version: **Claude Code** and **Cursor Agent**. A later host is a row in `hosts.json` plus a format adapter, not a second product.
+
+`dhs install` and `/dhs-setup` always write **every** row in `.dhs/references/hosts.json`. They do not ask which hosts to use. Live skills, agents, rules, and brainstorm files are **copies** (not symlinks to `.dhs/agents/`) under `.claude/` and `.cursor/` (rules as `.md` vs `.mdc`). In a session, use the copy that host loaded. Skill bodies match; live agent `model:` is that host’s string only.
+
+### Models per host
+
+`agents.roles.<role>.model` is a map keyed by host `id`, not one string per role:
+
+```text
+"architect": { "model": { "claude-code": "opus", "cursor": "inherit" } }
+```
+
+First-run suggestions come from that host row’s `modelSuggest`. dhs does not translate a Claude alias into a Cursor id.
+
+| Host | Architect | Implementer | Consultant | Reviewer |
+|------|-----------|-------------|------------|----------|
+| Claude Code | `opus` | `sonnet` | `haiku` | `sonnet` |
+| Cursor | `inherit` | `inherit` | `inherit` | `inherit` |
+
+A later `/dhs-setup` model change is one cell `(role, host)` and rewrites `model:` only in that host’s `agentsDir`. If `model` is still a string, or a host `id` is missing, setup finishes the map first (prefill a legacy string on every host, then confirm per host) before it stamps live files.
+
+Brainstorm uses the same map shape on `agents.brainstorm.model`. `/dhs-brainstorm` asks one model per host on the first member (not `/dhs-setup`): that string is for every persona turn **and** the facilitator. No per-persona model.
 
 ## 1. Install
 
@@ -27,15 +52,15 @@ npx -p https://github.com/nbmh/dev-harness-layer dhs install
 
 npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 
-**Result:** `.dhs/` and the project skill `/dhs-setup`. Setup is **not** done. Work skills (`/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`) do not exist yet.
+**Result:** `.dhs/` and the project skill `/dhs-setup` in every host `skillsDir` (today `.claude/skills/dhs-setup` and `.cursor/skills/dhs-setup`). Setup is **not** done. Work skills (`/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`) do not exist yet.
 
 ## 2. Setup
 
 In the assistant, run **`/dhs-setup`**. That is the only way to finish first-time setup. The CLI does not configure the project.
 
-First run asks one question at a time (role models, content language, base git branch, optional project rule, Jira). It does not commit.
+First run asks one question at a time (role models **per host**, content language, base git branch, optional project rule, Jira). It does not commit.
 
-**Required result:** a project PRD, `harness.config.json`, live agents, the remaining skills, rule packs, and a project-root `AGENTS.md`.
+**Required result:** a project PRD, `harness.config.json`, live agents, remaining skills, and rule packs in **every** host tree, plus a project-root `AGENTS.md`.
 
 Until `harness.config.json` exists, and whenever `.dhs/VERSION` does not match `dhs.generatedFrom`, work skills stop and tell you to run `/dhs-setup`.
 
@@ -65,7 +90,7 @@ npx -p dev-harness-layer dhs uninstall
 npx -p github:nbmh/dev-harness-layer dhs uninstall
 ```
 
-Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config.json` and files `/dhs-setup` already generated.
+Removes `.dhs/` and the install-owned `/dhs-setup` skill from every `skillsDir`. Leaves `harness.config.json` and files `/dhs-setup` already generated (live agents, work skills, rules).
 
 ## After a package update
 
@@ -79,7 +104,7 @@ If Architect needs a persona round, work skills **stop and ask** `/dhs-brainstor
 
 | Skill | When | What happens | Example |
 |-------|------|----------------|---------|
-| `/dhs-setup` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit. See [`/dhs-setup`](#dhs-setup). | "change the architect model" · "connect Jira" |
+| `/dhs-setup` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit. See [`/dhs-setup`](#dhs-setup). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" |
 | `/dhs-planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
 | `/dhs-doit` | Spec and prompt already exist | Implementer + Consultant loop; status stays `in progress` | "implement 001-login" · "implement PROJ-12" |
 | `/dhs-checkit` | One Reviewer round | Variants: review (default), update from base, close after **you** confirm merge | "review this" · "update this branch from base" · "the PR is merged, close the task" |
@@ -106,15 +131,15 @@ The only way to configure this project. The CLI does not write config. Questions
 If `harness.config.json` is missing, that is a **first run**. If the file is already there, that is a **later run** — the same skill, not a second command.
 
 ```text
-"change the architect model" · "connect Jira" · "change the base branch"
+"change the architect model" · "change the architect model on Cursor" · "connect Jira" · "change the base branch"
 ```
 
 ### First run
 
 1. Reads the repo and states inferred choices so you can object.
 2. **Project PRD.** Uses an existing one and does not rewrite it. If none exists, gathers from the repo, asks only for facts the repo does not contain, then writes `docs/prd.md`. Config stores a one-line product plus `agents.docs`, not the PRD body.
-3. **Questions** (before it writes config): models for the four roles (suggest opus / sonnet / haiku / sonnet); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
-4. Writes `harness.config.json` (`dhs.generatedFrom` = `.dhs/VERSION`) and generates live agents, work skills, and rule packs from `.dhs/`.
+3. **Questions** (before it writes config): for each host, then for each of the four roles, one model (suggest that host’s `modelSuggest`; see [Models per host](#models-per-host)); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
+4. Writes `harness.config.json` (`dhs.generatedFrom` = `.dhs/VERSION`) and generates live agents, work skills, and rule packs from `.dhs/` into **every** host tree. Each live agent’s `model:` is `agents.roles.<role>.model[<host.id>]` only.
 5. Merges project-root `AGENTS.md` and/or `CLAUDE.md` with the dhs template, shows the full proposed markdown, and waits for acceptance. The result is always `AGENTS.md`. It writes `CLAUDE.md` only when `.claude/` was present and/or `CLAUDE.md` already existed (prefer a symlink to `AGENTS.md`; if the link fails, an independent file with the same body).
 6. Offers Jira **once**. A decline is stored; add, change, or remove later is this same skill.
 
@@ -122,9 +147,9 @@ If `harness.config.json` is missing, that is a **first run**. If the file is alr
 
 Config already exists. Say what to change in ordinary language.
 
-If `.dhs/VERSION` does not match `dhs.generatedFrom`, it first regenerates live agents, work skills, and rule packs, sets `dhs.generatedFrom` to `.dhs/VERSION`, and tells you the installed package templates changed — then continues. That is the same mechanism as [After a package update](#after-a-package-update).
+If a role `model` is still a string, or the map is missing a host `id`, it finishes that map first (prefill a legacy string on every host, then confirm per host). If `.dhs/VERSION` does not match `dhs.generatedFrom`, it first regenerates live agents, work skills, and rule packs into every host tree, sets `dhs.generatedFrom` to `.dhs/VERSION`, and tells you the installed package templates changed — then continues. That is the same mechanism as [After a package update](#after-a-package-update).
 
-Then **one change at a time**: show current and new value, wait for confirmation, then write. It does not overwrite keys you did not confirm.
+Then **one change at a time**: show current and new value, wait for confirmation, then write. It does not overwrite keys you did not confirm. A role `model` change is one cell `(role, host)` and rewrites `model:` in **that** host’s `agentsDir` only.
 
 It does **not** touch `agents.brainstorm` (that is `/dhs-brainstorm`), rewrite the project PRD, remake or re-merge `AGENTS.md`, or commit. If `.claude/` is present and `CLAUDE.md` is still missing, it creates the symlink the same way as on first run.
 
@@ -132,7 +157,7 @@ It does **not** touch `agents.brainstorm` (that is `/dhs-brainstorm`), rewrite t
 
 | Setting | First run | Later run | Side effect |
 |---------|-----------|-----------|-------------|
-| Role models | ask | yes | rewrite that live agent’s `model:` frontmatter |
+| Role models | ask per host | yes — one cell `(role, host)` | rewrite `model:` in that host’s `agentsDir` |
 | `agents.contentLanguage` | ask | yes | config only |
 | `agents.baseBranch` | ask | yes | config only |
 | Optional project rule | one; skip is default | if you ask — stored on the roles (`rules`; reviewer `checklist` when it is a review constraint) | stored on roles |
@@ -148,7 +173,7 @@ It does **not** touch `agents.brainstorm` (that is `/dhs-brainstorm`), rewrite t
 
 ## Agents
 
-Exactly four product agents. Brainstorm members are not agents and are not `@`-addressable. Default models: Architect opus, Implementer sonnet, Consultant haiku, Reviewer sonnet.
+Exactly four product agents. Brainstorm members are not agents and are not `@`-addressable. Interview defaults depend on the host (see [Models per host](#models-per-host)); config stores a map, not one string per role.
 
 | Agent | Job | Must not |
 |-------|-----|----------|
@@ -211,14 +236,14 @@ flowchart LR
 
 ### Personae and how you manage them
 
-CRUD is **only** `/dhs-brainstorm`. Config lives in `agents.brainstorm.members`: `id`, `description`, `identity`, `cares`, `dislikes`. Live files are typically `.claude/brainstorm/members/<id>.md`, generated from the template. After create, edit, or remove, regenerate that file from config. Do not hand-edit generated member markdown.
+CRUD is **only** `/dhs-brainstorm`. Config lives in `agents.brainstorm.members`: `id`, `description`, `identity`, `cares`, `dislikes`. Live files are `<brainstormDir>/members/<id>.md` for **every** `brainstormDir` in `.dhs/references/hosts.json`, generated from the template. After create, edit, or remove, regenerate that file from config. Do not hand-edit generated member markdown.
 
 On the **first** member in a project, the skill also asks (once):
 
 - Consult threshold: `any` (every user-visible change) / `significant` (default — hard to reverse, or changes how the product is used) / `broad` (new module, onboarding, pricing, navigation rebuild). Written as `agents.brainstorm.consult`.
-- One model for every persona turn **and** the facilitator. No per-persona model. Suggest `sonnet`. Written as `agents.brainstorm.model`.
+- One model **per host** for every persona turn **and** the facilitator (suggest that host’s `modelSuggest.brainstorm`). No per-persona model. Written as `agents.brainstorm.model` (a map keyed by host `id`). A legacy string is migrated the same way as role models.
 
-**App context** is `.claude/brainstorm/app-context.md`, built from the repo (product line, `agents.docs`, README). Gaps: one question at a time; write only after you confirm the file. A consult without a ready app context stops.
+**App context** is `<brainstormDir>/app-context.md` in every `brainstormDir`, built from the repo (product line, `agents.docs`, README). Gaps: one question at a time; write only after you confirm the file. A consult without a ready app context stops.
 
 ### How a round collects opinions
 
@@ -340,6 +365,6 @@ Replies follow the conversation language. Spec, prompt, log, changelog, and PR t
 
 ## CLI
 
-v1 CLI is only `dhs install` and `dhs uninstall`. Everything else is a skill.
+v1 CLI is only `dhs install` and `dhs uninstall`. Everything else is a skill. Install and uninstall loop every host in the **package** `hosts.json` (uninstall still works after `.dhs/` is gone).
 
 No extra product agents. No worktrees. No Linear or GitHub Issues as a tracker. No merging pull requests.

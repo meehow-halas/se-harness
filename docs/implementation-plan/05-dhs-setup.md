@@ -46,7 +46,7 @@ Cite [prd.md](../prd.md) sections **Skills** and **`/dhs-setup` (detail)** as th
 Live files written **in a consuming project** (not in this repo during this phase, except as documented behaviour):
 
 - `harness.config.json` including `dhs.generatedFrom` = `.dhs/VERSION`
-- Host agents (typically `.claude/agents/`) as **copies** of `.dhs/agents/` plus `model:` from `agents.roles`
+- Host agents as **copies** of `.dhs/agents/` plus `model:` from `agents.roles.<role>.model[<host.id>]` (phase 9)
 - Work skills in the host skills directory
 - Rule packs from `.dhs/packs/`, filtered
 - Project-root `AGENTS.md` (after acceptance); `CLAUDE.md` when required
@@ -69,7 +69,7 @@ Follow PRD `/dhs-setup` (detail) **First run**:
 2. **PRD:** use existing; never overwrite. If none, gather from the repo, ask for missing product facts, write `docs/prd.md`, put the path in `agents.docs`. Config stores a one-line product plus doc paths, not the PRD body.
 3. Detect frameworks; generate packs (JS/TS, React Native, Angular, Next.js, Python, Django, FastAPI). Monorepo: pack only on trees that use it. Honour `packsIgnored`.
 4. Generate live agents and work skills from `.dhs/` as copies. Write `dhs.generatedFrom` from `.dhs/VERSION`.
-5. Roles: only the four. Suggest models opus / sonnet / haiku / sonnet.
+5. Roles: only the four. One question per `(host, role)`. Suggest from that host’s `modelSuggest` (phase 9).
 6. `agents.contentLanguage`: ask once, suggest conversation language.
 7. `agents.baseBranch`: ask once, suggest `dev`. If the repo already names a default branch, state that inference; do not silently take `main`, `master`, or the current checkout. Do not write this value into agent markdown.
 8. **Optional project rule:** one question after models, language, and base branch. Explain what it is. Skip is the default. Do not ask for a list or a second rule.
@@ -78,9 +78,9 @@ Follow PRD `/dhs-setup` (detail) **First run**:
 
 ### Later run
 
-If `.dhs/VERSION` ≠ `dhs.generatedFrom`: regenerate live agents, work skills, and rule packs from current `.dhs/` first (not from the project PRD, not from `AGENTS.md`), set `dhs.generatedFrom`, tell the user templates changed. Then one parameter at a time.
+If a role `model` is still a string or the map is missing a host `id`, finish that map first. If `.dhs/VERSION` ≠ `dhs.generatedFrom`: regenerate live agents, work skills, and rule packs from current `.dhs/` first (not from the project PRD, not from `AGENTS.md`), set `dhs.generatedFrom`, tell the user templates changed. Then one parameter at a time.
 
-- Role `model` change → rewrite that live agent’s frontmatter.
+- Role `model` change → one cell `(role, host)`; rewrite that live agent’s frontmatter in **that** `agentsDir` only.
 - `packsIgnored` or detected frameworks change → regenerate rule packs.
 - `agents.baseBranch` change → config only.
 - Do not touch `agents.brainstorm`. Do not create or rewrite the project PRD. Do not remake `AGENTS.md`. Do not commit.
@@ -94,7 +94,7 @@ If the user names another config key, do that key first, then the tracker offer 
 
 ### Generation rules
 
-- Live agents: copies, not symlinks. `model:` from `agents.roles`. Bodies still do not interpolate runtime keys.
+- Live agents: copies, not symlinks. `model:` from `agents.roles.<role>.model[<host.id>]`. Bodies still do not interpolate runtime keys.
 - Work skills generated here; install does not generate them.
 - Packs: from `.dhs/packs/`, path-scoped as the pack files specify.
 
