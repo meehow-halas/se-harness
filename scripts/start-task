@@ -1,7 +1,9 @@
 #!/bin/sh
 # start-task <task>
 # Create or reuse a git worktree for the task branch. Does not switch the caller.
-# Reads project-root harness.config.json. No commit, no push.
+# Reads project-root harness.config.json. Copies this task's file-tracker files
+# into the worktree, then removes uncommitted copies of those paths from launch.
+# No commit, no push, no uncommit.
 # Invoked as .dhs/scripts/start-task after dhs install.
 
 . "$(dirname "$0")/lib.sh"

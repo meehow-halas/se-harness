@@ -70,7 +70,7 @@ That is the full install-owned set.
 Install also ensures the project-root `.gitignore` contains `.dhs/` and `harness.credentials.local.json` (creates the file if missing). This is not uninstall-owned: `dhs uninstall` does not edit `.gitignore`.
 
 - Do **not** generate live agents, work skills, rule packs, or `harness.config.json`.
-- After install, `/dhs-setup` is invocable. `/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm` do not exist yet and must not be written by install.
+- After install, `/dhs-setup` is invocable. `/dhs-shipit`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm` do not exist yet and must not be written by install.
 - Idempotent: a second install refreshes `.dhs/` from the package and the install-owned `/dhs-setup` skill. It still does not generate live files.
 - If `harness.config.json` already exists (later install after a package update), install **may** print that the user should run `/dhs-setup` to apply new templates. It still does not generate them.
 - Host skill location: the project skill directory the host uses (typically under `.claude/skills/` for Claude Code). Do not write machine-wide skills.

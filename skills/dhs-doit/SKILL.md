@@ -67,7 +67,7 @@ For **each** named task independently:
 If spec or prompt is missing:
 
 ```text
-BLOCKED: spec and prompt are missing — run /dhs-planit or /dhs-feature
+BLOCKED: spec and prompt are missing — run /dhs-planit or /dhs-shipit
 ```
 
 Read status from the active tracker. Compare to `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). If status is already the configured `in review` or `done` string:
@@ -101,4 +101,4 @@ When all phases have `continue`, status stays `in progress`. Do not start Review
 
 ## After Implementer finishes
 
-Report each task key, its `worktree:`, and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/dhs-checkit` (one Reviewer round, same list) or `/dhs-feature` for a single leftover. Do **not** start review.
+Report each task key, its `worktree:`, and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/dhs-checkit` (one Reviewer round, same list) or `/dhs-shipit` for a single leftover. Do **not** start review.

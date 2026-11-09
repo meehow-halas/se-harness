@@ -63,7 +63,7 @@ The only supported adoption path:
 
 1. **Bootstrap** — `npx -p dev-harness-layer dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill in every `skillsDir` from `references/hosts.json`. Setup is not done. Work skills must not exist yet and must not be offered.
 2. **Finish setup** — `/dhs-setup` only. CLI does not configure the project.
-3. **Work** — `/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`, or later `/dhs-setup`.
+3. **Work** — `/dhs-shipit`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`, or later `/dhs-setup`.
 4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config.json` and files `/dhs-setup` generated.
 
 ## Shared stops
@@ -74,7 +74,7 @@ Not questions and not Consultant `must-fix`. One line:
 BLOCKED: <what stopped> — <what the user or another skill must do>
 ```
 
-Examples in the PRD (Stops): install missing, setup not run, VERSION mismatch, approval missing, open blocker task, merge not confirmed, dirty task worktree on `return-to-base`, `/dhs-feature` given a list, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
+Examples in the PRD (Stops): install missing, setup not run, VERSION mismatch, approval missing, open blocker task, merge not confirmed, dirty task worktree on `return-to-base`, `/dhs-shipit` given a list, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
 
 Do not use a `BLOCKED: rule=<id>` shape. Published product uses the PRD line above.
 

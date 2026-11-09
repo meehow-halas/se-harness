@@ -145,7 +145,7 @@ BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harne
 
 If any role `model` is still a string, or a map is missing a `hosts.json` `id`, finish **Role model maps** first. Do not regenerate live agents until every role has a complete map.
 
-If `.dhs/VERSION` (trimmed) does not equal `dhs.generatedFrom`: regenerate live agents, work skills, and rule packs from `.dhs/` (same copy rules as first run), set `dhs.generatedFrom` to `.dhs/VERSION`, and tell the user the installed package templates changed. Then continue below.
+If `.dhs/VERSION` (trimmed) does not equal `dhs.generatedFrom`: regenerate live agents, work skills, and rule packs from `.dhs/` (same copy rules as first run), set `dhs.generatedFrom` to `.dhs/VERSION`, and tell the user the installed package templates changed. That message must name the work-skill rename: `/dhs-feature` was renamed to `/dhs-shipit`; leftover live `dhs-feature` was removed from every `skillsDir`. Do not rewrite `AGENTS.md` or `CLAUDE.md`; mention they may still contain the old name. Then continue below.
 
 Then **one change at a time**. Show current and new value, wait for confirmation, then write. Do not overwrite keys the user did not confirm.
 
@@ -223,10 +223,12 @@ Copy these directories from `.dhs/skills/` to **each** `skillsDir`, if they exis
 - `dhs-planit`
 - `dhs-doit`
 - `dhs-checkit`
-- `dhs-feature`
+- `dhs-shipit`
 - `dhs-brainstorm` (when present)
 
 Do **not** overwrite the install-owned `/dhs-setup` skill from this copy step. If a listed template is missing, still copy the others; the copied stub (when present) stops with `BLOCKED:` until a later package fills the body.
+
+In **each** `skillsDir`, if a leftover `dhs-feature` directory exists, delete it. Do not leave it as an alias.
 
 When the host `id` is `cursor`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/dhs-setup`). The package templates may omit that field.
 

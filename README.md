@@ -52,7 +52,7 @@ npx -p https://github.com/nbmh/dev-harness-layer dhs install
 
 npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 
-**Result:** `.dhs/` and the project skill `/dhs-setup` in every host `skillsDir` (today `.claude/skills/dhs-setup` and `.cursor/skills/dhs-setup`). Setup is **not** done. Work skills (`/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`) do not exist yet.
+**Result:** `.dhs/` and the project skill `/dhs-setup` in every host `skillsDir` (today `.claude/skills/dhs-setup` and `.cursor/skills/dhs-setup`). Setup is **not** done. Work skills (`/dhs-shipit`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`) do not exist yet.
 
 ## 2. Setup
 
@@ -68,11 +68,11 @@ First run, later changes, and what you can set: [`/dhs-setup`](#dhs-setup).
 
 ## 3. Work
 
-Say what you want in ordinary language. The assistant matches **intent** to a skill; slash names (`/dhs-feature`, and so on) label the skill in the host, they are not a command line to assemble.
+Say what you want in ordinary language. The assistant matches **intent** to a skill; slash names (`/dhs-shipit`, and so on) label the skill in the host, they are not a command line to assemble.
 
 | Intent | Skill |
 |--------|---------|
-| Full path | `/dhs-feature` |
+| Full path | `/dhs-shipit` |
 | Spec only | `/dhs-planit` |
 | Implementation only | `/dhs-doit` (one task or a list) |
 | One review / update from base / close after merge | `/dhs-checkit` (one task or a list; one variant) |
@@ -94,13 +94,13 @@ Removes `.dhs/` and the install-owned `/dhs-setup` skill from every `skillsDir`.
 
 ## After a package update
 
-Run install again from the same source, then `/dhs-setup`, so generated files match the installed templates (`.dhs/VERSION` vs `dhs.generatedFrom`).
+Run install again from the same source, then `/dhs-setup`, so generated files match the installed templates (`.dhs/VERSION` vs `dhs.generatedFrom`). That regeneration copies `/dhs-shipit` and deletes leftover live `/dhs-feature`. It does not rewrite project `AGENTS.md`.
 
 ## Skills
 
-Consultant is **not** a slash skill. The Implementer launches it. Single-stage skills do not chain; only `/dhs-feature` runs the full path, and it is **one task**.
+Consultant is **not** a slash skill. The Implementer launches it. Single-stage skills do not chain; only `/dhs-shipit` runs the full path, and it is **one task**.
 
-If Architect needs a persona round, work skills **stop and ask** `/dhs-brainstorm`. `/dhs-feature` does not run that round itself.
+If Architect needs a persona round, work skills **stop and ask** `/dhs-brainstorm`. `/dhs-shipit` does not run that round itself.
 
 | Skill | When | What happens | Example |
 |-------|------|----------------|---------|
@@ -108,7 +108,7 @@ If Architect needs a persona round, work skills **stop and ask** `/dhs-brainstor
 | `/dhs-planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
 | `/dhs-doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. Status stays `in progress` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
 | `/dhs-checkit` | One Reviewer round per named task | Variants: review (default), update from base, close after **you** confirm merge. One variant for the whole invocation; same worktree / parallel rules as `/dhs-doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" · "the PR is merged, close the task" |
-| `/dhs-feature` | Full path, **one task** | Starts at the first missing stage; does not merge. A list of keys is a stop — spec with `/dhs-planit`, then `/dhs-doit`. Implementer and Reviewer still use a worktree | "add password reset from spec through PR" |
+| `/dhs-shipit` | Full path, **one task** | Starts at the first missing stage; does not merge. A list of keys is a stop — spec with `/dhs-planit`, then `/dhs-doit`. Implementer and Reviewer still use a worktree | "add password reset from spec through PR" |
 | `/dhs-brainstorm` | Personae | CRUD members, app context, consult round; does not role-play. See [Brainstorm](#brainstorm). | "consult this spec with the personae" · "build the app context" |
 
 ```mermaid
@@ -117,9 +117,9 @@ flowchart LR
   doit["/dhs-doit"] --> implementer[Implementer]
   implementer --> consultant[Consultant]
   checkit["/dhs-checkit"] --> reviewer[Reviewer]
-  feature["/dhs-feature"] --> architect
-  feature --> implementer
-  feature --> reviewer
+  shipit["/dhs-shipit"] --> architect
+  shipit --> implementer
+  shipit --> reviewer
   reviewer --> humanMerge[You merge on GitHub]
   humanMerge --> close["/dhs-checkit close"]
 ```
@@ -147,7 +147,7 @@ If `harness.config.json` is missing, that is a **first run**. If the file is alr
 
 Config already exists. Say what to change in ordinary language.
 
-If a role `model` is still a string, or the map is missing a host `id`, it finishes that map first (prefill a legacy string on every host, then confirm per host). If `.dhs/VERSION` does not match `dhs.generatedFrom`, it first regenerates live agents, work skills, and rule packs into every host tree, sets `dhs.generatedFrom` to `.dhs/VERSION`, and tells you the installed package templates changed — then continues. That is the same mechanism as [After a package update](#after-a-package-update).
+If a role `model` is still a string, or the map is missing a host `id`, it finishes that map first (prefill a legacy string on every host, then confirm per host). If `.dhs/VERSION` does not match `dhs.generatedFrom`, it first regenerates live agents, work skills, and rule packs into every host tree, sets `dhs.generatedFrom` to `.dhs/VERSION`, and tells you the installed package templates changed (including that `/dhs-feature` was renamed to `/dhs-shipit`) — then continues. That is the same mechanism as [After a package update](#after-a-package-update).
 
 Then **one change at a time**: show current and new value, wait for confirmation, then write. It does not overwrite keys you did not confirm. A role `model` change is one cell `(role, host)` and rewrites `model:` in **that** host’s `agentsDir` only.
 
@@ -268,7 +268,7 @@ Do not paste transcripts back into the chat or into the Architect launch. If eve
 
 **Direct consult** (`/dhs-brainstorm` plus a question or a spec). Needs a ready app context and at least one member. The consult threshold does **not** apply. If you name members, those are asked; otherwise every member. The skill runs personae → facilitator → Architect, then **shows the Architect’s decisions** (not the raw persona replies). You resolve leftover conflicts. A blocker the Architect rejected is still shown.
 
-**During specification** (`/dhs-planit`, or Architect inside `/dhs-feature`). If Architect needs a round, work skills **stop and ask** `/dhs-brainstorm`. They do not interview personae in-process. `/dhs-feature` does not start a round by itself.
+**During specification** (`/dhs-planit`, or Architect inside `/dhs-shipit`). If Architect needs a round, work skills **stop and ask** `/dhs-brainstorm`. They do not interview personae in-process. `/dhs-shipit` does not start a round by itself.
 
 A round **on its own** (nobody named a question) runs only when there are at least **two** members **and** the work passes `agents.brainstorm.consult` (`any` / `significant` / `broad` as above).
 
@@ -286,7 +286,7 @@ Two axes. Do not mix them.
 
 ### Interaction
 
-From **intent**, not a required slash flag. Default: `interactive`. You may name the mode in the request so every agent in a `/dhs-feature` run shares it; you do not assemble it like a CLI flag.
+From **intent**, not a required slash flag. Default: `interactive`. You may name the mode in the request so every agent in a `/dhs-shipit` run shares it; you do not assemble it like a CLI flag.
 
 | Mode | Ask the user |
 |------|----------------|

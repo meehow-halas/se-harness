@@ -15,7 +15,7 @@ Publish brainstorm round templates and `/dhs-brainstorm`. Facilitator **collect 
 - A fifth role in `agents.roles` or a `/dhs-setup` question for facilitator model as a product role.
 - Implementer, Consultant, or Reviewer running a round.
 - `/dhs-setup` editing members.
-- `/dhs-feature` starting a round by itself.
+- `/dhs-shipit` starting a round by itself.
 - Writing persona transcripts back into chat or into the Architect launch.
 - Cursor-specific generators (Deferred).
 - A judging synthesizer. Facilitator templates stay in `brainstorm/`, not `agents/`.
@@ -62,7 +62,7 @@ Personae see only: member file, output format, app context, material. Facilitato
 
 ### During specification
 
-`/dhs-planit` or Architect inside `/dhs-feature`: if a round is needed, stop and ask this skill. Consult on its own when there are at least two members **and** the work passes `agents.brainstorm.consult`:
+`/dhs-planit` or Architect inside `/dhs-shipit`: if a round is needed, stop and ask this skill. Consult on its own when there are at least two members **and** the work passes `agents.brainstorm.consult`:
 
 - `any` — every user-visible change
 - `significant` (default if unset) — hard to reverse, or changes how the product is used

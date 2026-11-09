@@ -5,7 +5,7 @@ description: Run the Architect once for a request. Use when the user runs /dhs-p
 
 # /dhs-planit
 
-Spec only. Launch the Architect once. When that finishes, offer `/dhs-doit` or `/dhs-feature`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill.
+Spec only. Launch the Architect once. When that finishes, offer `/dhs-doit` or `/dhs-shipit`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill.
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands. Do not merge a PR.
 
@@ -76,6 +76,6 @@ Report the task key, title, type, tracker, and that status stays at the configur
 Offer the next step. Do **not** start it:
 
 - `/dhs-doit` — implement this spec (Consultant loop inside Implementer)
-- `/dhs-feature` — full path from here
+- `/dhs-shipit` — full path from here
 
 Do not start Reviewer. Do not call `.dhs/scripts/`.

@@ -41,7 +41,7 @@ Cite [prd.md](../prd.md) sections **Skills** and **`/dhs-setup` (detail)** as th
 | Path | What |
 |------|------|
 | `skills/dhs-setup/` (or host-shaped equivalent) | Full `/dhs-setup` skill | 
-| Work-skill **templates** under `skills/` | At least filenames setup will copy live: `dhs-planit`, `dhs-doit`, `dhs-checkit`, `dhs-feature` (bodies: phase 6). Optional thin `BLOCKED:` stubs if phase 6 is not in the same pass |
+| Work-skill **templates** under `skills/` | At least filenames setup will copy live: `dhs-planit`, `dhs-doit`, `dhs-checkit`, `dhs-shipit` (bodies: phase 6). Optional thin `BLOCKED:` stubs if phase 6 is not in the same pass |
 
 Live files written **in a consuming project** (not in this repo during this phase, except as documented behaviour):
 
@@ -107,4 +107,4 @@ If the user names another config key, do that key first, then the tracker offer 
 
 ## Handoff
 
-Phase 6 replaces work-skill stubs with real `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-feature`. Those skills must stop when config is missing or VERSION ≠ `generatedFrom`, with a message to run `/dhs-setup` (and `dhs install` first if `.dhs/` or VERSION is missing). Phase 7 adds `/dhs-brainstorm` the same way.
+Phase 6 replaces work-skill stubs with real `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-shipit`. Those skills must stop when config is missing or VERSION ≠ `generatedFrom`, with a message to run `/dhs-setup` (and `dhs install` first if `.dhs/` or VERSION is missing). Phase 7 adds `/dhs-brainstorm` the same way.

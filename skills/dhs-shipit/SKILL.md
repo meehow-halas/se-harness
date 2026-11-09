@@ -1,14 +1,14 @@
 ---
-name: dhs-feature
-description: Full path Architect → Implementer (Consultant inside) → Reviewer. Use when the user runs /dhs-feature. Starts at the first missing stage.
+name: dhs-shipit
+description: Full path Architect → Implementer (Consultant inside) → Reviewer. Use when the user runs /dhs-shipit. Starts at the first missing stage.
 ---
 
-# /dhs-feature
+# /dhs-shipit
 
 Full path for **one task**. Single-stage skills do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR. There is no user-facing Consultant skill (Consultant stays inside Implementer). A list of keys:
 
 ```text
-BLOCKED: /dhs-feature is one task — spec with /dhs-planit, then /dhs-doit with the list
+BLOCKED: /dhs-shipit is one task — spec with /dhs-planit, then /dhs-doit with the list
 ```
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands.
@@ -70,7 +70,7 @@ Reply in the conversation language.
 Active tracker only: files if `agents.tracker` is absent; Jira if it is present. Never both. Never mirror.
 
 - New work (a sentence, no key) → no spec yet.
-- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /dhs-feature is one task` above).
+- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /dhs-shipit is one task` above).
 - Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). Compare to those values; do not translate them.
 
 If status is already the configured **`in review`** or **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:

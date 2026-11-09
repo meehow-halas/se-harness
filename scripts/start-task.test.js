@@ -175,25 +175,121 @@ describe("start-task", () => {
     });
   });
 
-  test("copies file-tracker files from the launch tree into the worktree", () => {
+  test("copies untracked file-tracker files into the worktree and removes them from launch", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      writeFile(cwd, "docs/features/001-feature.feature.md", "spec\n");
-      writeFile(cwd, "docs/prompt/001-feature.prompt.md", "prompt\n");
-      writeFile(cwd, "docs/feature-log/001-feature.log.md", "log\n");
-      const wt = startWorktree(cwd, "001-feature");
+      const task = "042-login";
+      writeFile(cwd, `docs/features/${task}.feature.md`, "alpha-spec\n");
+      writeFile(cwd, `docs/prompt/${task}.prompt.md`, "alpha-prompt\n");
+      writeFile(cwd, `docs/feature-log/${task}.log.md`, "alpha-log\n");
+      writeFile(cwd, "notes-unrelated.txt", "keep-me\n");
+      const wt = startWorktree(cwd, task);
       assert.equal(
-        fs.readFileSync(path.join(wt, "docs/features/001-feature.feature.md"), "utf8"),
-        "spec\n"
+        fs.readFileSync(path.join(wt, `docs/features/${task}.feature.md`), "utf8"),
+        "alpha-spec\n"
       );
       assert.equal(
-        fs.readFileSync(path.join(wt, "docs/prompt/001-feature.prompt.md"), "utf8"),
-        "prompt\n"
+        fs.readFileSync(path.join(wt, `docs/prompt/${task}.prompt.md`), "utf8"),
+        "alpha-prompt\n"
       );
       assert.equal(
-        fs.readFileSync(path.join(wt, "docs/feature-log/001-feature.log.md"), "utf8"),
-        "log\n"
+        fs.readFileSync(path.join(wt, `docs/feature-log/${task}.log.md`), "utf8"),
+        "alpha-log\n"
       );
+      assert.equal(fs.existsSync(path.join(cwd, `docs/features/${task}.feature.md`)), false);
+      assert.equal(fs.existsSync(path.join(cwd, `docs/prompt/${task}.prompt.md`)), false);
+      assert.equal(fs.existsSync(path.join(cwd, `docs/feature-log/${task}.log.md`)), false);
+      assert.equal(fs.readFileSync(path.join(cwd, "notes-unrelated.txt"), "utf8"), "keep-me\n");
+      assert.equal(currentBranch(cwd), "dev");
+    });
+  });
+
+  test("restores tracked dirty file-tracker files on launch after copying into the worktree", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const task = "007-checkout";
+      writeFile(cwd, `docs/features/${task}.feature.md`, "head-spec\n");
+      writeFile(cwd, `docs/prompt/${task}.prompt.md`, "head-prompt\n");
+      writeFile(cwd, `docs/feature-log/${task}.log.md`, "head-log\n");
+      git(cwd, ["add", `docs/features/${task}.feature.md`, `docs/prompt/${task}.prompt.md`, `docs/feature-log/${task}.log.md`]);
+      git(cwd, ["commit", "-m", "tracker on base"]);
+      writeFile(cwd, `docs/features/${task}.feature.md`, "dirty-spec\n");
+      writeFile(cwd, `docs/prompt/${task}.prompt.md`, "dirty-prompt\n");
+      writeFile(cwd, `docs/feature-log/${task}.log.md`, "dirty-log\n");
+      writeFile(cwd, "scratch.txt", "other-dirty\n");
+      const wt = startWorktree(cwd, task);
+      assert.equal(
+        fs.readFileSync(path.join(wt, `docs/features/${task}.feature.md`), "utf8"),
+        "dirty-spec\n"
+      );
+      assert.equal(
+        fs.readFileSync(path.join(wt, `docs/prompt/${task}.prompt.md`), "utf8"),
+        "dirty-prompt\n"
+      );
+      assert.equal(
+        fs.readFileSync(path.join(wt, `docs/feature-log/${task}.log.md`), "utf8"),
+        "dirty-log\n"
+      );
+      assert.equal(
+        fs.readFileSync(path.join(cwd, `docs/features/${task}.feature.md`), "utf8"),
+        "head-spec\n"
+      );
+      assert.equal(
+        fs.readFileSync(path.join(cwd, `docs/prompt/${task}.prompt.md`), "utf8"),
+        "head-prompt\n"
+      );
+      assert.equal(
+        fs.readFileSync(path.join(cwd, `docs/feature-log/${task}.log.md`), "utf8"),
+        "head-log\n"
+      );
+      assert.equal(fs.readFileSync(path.join(cwd, "scratch.txt"), "utf8"), "other-dirty\n");
+    });
+  });
+
+  test("leaves tracked clean file-tracker files on launch", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const task = "019-session";
+      writeFile(cwd, `docs/features/${task}.feature.md`, "clean-spec\n");
+      writeFile(cwd, `docs/prompt/${task}.prompt.md`, "clean-prompt\n");
+      writeFile(cwd, `docs/feature-log/${task}.log.md`, "clean-log\n");
+      git(cwd, ["add", `docs/features/${task}.feature.md`, `docs/prompt/${task}.prompt.md`, `docs/feature-log/${task}.log.md`]);
+      git(cwd, ["commit", "-m", "tracker committed"]);
+      const wt = startWorktree(cwd, task);
+      assert.equal(
+        fs.readFileSync(path.join(wt, `docs/features/${task}.feature.md`), "utf8"),
+        "clean-spec\n"
+      );
+      assert.equal(
+        fs.readFileSync(path.join(cwd, `docs/features/${task}.feature.md`), "utf8"),
+        "clean-spec\n"
+      );
+      assert.equal(
+        fs.readFileSync(path.join(cwd, `docs/prompt/${task}.prompt.md`), "utf8"),
+        "clean-prompt\n"
+      );
+      assert.equal(
+        fs.readFileSync(path.join(cwd, `docs/feature-log/${task}.log.md`), "utf8"),
+        "clean-log\n"
+      );
+    });
+  });
+
+  test("second start-task does not clobber worktree tracker files when launch is already clean", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const task = "033-widget";
+      writeFile(cwd, `docs/features/${task}.feature.md`, "first-spec\n");
+      writeFile(cwd, `docs/prompt/${task}.prompt.md`, "first-prompt\n");
+      writeFile(cwd, `docs/feature-log/${task}.log.md`, "first-log\n");
+      const wt = startWorktree(cwd, task);
+      writeFile(wt, `docs/feature-log/${task}.log.md`, "worktree-log\n");
+      assertUnchanged(startTask(cwd, task), { branch: task, created: "no", worktree: wt });
+      assert.equal(
+        fs.readFileSync(path.join(wt, `docs/feature-log/${task}.log.md`), "utf8"),
+        "worktree-log\n"
+      );
+      assert.equal(fs.existsSync(path.join(cwd, `docs/feature-log/${task}.log.md`)), false);
     });
   });
 

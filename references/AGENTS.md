@@ -12,7 +12,7 @@ The only supported adoption path:
 
 1. **Bootstrap** — `npx -p dev-harness-layer dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill in every `skillsDir`, and `.dhs/` and `harness.credentials.local.json` entries in the project-root `.gitignore`. Setup is not done. Do not offer work skills yet.
 2. **Finish setup** — `/dhs-setup` only. The CLI does not configure the project.
-3. **Work** — `/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`, or later `/dhs-setup`.
+3. **Work** — `/dhs-shipit`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`, or later `/dhs-setup`.
 4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/` and the install-owned `/dhs-setup` skill from every `skillsDir`. Leaves `harness.config.json` and files `/dhs-setup` generated.
 
 CLI in v1: `dhs install` and `dhs uninstall` only.
@@ -40,7 +40,7 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | `/dhs-planit` | Architect once. Offer the next step; do not start it. |
 | `/dhs-doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
 | `/dhs-checkit` | One Reviewer round per named task: review, update from base, or close after the user confirms merge. |
-| `/dhs-feature` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task only. |
+| `/dhs-shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task only. |
 | `/dhs-brainstorm` | Members, app context, and a consult round. |
 
 ## Tracker
@@ -67,7 +67,7 @@ Allowlisted git/`gh` operations run through `.dhs/scripts/`. Agents call those s
 
 | Script | Who |
 |--------|-----|
-| `start-task` | Implementer at start; Reviewer if the branch is missing. Creates or reuses the worktree; does not switch the caller |
+| `start-task` | Implementer at start; Reviewer if the branch is missing. Creates or reuses the worktree; does not switch the caller. Copies this task’s file-tracker files into the worktree, then removes uncommitted copies of those paths from the launch tree |
 | `commit-task` | Reviewer, after acceptance, or after resolving an update merge (from the worktree) |
 | `push-task` | Reviewer |
 | `open-pr` | Reviewer, after acceptance |

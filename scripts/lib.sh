@@ -93,6 +93,15 @@ sync_launch_files() {
     if [ -f "$_launch/$_rel" ]; then
       mkdir -p "$_wt/$(dirname "$_rel")"
       cp "$_launch/$_rel" "$_wt/$_rel"
+      _st=$(git -C "$_launch" status --porcelain -- "$_rel")
+      _xy=$(printf '%s\n' "$_st" | cut -c1-2)
+      if [ -z "$_st" ]; then
+        :
+      elif [ "$_xy" = "??" ]; then
+        rm -f "$_launch/$_rel"
+      else
+        git -C "$_launch" restore --source=HEAD --worktree --staged -- "$_rel"
+      fi
     fi
   done
   link_if_missing "$_launch/.dhs" "$_wt/.dhs"
