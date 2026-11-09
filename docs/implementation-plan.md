@@ -25,6 +25,7 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 10 | [10-parallel-worktrees.md](implementation-plan/10-parallel-worktrees.md) | [10-parallel-worktrees.prompt.md](implementation-plan/10-parallel-worktrees.prompt.md) |
 | Phase 11 | [11-session-update-check.md](implementation-plan/11-session-update-check.md) | — |
 | Phase 12 | [12-jira-rest-scripts.md](implementation-plan/12-jira-rest-scripts.md) | [12-jira-rest-scripts.prompt.md](implementation-plan/12-jira-rest-scripts.prompt.md) |
+| Phase 13 | [13-opencode-host.md](implementation-plan/13-opencode-host.md) | — |
 
 Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longest because `/dhs-setup` and the work-skill pipeline are large; they still point at the PRD rather than restating it.
 
@@ -32,7 +33,7 @@ Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longe
 
 - The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-layer`**.
 - CLI in v1: `dhs install` and `dhs uninstall` only. No `dhs agent`, `dhs git`, `dhs check`, status, or Jira subcommand. Never `npm install -g`.
-- Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, or any other machine-wide path. Run only in the target project.
+- Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, or any other machine-wide path. Run only in the target project.
 - Setup is `/dhs-setup`.
 - Exactly four product agents: Architect, Implementer, Consultant, Reviewer. The brainstorm facilitator is a collector runner, not a fifth role and not in `agents/`.
 - Git allowlist helpers, Jira Cloud REST (`jira`), and the session update check are POSIX `sh` files under package `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands. Agents call those scripts; they do not compose the matching `git`/`gh`/`curl` themselves. Implementer and Reviewer use a git worktree per task (`start-task`); Architect does not. Host session-start hooks run `.dhs/scripts/check-update` (GitHub tags, notify only, fail-open).
@@ -114,6 +115,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 10 | Parallel worktrees (`start-task` + multi-task `/dhs-doit` / `/dhs-checkit`) | 2, 4, 6 | done |
 | 11 | Session update check (GitHub tags, host hooks) | 1, 8 | done |
 | 12 | Jira Cloud REST scripts (no MCP) | 2, 3, 4, 5 | done |
+| 13 | OpenCode host | 8, 9, 11 | done |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.dhs/VERSION`.
 

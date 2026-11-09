@@ -263,6 +263,13 @@ function makePackageRoot(dir, { payload, setupSkill = true, version = "1.2.3" } 
   const refsDir = path.join(dir, "references");
   fs.mkdirSync(refsDir, { recursive: true });
   fs.copyFileSync(hostsSrc, path.join(refsDir, "hosts.json"));
+  const pluginSrc = path.join(REPO_ROOT, "references", "opencode-check-update.js");
+  if (fs.existsSync(pluginSrc)) {
+    fs.copyFileSync(
+      pluginSrc,
+      path.join(refsDir, "opencode-check-update.js")
+    );
+  }
 }
 
 function blockedMessage(result) {

@@ -1,6 +1,6 @@
 # Product: dhs
 
-A layer for software engineering work in an AI coding assistant. Supported hosts in this version are **Claude Code** and **Cursor Agent**. A later host is a row in `references/hosts.json` plus a format adapter, not a second product. It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
+A layer for software engineering work in an AI coding assistant. Supported hosts in this version are **Claude Code**, **Cursor Agent**, and **OpenCode**. A later host is a row in `references/hosts.json` plus a format adapter, not a second product. It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
 
 The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-layer`**.
 
@@ -46,7 +46,7 @@ npx -p https://github.com/nbmh/dev-harness-layer dhs install
 
 `nbmh/dev-harness-layer` is the GitHub repository that publishes the `dev-harness-layer` package (`dhs` CLI). A git HTTPS URL is the same as `github:nbmh/dev-harness-layer`. npm and GitHub are first-class and equivalent.
 
-**Required result:** `.dhs/` and the project skill `/dhs-setup` in every supported host `skillsDir` (today `.claude/skills/dhs-setup` and `.cursor/skills/dhs-setup`). Setup is **not** done. `/dhs-shipit`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, and `/dhs-brainstorm` do not exist yet and must not be offered. `/dhs-setup` is the skill that finishes first-time setup and later changes the same config.
+**Required result:** `.dhs/` and the project skill `/dhs-setup` in every supported host `skillsDir` (today `.claude/skills/dhs-setup`, `.cursor/skills/dhs-setup`, and `.opencode/skills/dhs-setup`). Setup is **not** done. `/dhs-shipit`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, and `/dhs-brainstorm` do not exist yet and must not be offered. `/dhs-setup` is the skill that finishes first-time setup and later changes the same config.
 
 ### 2. Finish setup
 
@@ -86,7 +86,7 @@ Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config
 
 ## How it runs
 
-`dhs` is **never** installed globally (`npm install -g` is out). **Never** write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, or any other machine-wide location.
+`dhs` is **never** installed globally (`npm install -g` is out). **Never** write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, or any other machine-wide location.
 
 The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-layer`**. Run the CLI only in the target project. Pick one source in step 1 and reuse it in step 4.
 
@@ -100,7 +100,7 @@ Into **this project only**:
 |------|------|
 | `.dhs/` | Working copy of `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` from the package, plus `.dhs/VERSION` (package version). |
 | Project skill `/dhs-setup` | First-time configuration and later parameter changes (binding flow steps 2 and 3). Written into **every** `skillsDir` in `references/hosts.json`. |
-| Host session-start hook | One install-owned command that runs `.dhs/scripts/check-update`. Merged into each host’s `hooksFile` from `references/hosts.json` (today `.claude/settings.json` `SessionStart` and `.cursor/hooks.json` `sessionStart`). Does not overwrite other hooks or other keys in that file. |
+| Host session-start hook | One install-owned command that runs `.dhs/scripts/check-update`. Merged into each host’s `hooksFile` from `references/hosts.json` (today `.claude/settings.json` `SessionStart`, `.cursor/hooks.json` `sessionStart`, and the OpenCode plugin `.opencode/plugins/dhs-check-update.js`). Does not overwrite other hooks or other keys in that file. |
 
 That is the full install-owned set. After install, `/dhs-setup` is invocable. Live agents, the other skills, rule packs, and `harness.config.json` do **not** exist yet. Install does not generate those live files. If this project already has `harness.config.json` (a later install, for example after a package update), install may print that the user should run `/dhs-setup` to apply the new templates. It still does not generate them itself.
 
@@ -131,7 +131,7 @@ Agents run the **project’s own** test/lint/typecheck scripts (from `package.js
 - Auto-install or auto `/dhs-setup` when a newer GitHub tag exists. The session hook only notifies.
 - Status or log helpers for the **files** tracker as `.dhs/scripts/` in v1. Agents write file-tracker status and log themselves. Jira I/O is `.dhs/scripts/jira` (not a `dhs` CLI subcommand).
 - A second skill for first-time setup or later config changes. `/dhs-setup` does both.
-- Global install (`npm install -g`, machine-wide skills, `~/.claude/`, `~/.cursor/`).
+- Global install (`npm install -g`, machine-wide skills, `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`).
 - Finishing setup by any path other than `/dhs-setup` after `dhs install`.
 - Extra product agents. The set is Architect, Implementer, Consultant, Reviewer. The brainstorm facilitator is a collector runner, not a fifth role.
 - Merging pull requests.
@@ -435,9 +435,9 @@ These scripts do not cover LLM procedure (phases, Consultant, review checklist, 
 
 | Live file | What setup writes |
 |-----------|-------------------|
-| Host agent files | Copy of `.dhs/agents/` plus `model:` from `agents.roles.<role>.model[<host.id>]` into **each** `agentsDir` in `.dhs/references/hosts.json`. Not a symlink. Do not copy another host’s model. Cursor `consultant` copies also get `readonly: true`. |
+| Host agent files | Copy of `.dhs/agents/` plus `model:` from `agents.roles.<role>.model[<host.id>]` into **each** `agentsDir` in `.dhs/references/hosts.json`. Not a symlink. Do not copy another host’s model. Cursor `consultant` copies also get `readonly: true`. OpenCode copies get `mode: subagent`; OpenCode `consultant` copies also get `permissions` deny `edit`. |
 | Work skills (`/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-shipit`, `/dhs-brainstorm`) | From `.dhs/skills/` into every `skillsDir`. Do not overwrite install-owned `/dhs-setup`. Cursor copies also get `disable-model-invocation: true`. On generate, delete leftover `dhs-feature` from each `skillsDir` if it exists. |
-| Rule packs | From `.dhs/packs/`, filtered by detection and `packsIgnored`, into every `rulesDir` using that host’s `rulesExt` (`.md` + `paths:` vs `.mdc` + `description` / `globs` / `alwaysApply: false`). |
+| Rule packs | From `.dhs/packs/`, filtered by detection and `packsIgnored`, into every `rulesDir` using that host’s `rulesExt` (`.md` + `paths:` vs `.mdc` + `description` / `globs` / `alwaysApply: false`). For OpenCode, also merge the glob `.opencode/rules/*.md` into `.opencode/opencode.json` `instructions` (create the file if missing; do not edit project-root `opencode.json`). |
 | `dhs.generatedFrom` in `harness.config.json` | Equal to `.dhs/VERSION` after a generation that used that tree. |
 
 `.dhs/scripts/` are install-owned. A later `dhs install` replaces them immediately. Live agents, work skills, and rules stay until `/dhs-setup` regenerates them.
@@ -651,7 +651,7 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does n
 16. **Base branch is configured, never guessed.** First `/dhs-setup` asks for `agents.baseBranch` (suggested default `dev`). Later `/dhs-setup` can change it. `.dhs/scripts/` use only that value to cut, return, update-from-base, and target PRs. Agent markdown does not interpolate it.
 17. **Runtime config, not baked agent bodies.** Generated agents read `harness.config.json` for `agents.baseBranch`, statuses, tracker maps, `fetchFields`, content language, and product line. They call `.dhs/scripts/` for the git allowlist and for Jira. Changing those config keys does not require regenerating agents. Role `model` is written into live agent frontmatter because the host loads it from the file. Live agents are copies into **every** `agentsDir` in `.dhs/references/hosts.json`, not symlinks to `.dhs/agents/`. `agents.roles.<role>.model` is a map keyed by host `id`; each live copy gets `model:` from that host’s entry only. `agents.brainstorm.model` uses the same map shape.
 18. **Template version is stamped.** `dhs install` writes `.dhs/VERSION`. `/dhs-setup` writes `dhs.generatedFrom` in `harness.config.json`. A later `/dhs-setup` regenerates live agents, work skills, and rules when those two differ. Install never generates live files. Work skills stop on that mismatch the same way they stop when config is missing.
-19. **Always write every supported host.** `references/hosts.json` is the host table. Install and `/dhs-setup` write all rows; they do not ask which hosts to use. Adding a host is a new row plus a path/frontmatter adapter. Each row may carry `modelSuggest` (per role and `brainstorm`) as interview defaults; dhs does not translate one host’s model id into another’s. Do not maintain a second template tree per host.
+19. **Always write every supported host.** `references/hosts.json` is the host table. Install and `/dhs-setup` write all rows; they do not ask which hosts to use. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format, `modelSuggest`, hook shape). Each row may carry `modelSuggest` (per role and `brainstorm`) as interview defaults; dhs does not translate one host’s model id into another’s. Do not maintain a second template tree per host.
 20. **Worktree always; parallel on `/dhs-doit` and `/dhs-checkit`.** Implementer and Reviewer work in `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>` even for one task. Architect stays on the launch checkout. No fifth agent and no extra skill: `/dhs-doit` and `/dhs-checkit` accept a list; `/dhs-shipit` stays one sequential task. Parallel children when the runtime allows.
 21. **Session update check is GitHub tags, notify only.** Available version is the highest semver tag on `nbmh/dev-harness-layer`, not npm. Host session-start hooks run `.dhs/scripts/check-update`. Fail-open. No `dhs check` CLI and no silent install. Do not treat default-branch `package.json` or untagged commits as a new version.
 

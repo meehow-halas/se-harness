@@ -7,7 +7,7 @@ description: First-time dhs setup and later parameter changes. Use when the user
 
 Finish first-time setup, or later change the same config. The CLI does not configure the project.
 
-Generate from `.dhs/` only. Do not invent CLI commands. Do not `npm install -g`. Do not write to `~/.claude/`, `~/.cursor/`, or any other machine-wide path. Do not commit.
+Generate from `.dhs/` only. Do not invent CLI commands. Do not `npm install -g`. Do not write to `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, or any other machine-wide path. Do not commit.
 
 Read `.dhs/references/hosts.json`. Install and this skill **always write every row**. Do not ask which hosts to use. If that file is missing, stop:
 
@@ -208,9 +208,20 @@ Set frontmatter `model:` from `agents.roles.<key>.model[<host.id>]`. If that ent
 
 When the host `id` is `cursor` and the role is `consultant`, also set `readonly: true`. Do not set `readonly` on architect, implementer, or reviewer.
 
+When the host `id` is `opencode`, set `mode: subagent` on each of the four copies. When the host `id` is `opencode` and the role is `consultant`, also set:
+
+```yaml
+permissions:
+  - action: edit
+    resource: "*"
+    effect: deny
+```
+
+Do not set those `permissions` on architect, implementer, or reviewer.
+
 Do not add a fifth agent. Do not copy brainstorm templates from `.dhs/brainstorm/` into any `agentsDir`.
 
-On VERSION mismatch regeneration: replace those four live files in **every** `agentsDir` from `.dhs/agents/` and re-apply `model:` from `agents.roles.<key>.model[<host.id>]` (and Cursor `readonly` on consultant) from **current** config.
+On VERSION mismatch regeneration: replace those four live files in **every** `agentsDir` from `.dhs/agents/` and re-apply `model:` from `agents.roles.<key>.model[<host.id>]` (and Cursor `readonly` on consultant, OpenCode `mode: subagent` and consultant `permissions`) from **current** config.
 
 On a confirmed role `model` cell change only: rewrite that one file’s `model:` line in **that** host’s `agentsDir`.
 
@@ -254,7 +265,15 @@ Write live rules under **each** `rulesDir` as `dhs-<packId>-<basename><rulesExt>
 - `.md`: keep `paths:` (YAML list), rewritten for monorepo trees.
 - `.mdc`: `description` (short, from the pack title), `globs` from the same path list (comma-separated if the host wants a string), `alwaysApply: false`. Cursor ignores plain `.md` in `.cursor/rules/`.
 
-On regenerate: in **each** `rulesDir`, delete existing `dhs-*` files this skill wrote, then write the current filtered set. Do not delete rule files that are not `dhs-` prefixed.
+When the host `id` is `opencode`, after writing that host’s `dhs-*` rule files, merge the glob `.opencode/rules/*.md` into **`.opencode/opencode.json`** (not project-root `opencode.json` / `opencode.jsonc`):
+
+- If `.opencode/opencode.json` is missing, create `{ "instructions": [".opencode/rules/*.md"] }`.
+- If it exists, parse JSON. Ensure `instructions` is an array and contains `.opencode/rules/*.md` exactly once. Do not remove other instructions or other keys.
+- Invalid JSON in that file: stop with `BLOCKED: invalid JSON at .opencode/opencode.json — fix the file, then /dhs-setup again`.
+- Do not edit a project-root `opencode.json` or `opencode.jsonc`. OpenCode combines `instructions` from both configs.
+- Uninstall does not remove this glob (setup-owned, like the rule files).
+
+On regenerate: in **each** `rulesDir`, delete existing `dhs-*` files this skill wrote, then write the current filtered set. Do not delete rule files that are not `dhs-` prefixed. Leave the OpenCode `instructions` glob in place.
 
 ---
 
