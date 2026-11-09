@@ -13,9 +13,11 @@ The only supported adoption path:
 1. **Bootstrap** — `npx -p dev-harness-layer dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill in every `skillsDir`, and `.dhs/` and `harness.credentials.local.json` entries in the project-root `.gitignore`. Setup is not done. Do not offer work skills yet.
 2. **Finish setup** — `/dhs-setup` only. The CLI does not configure the project.
 3. **Work** — `/dhs-shipit`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`, or later `/dhs-setup`.
-4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/` and the install-owned `/dhs-setup` skill from every `skillsDir`. Leaves `harness.config.json` and files `/dhs-setup` generated.
+4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/`, the install-owned `/dhs-setup` skill from every `skillsDir`, and the install-owned session-start hook command. Leaves `harness.config.json` and files `/dhs-setup` generated.
 
 CLI in v1: `dhs install` and `dhs uninstall` only.
+
+If this session’s context says a newer dhs GitHub tag exists than `.dhs/VERSION`, tell the user on the first reply and give both install commands (`npx -p dev-harness-layer dhs install` and `npx -p github:nbmh/dev-harness-layer dhs install`) plus `/dhs-setup`. Do not query npm or GitHub yourself. Do not install unless they ask.
 
 Work skills stop before doing work when `harness.config.json` is missing **or** `.dhs/VERSION` does not match `dhs.generatedFrom`. Tell the user to run `/dhs-setup` (and `dhs install` first if `.dhs/` or `.dhs/VERSION` is missing).
 

@@ -17,7 +17,7 @@ Published product sources live in this repo at the package root. Do not invent a
 | `skills/` | Skill templates, including `/dhs-setup`. |
 | `brainstorm/` | Round templates: member, persona output format, facilitator (collect only), report, app-context skeleton. Not product agents and not in `agents/`. |
 | `references/` | Extra file templates (spec / prompt / log shapes, config skeleton, `BLOCKED` format, the consumer `AGENTS.md` template, `hosts.json`, and the like). |
-| `scripts/` | POSIX `sh` git/`gh` helpers. Copied into `.dhs/scripts/`. Not the `dhs` CLI. |
+| `scripts/` | POSIX `sh` helpers (git/`gh` allowlist and session update check). Copied into `.dhs/scripts/`. Not the `dhs` CLI. |
 | `src/` | CLI (`install` / `uninstall` only). Not copied into `.dhs/`. |
 
 `docs/` is this product’s own documentation. It is not copied into a consuming project’s `.dhs/`.
@@ -100,12 +100,15 @@ Into **this project only**:
 |------|------|
 | `.dhs/` | Working copy of `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` from the package, plus `.dhs/VERSION` (package version). |
 | Project skill `/dhs-setup` | First-time configuration and later parameter changes (binding flow steps 2 and 3). Written into **every** `skillsDir` in `references/hosts.json`. |
+| Host session-start hook | One install-owned command that runs `.dhs/scripts/check-update`. Merged into each host’s `hooksFile` from `references/hosts.json` (today `.claude/settings.json` `SessionStart` and `.cursor/hooks.json` `sessionStart`). Does not overwrite other hooks or other keys in that file. |
 
 That is the full install-owned set. After install, `/dhs-setup` is invocable. Live agents, the other skills, rule packs, and `harness.config.json` do **not** exist yet. Install does not generate those live files. If this project already has `harness.config.json` (a later install, for example after a package update), install may print that the user should run `/dhs-setup` to apply the new templates. It still does not generate them itself.
 
 Install also ensures the project-root `.gitignore` contains `.dhs/` and `harness.credentials.local.json` (creates the file if missing). This is not uninstall-owned: `dhs uninstall` does not edit `.gitignore`.
 
-`dhs uninstall` removes that same set (`.dhs/` and the install-owned `/dhs-setup` skill in every `skillsDir`). It does not delete `harness.config.json` or files `/dhs-setup` already generated.
+`dhs uninstall` removes that same set (`.dhs/`, the install-owned `/dhs-setup` skill in every `skillsDir`, and the install-owned hook command from each `hooksFile`). It does not delete `harness.config.json`, files `/dhs-setup` already generated, or a host hooks file that still has other keys. If the file has only empty hook lists left (and Cursor’s required `version` key), uninstall deletes that file.
+
+On host session start, `.dhs/scripts/check-update` compares `.dhs/VERSION` to the highest semver git tag on `https://github.com/nbmh/dev-harness-layer.git`. That GitHub tag is the available version, whether bootstrap used npm or GitHub. It only injects context when the tag is strictly newer. It never runs `dhs install`. Network, timeout, missing `.dhs/VERSION`, or a local version that is already higher: silence (fail-open). Cache under `.dhs/` (TTL 24h). A later `/dhs-setup` after a manual install is still required when templates changed.
 
 ### What `/dhs-setup` does
 
@@ -124,7 +127,8 @@ Agents run the **project’s own** test/lint/typecheck scripts (from `package.js
 
 ## Non-goals (v1)
 
-- Any `dhs` CLI beyond `install` and `uninstall`. No `dhs agent`, `dhs git`, or `dhs` status/Jira command. Git allowlist helpers are files under `.dhs/scripts/`, not CLI subcommands.
+- Any `dhs` CLI beyond `install` and `uninstall`. No `dhs agent`, `dhs git`, `dhs check`, or `dhs` status/Jira command. Git allowlist helpers and the session update check are files under `.dhs/scripts/`, not CLI subcommands.
+- Auto-install or auto `/dhs-setup` when a newer GitHub tag exists. The session hook only notifies.
 - Status, log, or Jira helpers as `.dhs/scripts/` in v1. Agents read `harness.config.json` and write the active tracker themselves.
 - A second skill for first-time setup or later config changes. `/dhs-setup` does both.
 - Global install (`npm install -g`, machine-wide skills, `~/.claude/`, `~/.cursor/`).
@@ -622,7 +626,7 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does n
 1. **The product and CLI binary are `dhs`.** The npm package and GitHub repo are `dev-harness-layer`.
 2. **No extra wrappers.** There is no agent-wrapper CLI. Isolation for Implementer and Reviewer is git worktrees via `.dhs/scripts/start-task`, not a `dhs` subcommand. Ship only what this PRD names.
 3. **The binding user flow is the only adoption path:** `dhs install` (npm or GitHub) → `/dhs-setup` → work skills. Reverse of install is `dhs uninstall` with the same source. No extra CLI for setup or config, no global install, no skip of `/dhs-setup`.
-4. **CLI is only install/uninstall, always in the current project.** Install writes `.dhs/` (including `scripts/` and `.dhs/VERSION`) and `/dhs-setup` into every supported host `skillsDir`. It does not generate live agents, work skills, or rule packs. Generation of those is `/dhs-setup`. Verify is the project’s script. Git/`gh` on the allowlist is invoked by `.dhs/scripts/`.
+4. **CLI is only install/uninstall, always in the current project.** Install writes `.dhs/` (including `scripts/` and `.dhs/VERSION`), `/dhs-setup` into every supported host `skillsDir`, and the session-start hook command into every host `hooksFile`. It does not generate live agents, work skills, or rule packs. Generation of those is `/dhs-setup`. Verify is the project’s script. Git/`gh` on the allowlist and the session update check are invoked by `.dhs/scripts/`.
 5. **Consultant is in the default pipeline** — haiku, per phase, structured verdict, 2-pass cap, debt protocol. That is the finite loop (see the table under Consultant).
 6. **Reviewer stays spec-only** — split of duties: Consultant = how the code is written; Reviewer = whether it matches the spec.
 7. **Mode names** — `interactive` / `critical` / `autonomous` (same meaning as default / semi-standalone / standalone).
@@ -639,6 +643,7 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does n
 18. **Template version is stamped.** `dhs install` writes `.dhs/VERSION`. `/dhs-setup` writes `dhs.generatedFrom` in `harness.config.json`. A later `/dhs-setup` regenerates live agents, work skills, and rules when those two differ. Install never generates live files. Work skills stop on that mismatch the same way they stop when config is missing.
 19. **Always write every supported host.** `references/hosts.json` is the host table. Install and `/dhs-setup` write all rows; they do not ask which hosts to use. Adding a host is a new row plus a path/frontmatter adapter. Each row may carry `modelSuggest` (per role and `brainstorm`) as interview defaults; dhs does not translate one host’s model id into another’s. Do not maintain a second template tree per host.
 20. **Worktree always; parallel on `/dhs-doit` and `/dhs-checkit`.** Implementer and Reviewer work in `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>` even for one task. Architect stays on the launch checkout. No fifth agent and no extra skill: `/dhs-doit` and `/dhs-checkit` accept a list; `/dhs-shipit` stays one sequential task. Parallel children when the runtime allows.
+21. **Session update check is GitHub tags, notify only.** Available version is the highest semver tag on `nbmh/dev-harness-layer`, not npm. Host session-start hooks run `.dhs/scripts/check-update`. Fail-open. No `dhs check` CLI and no silent install. Do not treat default-branch `package.json` or untagged commits as a new version.
 
 ## Deferred
 
@@ -647,6 +652,7 @@ These are **out of v1 on purpose**. The list is a scope boundary, not a backlog:
 - Full Codex adapter (TOML agents under `.codex/agents`, skills under `.codex/skills` or `.agents/skills`).
 - Trackers beyond Jira.
 - Auto-merge.
+- Auto-install when a newer GitHub tag exists.
 - User-facing Consultant skill (it would skip the Implementer).
 - Changing `agents.contentLanguage` mid-task.
 - Status, log, or Jira helpers in `.dhs/scripts/`.

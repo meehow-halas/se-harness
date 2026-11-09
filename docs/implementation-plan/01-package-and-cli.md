@@ -64,8 +64,9 @@ Copies into **this project only**:
 | `.dhs/agents/`, `.dhs/packs/`, `.dhs/skills/`, `.dhs/brainstorm/`, `.dhs/references/`, `.dhs/scripts/` | Same names as package dirs; no remap |
 | `.dhs/VERSION` | Package version string |
 | Host `/dhs-setup` skill | From package `skills/` (install-owned) |
+| Host session-start hook | Merged into each host `hooksFile` (phase 11) |
 
-That is the full install-owned set.
+That is the full install-owned set (hook merge is phase 11).
 
 Install also ensures the project-root `.gitignore` contains `.dhs/` and `harness.credentials.local.json` (creates the file if missing). This is not uninstall-owned: `dhs uninstall` does not edit `.gitignore`.
 

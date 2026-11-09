@@ -23,17 +23,18 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 8 | [08-multi-host.md](implementation-plan/08-multi-host.md) | — |
 | Phase 9 | [09-per-host-models.md](implementation-plan/09-per-host-models.md) | — |
 | Phase 10 | [10-parallel-worktrees.md](implementation-plan/10-parallel-worktrees.md) | [10-parallel-worktrees.prompt.md](implementation-plan/10-parallel-worktrees.prompt.md) |
+| Phase 11 | [11-session-update-check.md](implementation-plan/11-session-update-check.md) | — |
 
 Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longest because `/dhs-setup` and the work-skill pipeline are large; they still point at the PRD rather than restating it.
 
 ## Product invariants
 
 - The product and CLI binary are **`dhs`**. The npm package is **`dev-harness-layer`**.
-- CLI in v1: `dhs install` and `dhs uninstall` only. No `dhs agent`, `dhs git`, status, or Jira subcommand. Never `npm install -g`.
+- CLI in v1: `dhs install` and `dhs uninstall` only. No `dhs agent`, `dhs git`, `dhs check`, status, or Jira subcommand. Never `npm install -g`.
 - Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, or any other machine-wide path. Run only in the target project.
 - Setup is `/dhs-setup`.
 - Exactly four product agents: Architect, Implementer, Consultant, Reviewer. The brainstorm facilitator is a collector runner, not a fifth role and not in `agents/`.
-- Git allowlist helpers are POSIX `sh` files under package `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands. Agents call those scripts; they do not compose the matching `git`/`gh` themselves. Implementer and Reviewer use a git worktree per task (`start-task`); Architect does not.
+- Git allowlist helpers and the session update check are POSIX `sh` files under package `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands. Agents call the git scripts; they do not compose the matching `git`/`gh` themselves. Implementer and Reviewer use a git worktree per task (`start-task`); Architect does not. Host session-start hooks run `.dhs/scripts/check-update` (GitHub tags, notify only, fail-open).
 - Status, log, and Jira writes are agent work against `harness.config.json`. They are not scripts in v1.
 - One tracker: files **or** Jira, never both. No mirroring.
 - Live agents are **copies** into every `agentsDir` in `references/hosts.json`, not symlinks to `.dhs/agents/`. Bodies do **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time. Role and brainstorm `model` values are maps keyed by host `id`; each live agent copy gets that host’s string only.
@@ -52,7 +53,7 @@ Published sources live at the package root. Do not invent a wrapping `templates/
 | `skills/` | Skill templates, including `/dhs-setup` | yes |
 | `brainstorm/` | Round templates (not product agents) | yes |
 | `references/` | Config skeleton, artifact shapes, consumer `AGENTS.md`, `BLOCKED` format, `hosts.json` | yes |
-| `scripts/` | POSIX git/`gh` helpers | yes |
+| `scripts/` | POSIX git/`gh` helpers and session update check | yes |
 | `src/` | CLI only | no |
 
 `docs/` is this product’s own documentation and is not copied into a consuming project’s `.dhs/`.
@@ -61,10 +62,10 @@ Published sources live at the package root. Do not invent a wrapping `templates/
 
 The only supported adoption path:
 
-1. **Bootstrap** — `npx -p dev-harness-layer dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill in every `skillsDir` from `references/hosts.json`. Setup is not done. Work skills must not exist yet and must not be offered.
+1. **Bootstrap** — `npx -p dev-harness-layer dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill in every `skillsDir` from `references/hosts.json`, plus a merged session-start hook in each host `hooksFile`. Setup is not done. Work skills must not exist yet and must not be offered.
 2. **Finish setup** — `/dhs-setup` only. CLI does not configure the project.
 3. **Work** — `/dhs-shipit`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`, or later `/dhs-setup`.
-4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config.json` and files `/dhs-setup` generated.
+4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/`, the install-owned `/dhs-setup` skill, and the install-owned hook command. Leaves `harness.config.json` and files `/dhs-setup` generated.
 
 ## Shared stops
 
@@ -110,6 +111,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 8 | Multi-host (Claude Code + Cursor) | 1–7 (`hosts.json`) | done |
 | 9 | Per-host role and brainstorm models | 8 | done |
 | 10 | Parallel worktrees (`start-task` + multi-task `/dhs-doit` / `/dhs-checkit`) | 2, 4, 6 | done |
+| 11 | Session update check (GitHub tags, host hooks) | 1, 8 | done |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.dhs/VERSION`.
 
@@ -124,6 +126,6 @@ Then set that phase’s **Status** to `done` in the Phase index. That write is p
 
 ## Out of this v1 plan (PRD Deferred)
 
-Full Codex adapter (TOML agents, `.codex/` / `.agents/skills`); trackers beyond Jira; auto-merge; a user-facing Consultant skill; changing `agents.contentLanguage` mid-task; status/log/Jira helpers in `.dhs/scripts/`; Windows `sh` hosts; symlinking live agents to `.dhs/agents/`.
+Full Codex adapter (TOML agents, `.codex/` / `.agents/skills`); trackers beyond Jira; auto-merge; auto-install when a newer GitHub tag exists; a user-facing Consultant skill; changing `agents.contentLanguage` mid-task; status/log/Jira helpers in `.dhs/scripts/`; Windows `sh` hosts; symlinking live agents to `.dhs/agents/`.
 
 This list is a **scope boundary**, not a backlog. Do not open tickets from it. Do not implement these items in a v1 phase. A later version may pick items up only after an explicit new scope.

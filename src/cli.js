@@ -15,6 +15,7 @@ const PAYLOAD_DIRS = [
 ];
 const SETUP_SKILL = "dhs-setup";
 const HOSTS_FILE = "hosts.json";
+const CHECK_UPDATE_SCRIPT = ".dhs/scripts/check-update";
 const GITIGNORE_ENTRIES = [
   {
     line: ".dhs/",
@@ -71,6 +72,21 @@ function loadHosts(packageRoot) {
     if (!host || typeof host.skillsDir !== "string" || host.skillsDir === "") {
       console.error("dhs: references/hosts.json host is missing skillsDir");
       process.exit(1);
+    }
+    if (host.hooksFile) {
+      if (
+        typeof host.hooksFile !== "string" ||
+        typeof host.hooksEvent !== "string" ||
+        typeof host.hooksShape !== "string" ||
+        host.hooksFile === "" ||
+        host.hooksEvent === "" ||
+        host.hooksShape === ""
+      ) {
+        console.error(
+          "dhs: references/hosts.json host hooksFile needs hooksEvent and hooksShape"
+        );
+        process.exit(1);
+      }
     }
   }
   return data.hosts;
@@ -130,6 +146,204 @@ function ensureGitignore(cwd) {
   fs.writeFileSync(gitignorePath, `${contents}${prefix}${added}`);
 }
 
+function checkUpdateCommand(host) {
+  const arg = host.hooksHostArg || host.id;
+  return `${CHECK_UPDATE_SCRIPT} --host ${arg}`;
+}
+
+function commandLooksLikeCheckUpdate(command) {
+  return String(command || "").includes(CHECK_UPDATE_SCRIPT);
+}
+
+function hooksFilePath(cwd, host) {
+  return path.join(cwd, posixJoin(host.hooksFile));
+}
+
+function readJsonFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  const raw = fs.readFileSync(filePath, "utf8").trim();
+  if (raw === "") {
+    return {};
+  }
+  return JSON.parse(raw);
+}
+
+function writeJsonFile(filePath, data) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`);
+}
+
+function eventList(data, eventName) {
+  if (!data.hooks || typeof data.hooks !== "object" || Array.isArray(data.hooks)) {
+    data.hooks = {};
+  }
+  if (!Array.isArray(data.hooks[eventName])) {
+    data.hooks[eventName] = [];
+  }
+  return data.hooks[eventName];
+}
+
+function claudeEntryHasCheckUpdate(entry) {
+  if (!entry || typeof entry !== "object") {
+    return false;
+  }
+  if (commandLooksLikeCheckUpdate(entry.command)) {
+    return true;
+  }
+  if (!Array.isArray(entry.hooks)) {
+    return false;
+  }
+  return entry.hooks.some(
+    (hook) => hook && commandLooksLikeCheckUpdate(hook.command)
+  );
+}
+
+function ensureClaudeHook(data, eventName, command) {
+  const list = eventList(data, eventName);
+  if (list.some(claudeEntryHasCheckUpdate)) {
+    return;
+  }
+  list.push({
+    matcher: "startup",
+    hooks: [{ type: "command", command }],
+  });
+}
+
+function stripClaudeCheckUpdate(entry) {
+  if (!entry || typeof entry !== "object") {
+    return entry;
+  }
+  if (commandLooksLikeCheckUpdate(entry.command)) {
+    return null;
+  }
+  if (!Array.isArray(entry.hooks)) {
+    return entry;
+  }
+  const hooks = entry.hooks.filter(
+    (hook) => !(hook && commandLooksLikeCheckUpdate(hook.command))
+  );
+  if (hooks.length === 0) {
+    return null;
+  }
+  return { ...entry, hooks };
+}
+
+function removeClaudeHook(data, eventName) {
+  if (!data.hooks || typeof data.hooks !== "object") {
+    return;
+  }
+  if (!Array.isArray(data.hooks[eventName])) {
+    return;
+  }
+  data.hooks[eventName] = data.hooks[eventName]
+    .map(stripClaudeCheckUpdate)
+    .filter(Boolean);
+}
+
+function ensureCursorHook(data, eventName, command) {
+  if (data.version == null) {
+    data.version = 1;
+  }
+  const list = eventList(data, eventName);
+  if (list.some((entry) => commandLooksLikeCheckUpdate(entry && entry.command))) {
+    return;
+  }
+  list.push({ command, timeout: 5 });
+}
+
+function removeCursorHook(data, eventName) {
+  if (data.version == null) {
+    data.version = 1;
+  }
+  if (!data.hooks || typeof data.hooks !== "object") {
+    return;
+  }
+  if (!Array.isArray(data.hooks[eventName])) {
+    return;
+  }
+  data.hooks[eventName] = data.hooks[eventName].filter(
+    (entry) => !commandLooksLikeCheckUpdate(entry && entry.command)
+  );
+}
+
+function pruneEmptyHookLists(data) {
+  if (!data.hooks || typeof data.hooks !== "object") {
+    return;
+  }
+  for (const key of Object.keys(data.hooks)) {
+    if (Array.isArray(data.hooks[key]) && data.hooks[key].length === 0) {
+      delete data.hooks[key];
+    }
+  }
+  if (Object.keys(data.hooks).length === 0) {
+    delete data.hooks;
+  }
+}
+
+function hooksFileIsDisposable(data, shape) {
+  const keys = Object.keys(data);
+  if (shape === "cursor-flat") {
+    return keys.every((key) => key === "hooks" || key === "version");
+  }
+  return keys.every((key) => key === "hooks");
+}
+
+function ensureHostHook(cwd, host) {
+  if (!host.hooksFile) {
+    return;
+  }
+  const filePath = hooksFilePath(cwd, host);
+  let data;
+  try {
+    data = readJsonFile(filePath) || {};
+  } catch {
+    console.error(`dhs install: invalid JSON at ${host.hooksFile}`);
+    process.exit(1);
+  }
+  const command = checkUpdateCommand(host);
+  if (host.hooksShape === "cursor-flat") {
+    ensureCursorHook(data, host.hooksEvent, command);
+  } else if (host.hooksShape === "claude-nested") {
+    ensureClaudeHook(data, host.hooksEvent, command);
+  } else {
+    console.error(
+      `dhs: references/hosts.json unknown hooksShape ${host.hooksShape}`
+    );
+    process.exit(1);
+  }
+  writeJsonFile(filePath, data);
+}
+
+function removeHostHook(cwd, host) {
+  if (!host.hooksFile) {
+    return;
+  }
+  const filePath = hooksFilePath(cwd, host);
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
+  let data;
+  try {
+    data = readJsonFile(filePath) || {};
+  } catch {
+    return;
+  }
+  if (host.hooksShape === "cursor-flat") {
+    removeCursorHook(data, host.hooksEvent);
+  } else if (host.hooksShape === "claude-nested") {
+    removeClaudeHook(data, host.hooksEvent);
+  }
+  pruneEmptyHookLists(data);
+  if (hooksFileIsDisposable(data, host.hooksShape) && !data.hooks) {
+    fs.rmSync(filePath, { force: true });
+    pruneEmptyAncestors(path.dirname(filePath), cwd);
+    return;
+  }
+  writeJsonFile(filePath, data);
+}
+
 function pruneEmptyAncestors(startDir, cwd) {
   const root = path.resolve(cwd);
   let dir = path.resolve(startDir);
@@ -173,6 +387,7 @@ function install(ctx) {
   }
   for (const host of hosts) {
     copyTree(skillSrc, setupSkillDir(cwd, host));
+    ensureHostHook(cwd, host);
   }
 
   ensureGitignore(cwd);
@@ -192,6 +407,7 @@ function uninstall(ctx) {
     const skillDir = setupSkillDir(cwd, host);
     fs.rmSync(skillDir, { recursive: true, force: true });
     pruneEmptyAncestors(path.dirname(skillDir), cwd);
+    removeHostHook(cwd, host);
   }
 }
 

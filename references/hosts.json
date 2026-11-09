@@ -8,6 +8,10 @@
       "rulesExt": ".md",
       "brainstormDir": ".claude/brainstorm",
       "projectAgentsFile": "CLAUDE.md",
+      "hooksFile": ".claude/settings.json",
+      "hooksEvent": "SessionStart",
+      "hooksShape": "claude-nested",
+      "hooksHostArg": "claude-code",
       "modelSuggest": {
         "architect": "opus",
         "implementer": "sonnet",
@@ -24,6 +28,10 @@
       "rulesExt": ".mdc",
       "brainstormDir": ".cursor/brainstorm",
       "projectAgentsFile": null,
+      "hooksFile": ".cursor/hooks.json",
+      "hooksEvent": "sessionStart",
+      "hooksShape": "cursor-flat",
+      "hooksHostArg": "cursor",
       "modelSuggest": {
         "architect": "inherit",
         "implementer": "inherit",

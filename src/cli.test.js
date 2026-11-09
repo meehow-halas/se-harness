@@ -238,6 +238,7 @@ describe("dhs install", () => {
         "open-pr",
         "update-from-base",
         "return-to-base",
+        "check-update",
       ]) {
         const mode = fs.statSync(path.join(project, ".dhs", "scripts", name)).mode;
         assert.notEqual(mode & 0o111, 0, name);
@@ -357,6 +358,106 @@ describe("dhs install", () => {
       assert.equal(read(path.join(project, ".gitignore")), body);
     });
   });
+
+  test("merges a session-start check-update hook into each host hooks file", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+
+      const claude = JSON.parse(read(path.join(project, ".claude", "settings.json")));
+      assert.equal(claude.hooks.SessionStart.length, 1);
+      assert.equal(claude.hooks.SessionStart[0].matcher, "startup");
+      assert.equal(
+        claude.hooks.SessionStart[0].hooks[0].command,
+        ".dhs/scripts/check-update --host claude-code"
+      );
+
+      const cursor = JSON.parse(read(path.join(project, ".cursor", "hooks.json")));
+      assert.equal(cursor.version, 1);
+      assert.equal(cursor.hooks.sessionStart.length, 1);
+      assert.equal(
+        cursor.hooks.sessionStart[0].command,
+        ".dhs/scripts/check-update --host cursor"
+      );
+      assert.equal(cursor.hooks.sessionStart[0].timeout, 5);
+    });
+  });
+
+  test("second install does not duplicate the check-update hook", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      const claude = JSON.parse(read(path.join(project, ".claude", "settings.json")));
+      assert.equal(claude.hooks.SessionStart.length, 1);
+      const cursor = JSON.parse(read(path.join(project, ".cursor", "hooks.json")));
+      assert.equal(cursor.hooks.sessionStart.length, 1);
+    });
+  });
+
+  test("merges check-update into existing host hooks without dropping them", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      fs.mkdirSync(path.join(project, ".claude"), { recursive: true });
+      fs.writeFileSync(
+        path.join(project, ".claude", "settings.json"),
+        `${JSON.stringify({
+          permissions: { allow: ["Bash"] },
+          hooks: {
+            SessionStart: [
+              {
+                matcher: "startup",
+                hooks: [{ type: "command", command: "echo keep-claude" }],
+              },
+            ],
+          },
+        })}\n`
+      );
+      fs.mkdirSync(path.join(project, ".cursor"), { recursive: true });
+      fs.writeFileSync(
+        path.join(project, ".cursor", "hooks.json"),
+        `${JSON.stringify({
+          hooks: {
+            sessionStart: [{ command: "echo keep-cursor" }],
+          },
+        })}\n`
+      );
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+
+      const claude = JSON.parse(read(path.join(project, ".claude", "settings.json")));
+      assert.deepEqual(claude.permissions, { allow: ["Bash"] });
+      const claudeCmds = claude.hooks.SessionStart.flatMap((entry) =>
+        (entry.hooks || []).map((hook) => hook.command)
+      );
+      assert.ok(claudeCmds.includes("echo keep-claude"));
+      assert.ok(
+        claudeCmds.includes(".dhs/scripts/check-update --host claude-code")
+      );
+
+      const cursor = JSON.parse(read(path.join(project, ".cursor", "hooks.json")));
+      assert.equal(cursor.version, 1);
+      const cursorCmds = cursor.hooks.sessionStart.map((entry) => entry.command);
+      assert.ok(cursorCmds.includes("echo keep-cursor"));
+      assert.ok(cursorCmds.includes(".dhs/scripts/check-update --host cursor"));
+    });
+  });
 });
 
 describe("dhs uninstall", () => {
@@ -436,6 +537,58 @@ describe("dhs uninstall", () => {
       assert.equal(result.status, 0, result.stderr);
       assert.equal(exists(path.join(project, ".claude")), false);
       assert.equal(exists(path.join(project, ".cursor")), false);
+    });
+  });
+
+  test("removes only the check-update hook and keeps other host hook commands", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      fs.mkdirSync(path.join(project, ".claude"), { recursive: true });
+      fs.writeFileSync(
+        path.join(project, ".claude", "settings.json"),
+        `${JSON.stringify({
+          permissions: { defaultMode: "acceptEdits" },
+          hooks: {
+            SessionStart: [
+              {
+                matcher: "startup",
+                hooks: [{ type: "command", command: "echo keep-claude" }],
+              },
+            ],
+          },
+        })}\n`
+      );
+      fs.mkdirSync(path.join(project, ".cursor"), { recursive: true });
+      fs.writeFileSync(
+        path.join(project, ".cursor", "hooks.json"),
+        `${JSON.stringify({
+          version: 1,
+          hooks: {
+            sessionStart: [{ command: "echo keep-cursor" }],
+          },
+        })}\n`
+      );
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+
+      const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+
+      const claude = JSON.parse(read(path.join(project, ".claude", "settings.json")));
+      assert.equal(claude.permissions.defaultMode, "acceptEdits");
+      assert.equal(
+        claude.hooks.SessionStart[0].hooks[0].command,
+        "echo keep-claude"
+      );
+      const claudeDump = JSON.stringify(claude);
+      assert.equal(claudeDump.includes("check-update"), false);
+
+      const cursor = JSON.parse(read(path.join(project, ".cursor", "hooks.json")));
+      assert.equal(cursor.hooks.sessionStart[0].command, "echo keep-cursor");
+      assert.equal(JSON.stringify(cursor).includes("check-update"), false);
     });
   });
 
