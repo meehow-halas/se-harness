@@ -66,8 +66,8 @@ Only after step 2:
 |--------|---------|
 | Full path | `/dhs-feature` plus what to build |
 | Spec only | `/dhs-planit` |
-| Implementation only | `/dhs-doit` |
-| One review / update from base / close after merge | `/dhs-checkit` |
+| Implementation only | `/dhs-doit` (one task or a list) |
+| One review / update from base / close after merge | `/dhs-checkit` (one task or a list; one variant) |
 | Change parameters or Jira | `/dhs-setup` |
 | Personae | `/dhs-brainstorm` |
 
@@ -128,7 +128,6 @@ Agents run the **project’s own** test/lint/typecheck scripts (from `package.js
 - Global install (`npm install -g`, machine-wide skills, `~/.claude/`, `~/.cursor/`).
 - Finishing setup by any path other than `/dhs-setup` after `dhs install`.
 - Extra product agents. The set is Architect, Implementer, Consultant, Reviewer. The brainstorm facilitator is a collector runner, not a fifth role.
-- Worktrees as a dhs feature.
 - Merging pull requests.
 - Trackers other than files and Jira.
 - Architect writing line-level implementation instructions.
@@ -281,13 +280,13 @@ Brainstorm members are not agents and are not `@`-addressable.
 
 - Input: a sentence, or existing files / Jira.
 - Output: spec + prompt + first log row **on the active tracker only**. Status stays `todo`.
-- Does not create or switch branches.
+- Does not create or switch branches. Does not call git scripts. Does not use worktrees.
 - Interactive: confirm title, then spec+prompt, before write. Critical/autonomous: write once Questions is satisfied.
 
 ### Implementer
 
 - Implements whatever the Architect specified, including tasks with `type: bug`. There is no separate bug agent.
-- Before work: run `.dhs/scripts/start-task` with the task basename (see Git). That script reads `agents.baseBranch` from `harness.config.json`, creates and checks out the branch named as the basename from that base, and does not commit or push. Do not guess `main`, `master`, or the current checkout. Do not compose that git yourself.
+- Before work: run `.dhs/scripts/start-task` with the task basename (see Git). That script reads `agents.baseBranch` from `harness.config.json`, creates the branch named as the basename from that base in a git worktree, and does not commit, push, or switch the caller’s checkout. A launch may name `Worktree: <abs>`; all file edits, project tests, and `.dhs/scripts/` calls happen there. Do not guess `main`, `master`, or the current checkout. Do not compose that git yourself.
 - Set status `in progress`.
 - Plan 2–6 phases. A phase is a coherent slice (e.g. model + tests, then API), not one file.
 - After **each** phase: launch Consultant (see below). Do not start the next phase until the Consultant protocol says `continue`.
@@ -380,7 +379,7 @@ After acceptance, in order: final review in the log → status `in review` → `
 
 **Update from base:** only when the user asks (e.g. `/dhs-checkit … update`). Run `.dhs/scripts/update-from-base`. Resolve if possible, stop on conflicts.
 
-**Close:** only when the user says the PR is merged. Verify the merge, set `done`, run `.dhs/scripts/return-to-base` if this checkout is still on the task branch.
+**Close:** only when the user says the PR is merged. Verify the merge, set `done`, run `.dhs/scripts/return-to-base` from the task worktree (it removes that worktree; it does not switch the user’s primary checkout).
 
 ---
 
@@ -392,16 +391,18 @@ The scripts are the **how**. Agent markdown is the **when**. A script name is st
 
 **Contract.** Success prints `OK` or `UNCHANGED` and `key: value` lines. Refusal ends with a `BLOCKED:` line (see Stops). The agent copies that line into its report, stops that path, and does not work around it with raw git or `gh`.
 
-The base git branch is `agents.baseBranch` (set on first `/dhs-setup`, changeable later). Scripts cut task branches from it, open PRs against it, merge it into a task branch on **update**, and check it out after PR or **close**. Changing that key in config does not require regenerating agents.
+The base git branch is `agents.baseBranch` (set on first `/dhs-setup`, changeable later). Scripts cut task branches from it, open PRs against it, and merge it into a task branch on **update**. Changing that key in config does not require regenerating agents.
+
+Implementer and Reviewer always use a **git worktree** for the task. The path is `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/dhs-worktrees/<task>`). `start-task` does not switch the caller’s checkout. Architect and Consultant do not create worktrees and do not call these scripts.
 
 | Script | Who | Reads from config | Does |
 |--------|-----|-------------------|------|
-| `start-task` | Implementer at start; Reviewer if the branch is missing | `agents.baseBranch` | `git checkout -b <basename>` from that base, or `git checkout <basename>` if it exists. No commit, no push. |
-| `commit-task` | Reviewer, after Acceptance, or after resolving an **update** merge | — | `git add` of the listed paths and `git commit` on the task branch. |
+| `start-task` | Implementer at start; Reviewer if the branch is missing | `agents.baseBranch` | Create or reuse a worktree on `<task>` from that base (or attach an existing local/remote branch). Do not switch the caller. Print `worktree: <abs>`. Copy this task’s file-tracker files from the launch working tree into the worktree when they exist. If `.dhs/` or `harness.config.json` is missing in the worktree but present in the launch tree, symlink them. No commit, no push. |
+| `commit-task` | Reviewer, after Acceptance, or after resolving an **update** merge | — | `git add` of the listed paths and `git commit` on the task branch (run from the worktree). |
 | `push-task` | Reviewer | — | Push **only** the task branch. |
 | `open-pr` | Reviewer, after Acceptance | `agents.baseBranch` | `gh pr create --base <base> --head <task>`. |
 | `update-from-base` | Reviewer, only on **update** | `agents.baseBranch` | Merge that base into the task branch. Stop on conflicts. |
-| `return-to-base` | Reviewer, after PR opened or after **close** | `agents.baseBranch` | `git checkout` that base. |
+| `return-to-base` | Reviewer, after PR opened or after **close** | `agents.baseBranch` | From a dhs worktree: drop launch-only symlinks (`.dhs`, `harness.config.json`) then `git worktree remove` when clean (does not switch the primary checkout). From the primary checkout: `git checkout` that base (legacy). |
 | Merge the PR | Human (GitHub) | — | Not a script. |
 
 Architect and Consultant: no git writes. They do not call these scripts.
@@ -439,9 +440,9 @@ Work skills (`/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-feature`, `/dhs-b
 |-------|------|
 | `/dhs-setup` | Project-local, written by `dhs install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Asks for `agents.baseBranch` (suggested default `dev`). Writes config (including `dhs.generatedFrom` = `.dhs/VERSION`), generates agents/skills/rules from `.dhs/` without baking runtime config into agent bodies. Merges existing `AGENTS.md` and/or `CLAUDE.md` with the dhs template, shows the proposed body, writes `AGENTS.md` only after acceptance (even if the project had only `CLAUDE.md`). Writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (symlink, or independent file if the link cannot be created). Offers Jira once. Does not commit. **Later run** (config already there): if `.dhs/VERSION` ≠ `dhs.generatedFrom`, regenerate live agents, work skills, and rules first. Then change one parameter at a time, including the base branch and add/change/remove Jira. Does not rewrite the project PRD or remake `AGENTS.md`. Rewrites that live agent’s `model:` in **that host’s** `agentsDir` when one role `model` cell changes; regenerates rules when packs change. Ensures `CLAUDE.md` if `.claude/` is present and the file is still missing (symlink first, independent file if the link fails). |
 | `/dhs-planit` | Architect once. Offer next step; do not start it. |
-| `/dhs-doit` | Implementer, including the Consultant loop. Feature or bug: same agent. |
-| `/dhs-checkit` | One Reviewer round. Variants: review, update, close. |
-| `/dhs-feature` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. Starts at the first missing stage. Stops if already `in review` or `done`. |
+| `/dhs-doit` | Implementer, including the Consultant loop. Feature or bug: same agent. One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. |
+| `/dhs-checkit` | One Reviewer round per named task. Variants: review, update, close (one variant for the whole invocation). Same worktree / parallel rules as `/dhs-doit`. |
+| `/dhs-feature` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. **One task only.** Starts at the first missing stage. Stops if already `in review` or `done`. Implementer and Reviewer still use a worktree. |
 | `/dhs-brainstorm` | Project-local. Members CRUD, app context, run a consult: personae → facilitator (collect only) → Architect (PART A). |
 
 There is no user-facing Consultant skill.
@@ -510,13 +511,19 @@ If the user names another config key (model, base branch, …), do that key firs
 
 ### `/dhs-feature` pipeline
 
-1. No spec or prompt → Architect.
-2. Spec+prompt, no implementation → Implementer, Consultant inside each phase.
-3. Implementation exists → Reviewer.
+One task. A list of keys is a stop: spec with `/dhs-planit`, then `/dhs-doit` with the list.
+
+1. No spec or prompt → Architect (launch checkout; no git, no worktree).
+2. Spec+prompt, no implementation → Implementer in the task worktree, Consultant inside each phase.
+3. Implementation exists → Reviewer in that worktree.
 4. Open ❌ → Implementer with those items only, then Reviewer again (max 3).
 5. Interactive: stop on agent questions. Critical/autonomous: clean review = PR URL; do not merge.
 
 Do not pause between stages when there is no question and no stop. Report once at the end or at the first stop.
+
+### `/dhs-doit` and `/dhs-checkit` (one or many)
+
+The user may name one basename/issue key or several. For each task the parent: resolves the spec, enforces `depends` (unmet `depends` stops **that** task; siblings continue), runs `start-task` from the launch checkout, and launches the role with `Worktree: <abs>` from the script output. N>1: in parallel when the runtime allows; otherwise sequential, still one worktree per task. A `Q<n>` or interactive acceptance on one task does not stop siblings; the parent asks the user and resumes that child. `/dhs-checkit` applies one variant (`review` / `update` / `close`) to the whole invocation. Interactive acceptance is per task. Overlapping product files across parallel tasks are not a stop.
 
 ---
 
@@ -604,21 +611,21 @@ Not questions and not Consultant `must-fix`. Report in one line:
 
 `BLOCKED: <what stopped> — <what the user or another skill must do>`
 
-Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does not match `dhs.generatedFrom`, user approval missing, open blocker task, merge not confirmed, dirty checkout when Reviewer must switch branch, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
+Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does not match `dhs.generatedFrom`, user approval missing, open blocker task, merge not confirmed, dirty **task worktree** when `return-to-base` must remove it, `/dhs-feature` given a list of tasks, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused. A dirty **primary** checkout does not block `start-task`.
 
 ---
 
 ## Decisions
 
 1. **The product and CLI binary are `dhs`.** The npm package and GitHub repo are `dev-harness-layer`.
-2. **Worktrees and extra wrappers are not product.** There is no agent-wrapper CLI. Worktrees are not a dhs feature. Ship only what this PRD names.
+2. **No extra wrappers.** There is no agent-wrapper CLI. Isolation for Implementer and Reviewer is git worktrees via `.dhs/scripts/start-task`, not a `dhs` subcommand. Ship only what this PRD names.
 3. **The binding user flow is the only adoption path:** `dhs install` (npm or GitHub) → `/dhs-setup` → work skills. Reverse of install is `dhs uninstall` with the same source. No extra CLI for setup or config, no global install, no skip of `/dhs-setup`.
 4. **CLI is only install/uninstall, always in the current project.** Install writes `.dhs/` (including `scripts/` and `.dhs/VERSION`) and `/dhs-setup` into every supported host `skillsDir`. It does not generate live agents, work skills, or rule packs. Generation of those is `/dhs-setup`. Verify is the project’s script. Git/`gh` on the allowlist is invoked by `.dhs/scripts/`.
 5. **Consultant is in the default pipeline** — haiku, per phase, structured verdict, 2-pass cap, debt protocol. That is the finite loop (see the table under Consultant).
 6. **Reviewer stays spec-only** — split of duties: Consultant = how the code is written; Reviewer = whether it matches the spec.
 7. **Mode names** — `interactive` / `critical` / `autonomous` (same meaning as default / semi-standalone / standalone).
 8. **Five statuses** — drop `backlog` / `reviewReady` / `reviewDone` as duplicate labels.
-9. **Git allowlist via `.dhs/scripts/`, not a `dhs` wrapper CLI** — Implementer calls `start-task` only. Reviewer calls `commit-task` / `push-task` / `open-pr` / `update-from-base` / `return-to-base`. Scripts read `agents.baseBranch` from `harness.config.json`. Agents do not compose those git/`gh` commands. Merge of the PR is always human.
+9. **Git allowlist via `.dhs/scripts/`, not a `dhs` wrapper CLI** — Implementer calls `start-task` only. Reviewer calls `commit-task` / `push-task` / `open-pr` / `update-from-base` / `return-to-base`. Scripts read `agents.baseBranch` from `harness.config.json`. Agents do not compose those git/`gh` commands. Merge of the PR is always human. `start-task` always uses a worktree and does not switch the caller.
 10. **Only four product agents** — Architect, Implementer, Consultant, Reviewer. Brainstorm facilitator is an isolated collector, not a fifth role in `agents.roles`.
 11. **`/dhs-setup` is the only skill install writes** (into every `skillsDir`). It is first-time setup when `harness.config.json` is missing, and later parameter changes when the file already exists. Other skills are generated by `/dhs-setup` into every `skillsDir`. Work skills must not run before `harness.config.json` exists, and must not run when `.dhs/VERSION` does not match `dhs.generatedFrom`.
 12. **First `/dhs-setup` leaves the project with a PRD.** It uses an existing one and does not rewrite it. If none exists, it gathers from the repo, asks for gaps, and writes `docs/prd.md`. Config stores a one-line product plus doc paths, not the PRD body. Later `/dhs-setup` does not rewrite that file.
@@ -629,6 +636,7 @@ Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does n
 17. **Runtime config, not baked agent bodies.** Generated agents read `harness.config.json` for `agents.baseBranch`, statuses, tracker maps, `fetchFields`, content language, and product line. They call `.dhs/scripts/` for the git allowlist. Changing those config keys does not require regenerating agents. Role `model` is written into live agent frontmatter because the host loads it from the file. Live agents are copies into **every** `agentsDir` in `.dhs/references/hosts.json`, not symlinks to `.dhs/agents/`. `agents.roles.<role>.model` is a map keyed by host `id`; each live copy gets `model:` from that host’s entry only. `agents.brainstorm.model` uses the same map shape.
 18. **Template version is stamped.** `dhs install` writes `.dhs/VERSION`. `/dhs-setup` writes `dhs.generatedFrom` in `harness.config.json`. A later `/dhs-setup` regenerates live agents, work skills, and rules when those two differ. Install never generates live files. Work skills stop on that mismatch the same way they stop when config is missing.
 19. **Always write every supported host.** `references/hosts.json` is the host table. Install and `/dhs-setup` write all rows; they do not ask which hosts to use. Adding a host is a new row plus a path/frontmatter adapter. Each row may carry `modelSuggest` (per role and `brainstorm`) as interview defaults; dhs does not translate one host’s model id into another’s. Do not maintain a second template tree per host.
+20. **Worktree always; parallel on `/dhs-doit` and `/dhs-checkit`.** Implementer and Reviewer work in `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>` even for one task. Architect stays on the launch checkout. No fifth agent and no extra skill: `/dhs-doit` and `/dhs-checkit` accept a list; `/dhs-feature` stays one sequential task. Parallel children when the runtime allows.
 
 ## Deferred
 

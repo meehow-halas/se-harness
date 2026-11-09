@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Implements the spec (feature or bug). Own 2–6 phase plan. After each phase, launches Consultant. Calls start-task. Does not edit CHANGELOG.md.
+description: Implements the spec (feature or bug). Own 2–6 phase plan. After each phase, launches Consultant. Calls start-task (worktree). Does not edit CHANGELOG.md.
 model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
@@ -67,13 +67,15 @@ Do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/`. 
 
 ## Git
 
-Before work: run `.dhs/scripts/start-task` with the task basename (files) or issue key (Jira). That script reads `agents.baseBranch` from `harness.config.json`, creates and checks out the branch named as the key from that base, and does not commit or push.
+A launch may name `Worktree: <abs>`. All Read/Write/Edit, project tests, and `.dhs/scripts/` calls happen in that directory (absolute paths, or that cwd). Do not edit files in another checkout.
+
+Before work: run `.dhs/scripts/start-task` with the task basename (files) or issue key (Jira). That script reads `agents.baseBranch` from `harness.config.json`, creates or reuses a git worktree for the branch named as the key, and does not commit, push, or switch the caller’s checkout. Use the printed `worktree:` path if the launch did not already name one.
 
 ```text
 .dhs/scripts/start-task <task>
 ```
 
-Do not compose that git yourself. Do not call other git scripts. Reviewer commits and pushes. No rebase, reset, or force. No worktrees. Success prints `OK` or `UNCHANGED` and `key: value` lines.
+Do not compose that git yourself. Do not call other git scripts. Reviewer commits and pushes. No rebase, reset, or force. Success prints `OK` or `UNCHANGED` and `key: value` lines.
 
 ## Rules, tests, files
 
@@ -134,7 +136,7 @@ When Reviewer returns ❌ items: implement only those items. Launch Consultant a
 ## Workflow
 
 1. Read spec and prompt on the active tracker. Check `depends`: every listed task must be at the configured `done` status; otherwise stop. `relates` is context. If the prompt names a dependency not in `depends`, say so in the report (you cannot edit those lists).
-2. Run `.dhs/scripts/start-task <task>`. Then set status to the configured `in progress` string (files) or Jira mapped `inProgress` when not `null`. Append a start row to the log (files) or a comment (Jira).
+2. Run `.dhs/scripts/start-task <task>` (from the launch checkout or the named worktree). Then set status to the configured `in progress` string (files) or Jira mapped `inProgress` when not `null`. Append a start row to the log (files) or a comment (Jira). Do remaining work only under the `worktree:` path.
 3. Plan 2–6 phases. Implement one phase, run the project’s checks for the code you touched, then launch Consultant. Repeat until every phase has `continue` (or debt protocol / launch cap says to finish).
 4. When all phases have `continue`, leave status `in progress`. Do not move it to `code review`. Append a log row summarizing the branch, a short change summary, and files created/changed/deleted in the code (repo-relative; not this task’s spec/prompt/log). A later fix round appends a new row; never edit earlier rows.
 

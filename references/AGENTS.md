@@ -26,7 +26,7 @@ Exactly four product agents. Live copies live under every `agentsDir` in `.dhs/r
 | Role | Job |
 |------|-----|
 | Architect | Spec + prompt + first log row on the active tracker. Status stays at the configured `todo` string. Read-only on application code. No git writes. |
-| Implementer | Implements the spec (`feature` or `bug`). Own phase plan. After each phase, launches Consultant. Calls `.dhs/scripts/start-task` before work. |
+| Implementer | Implements the spec (`feature` or `bug`). Own phase plan. After each phase, launches Consultant. Calls `.dhs/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
 | Consultant | Code quality on the phase diff. Does not edit product code. Does not talk to the user. Does not judge spec compliance. Not a user-facing skill. |
 | Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, then git allowlist scripts. Does not merge the PR. |
 
@@ -38,9 +38,9 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 |-------|------|
 | `/dhs-setup` | First-time setup when config is missing; later, one parameter at a time (including tracker). |
 | `/dhs-planit` | Architect once. Offer the next step; do not start it. |
-| `/dhs-doit` | Implementer, including the Consultant loop. |
-| `/dhs-checkit` | One Reviewer round: review, update from base, or close after the user confirms merge. |
-| `/dhs-feature` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. |
+| `/dhs-doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
+| `/dhs-checkit` | One Reviewer round per named task: review, update from base, or close after the user confirms merge. |
+| `/dhs-feature` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task only. |
 | `/dhs-brainstorm` | Members, app context, and a consult round. |
 
 ## Tracker
@@ -63,16 +63,16 @@ Task key = basename. Branch name = basename. Status strings = `agents.statuses` 
 
 ## Git
 
-Allowlisted git/`gh` operations run through `.dhs/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh` themselves. Scripts read `agents.baseBranch` from `harness.config.json`. No rebase, reset, or force. No merge of the PR (human on GitHub).
+Allowlisted git/`gh` operations run through `.dhs/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh` themselves. Scripts read `agents.baseBranch` from `harness.config.json`. No rebase, reset, or force. No merge of the PR (human on GitHub). Implementer and Reviewer always use a git worktree at `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>`. A launch may name `Worktree: <abs>`. Architect does not use worktrees.
 
 | Script | Who |
 |--------|-----|
-| `start-task` | Implementer at start; Reviewer if the branch is missing |
-| `commit-task` | Reviewer, after acceptance, or after resolving an update merge |
+| `start-task` | Implementer at start; Reviewer if the branch is missing. Creates or reuses the worktree; does not switch the caller |
+| `commit-task` | Reviewer, after acceptance, or after resolving an update merge (from the worktree) |
 | `push-task` | Reviewer |
 | `open-pr` | Reviewer, after acceptance |
 | `update-from-base` | Reviewer, only when the user asks to update |
-| `return-to-base` | Reviewer, after PR opened or after close |
+| `return-to-base` | Reviewer, after PR opened or after close (removes the dhs worktree) |
 
 Architect and Consultant: no git writes; they do not call these scripts.
 

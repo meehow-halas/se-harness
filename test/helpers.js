@@ -342,6 +342,13 @@ function startTask(cwd, task) {
   return runScript("start-task", [task], { cwd });
 }
 
+function startWorktree(cwd, task) {
+  const parsed = assertOk(startTask(cwd, task));
+  const wt = parsed.fields.worktree;
+  assert.ok(wt, `start-task must print worktree:, got:\n${parsed.statusLine}`);
+  return wt;
+}
+
 function addBareOrigin(repoDir, remoteName = "origin") {
   const bare = `${repoDir}-bare.git`;
   const cloned = spawnSync("git", ["clone", "--bare", repoDir, bare], {
@@ -405,6 +412,7 @@ module.exports = {
   runScript,
   scriptOutputLines,
   startTask,
+  startWorktree,
   withTempDir,
   writeFile,
   writeGhStub,

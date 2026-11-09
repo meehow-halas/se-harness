@@ -16,7 +16,7 @@ const {
   initGitRepo,
   revParse,
   runScript,
-  startTask,
+  startWorktree,
   withTempDir,
   writeFile,
   writeGitLogger,
@@ -43,12 +43,12 @@ describe("push-task", () => {
       git(cwd, ["commit", "-m", "local base ahead of origin"]);
       const localBase = revParse(cwd, "trunk");
       assert.notEqual(localBase, originBase);
-      assertOk(startTask(cwd, "ABC-12"));
-      writeFile(cwd, "push.txt", "ahead\n");
-      git(cwd, ["add", "push.txt"]);
-      git(cwd, ["commit", "-m", "ahead"]);
+      const wt = startWorktree(cwd, "ABC-12");
+      writeFile(wt, "push.txt", "ahead\n");
+      git(wt, ["add", "push.txt"]);
+      git(wt, ["commit", "-m", "ahead"]);
       const { env, logFile } = pushEnv(cwd);
-      const result = runScript("push-task", ["ABC-12"], { cwd, env });
+      const result = runScript("push-task", ["ABC-12"], { cwd: wt, env });
       assertOk(result, { branch: "ABC-12", remote: "origin" });
       const heads = git(bare, ["show-ref"]).stdout;
       assert.match(heads, /refs\/heads\/ABC-12/);
@@ -63,13 +63,13 @@ describe("push-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       const bare = addBareOrigin(cwd);
-      assertOk(startTask(cwd, "001-feature"));
-      writeFile(cwd, "push.txt", "ahead\n");
-      git(cwd, ["add", "push.txt"]);
-      git(cwd, ["commit", "-m", "ahead"]);
-      assertOk(runScript("push-task", ["001-feature"], { cwd }));
+      const wt = startWorktree(cwd, "001-feature");
+      writeFile(wt, "push.txt", "ahead\n");
+      git(wt, ["add", "push.txt"]);
+      git(wt, ["commit", "-m", "ahead"]);
+      assertOk(runScript("push-task", ["001-feature"], { cwd: wt }));
       const remoteSha = revParse(bare, "refs/heads/001-feature");
-      const result = runScript("push-task", ["001-feature"], { cwd });
+      const result = runScript("push-task", ["001-feature"], { cwd: wt });
       assertUnchanged(result, { branch: "001-feature", remote: "origin" });
       assert.equal(revParse(bare, "refs/heads/001-feature"), remoteSha);
     });
@@ -78,7 +78,7 @@ describe("push-task", () => {
   test("BLOCKED when no remote exists", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      startWorktree(cwd, "001-feature");
       assertBlocked(
         runScript("push-task", ["001-feature"], { cwd }),
         /no git remote named origin/
@@ -90,7 +90,7 @@ describe("push-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       addBareOrigin(cwd);
-      assertOk(startTask(cwd, "001-feature"));
+      startWorktree(cwd, "001-feature");
       assertBlocked(
         runScript("push-task", ["001-feature", "extra"], { cwd }),
         /unexpected arguments/
@@ -102,12 +102,12 @@ describe("push-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       const bare = addBareOrigin(cwd, "upstream");
-      assertOk(startTask(cwd, "001-feature"));
-      writeFile(cwd, "push.txt", "ahead\n");
-      git(cwd, ["add", "push.txt"]);
-      git(cwd, ["commit", "-m", "ahead"]);
+      const wt = startWorktree(cwd, "001-feature");
+      writeFile(wt, "push.txt", "ahead\n");
+      git(wt, ["add", "push.txt"]);
+      git(wt, ["commit", "-m", "ahead"]);
       const { env, logFile } = pushEnv(cwd);
-      const result = runScript("push-task", ["001-feature"], { cwd, env });
+      const result = runScript("push-task", ["001-feature"], { cwd: wt, env });
       assertOk(result, { branch: "001-feature", remote: "upstream" });
       git(bare, ["show-ref", "--verify", "refs/heads/001-feature"]);
       const pushLines = argvLogArgv(logFile).filter((args) => args[0] === "push");
@@ -120,7 +120,7 @@ describe("push-task", () => {
       initGitRepo(cwd);
       const bare = addBareOrigin(cwd, "upstream");
       git(cwd, ["remote", "add", "fork", bare]);
-      assertOk(startTask(cwd, "001-feature"));
+      startWorktree(cwd, "001-feature");
       assertBlocked(
         runScript("push-task", ["001-feature"], { cwd }),
         /no git remote named origin/
@@ -132,11 +132,11 @@ describe("push-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       const bare = addBareOrigin(cwd);
-      assertOk(startTask(cwd, "001-feature"));
-      writeFile(cwd, "push.txt", "ahead\n");
-      git(cwd, ["add", "push.txt"]);
-      git(cwd, ["commit", "-m", "ahead"]);
-      assertOk(runScript("push-task", ["001-feature"], { cwd }));
+      const wt = startWorktree(cwd, "001-feature");
+      writeFile(wt, "push.txt", "ahead\n");
+      git(wt, ["add", "push.txt"]);
+      git(wt, ["commit", "-m", "ahead"]);
+      assertOk(runScript("push-task", ["001-feature"], { cwd: wt }));
 
       const other = path.join(cwd, ".other");
       cloneFrom(bare, other);
@@ -146,13 +146,13 @@ describe("push-task", () => {
       git(other, ["commit", "-m", "remote ahead"]);
       git(other, ["push", "origin", "001-feature"]);
 
-      writeFile(cwd, "local-only.txt", "local side\n");
-      git(cwd, ["add", "local-only.txt"]);
-      git(cwd, ["commit", "-m", "local ahead"]);
+      writeFile(wt, "local-only.txt", "local side\n");
+      git(wt, ["add", "local-only.txt"]);
+      git(wt, ["commit", "-m", "local ahead"]);
 
       const { env, logFile } = pushEnv(cwd);
       assertBlocked(
-        runScript("push-task", ["001-feature"], { cwd, env }),
+        runScript("push-task", ["001-feature"], { cwd: wt, env }),
         /push of 001-feature to origin failed/
       );
       const pushLines = argvLogArgv(logFile).filter((args) => args[0] === "push");

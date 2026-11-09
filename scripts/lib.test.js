@@ -13,7 +13,7 @@ const {
   git,
   initGitRepo,
   runScript,
-  startTask,
+  startWorktree,
   withTempDir,
   writeFile,
   writeHarnessConfig,
@@ -160,10 +160,10 @@ describe("shared refusals", () => {
     test(`${name}: detached HEAD is BLOCKED`, () => {
       withTempDir((cwd) => {
         initGitRepo(cwd);
-        assertOk(startTask(cwd, "001-feature"));
-        git(cwd, ["checkout", "--detach", "HEAD"]);
-        writeFile(cwd, "a.txt", "x\n");
-        assertBlocked(runAllowlisted(cwd, name, args), /detached HEAD/);
+        const wt = startWorktree(cwd, "001-feature");
+        git(wt, ["checkout", "--detach", "HEAD"]);
+        writeFile(wt, "a.txt", "x\n");
+        assertBlocked(runAllowlisted(wt, name, args), /detached HEAD/);
       });
     });
   }

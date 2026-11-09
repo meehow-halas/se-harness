@@ -5,7 +5,11 @@ description: Full path Architect → Implementer (Consultant inside) → Reviewe
 
 # /dhs-feature
 
-Full path. Single-stage skills do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR. There is no user-facing Consultant skill (Consultant stays inside Implementer).
+Full path for **one task**. Single-stage skills do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR. There is no user-facing Consultant skill (Consultant stays inside Implementer). A list of keys:
+
+```text
+BLOCKED: /dhs-feature is one task — spec with /dhs-planit, then /dhs-doit with the list
+```
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands.
 
@@ -66,7 +70,7 @@ Reply in the conversation language.
 Active tracker only: files if `agents.tracker` is absent; Jira if it is present. Never both. Never mirror.
 
 - New work (a sentence, no key) → no spec yet.
-- Named basename or issue key → load spec, prompt, log, status from that tracker.
+- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /dhs-feature is one task` above).
 - Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). Compare to those values; do not translate them.
 
 If status is already the configured **`in review`** or **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
@@ -99,7 +103,7 @@ No implementation means status is still the configured `todo` string (Architect 
 
 Follow the live Implementer file for this host (`<agentsDir>/implementer.md`). Consultant inside each phase; do not launch Consultant as a skill.
 
-Pass the same `Mode:` and the task key. Implementer calls `.dhs/scripts/start-task`.
+Run `.dhs/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent).
 
 If Implementer stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
 
@@ -111,7 +115,7 @@ Implementation exists when status is the configured `in progress` or `code revie
 
 Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round: `Variant: review`.
 
-Pass the same `Mode:` and the task key. Do not merge.
+Pass the same `Mode:`, the task key, and `Worktree: <abs>`. Do not merge.
 
 If Reviewer stops on `BLOCKED:` or `Q<n>` (including interactive acceptance), stop the pipeline and report.
 
@@ -138,6 +142,7 @@ The user merges on GitHub. Close is `/dhs-checkit` after they confirm, not this 
 
 - `Mode: <same mode for the whole run>`
 - Task key when it exists
+- `Worktree: <abs>` for Implementer and Reviewer (not Architect)
 - User request
 - Conversation language when known
 - Stage 4: the ❌ list only

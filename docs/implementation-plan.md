@@ -22,6 +22,7 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 7 | [07-brainstorm.md](implementation-plan/07-brainstorm.md) | [07-brainstorm.prompt.md](implementation-plan/07-brainstorm.prompt.md) |
 | Phase 8 | [08-multi-host.md](implementation-plan/08-multi-host.md) | — |
 | Phase 9 | [09-per-host-models.md](implementation-plan/09-per-host-models.md) | — |
+| Phase 10 | [10-parallel-worktrees.md](implementation-plan/10-parallel-worktrees.md) | [10-parallel-worktrees.prompt.md](implementation-plan/10-parallel-worktrees.prompt.md) |
 
 Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longest because `/dhs-setup` and the work-skill pipeline are large; they still point at the PRD rather than restating it.
 
@@ -32,7 +33,7 @@ Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longe
 - Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, or any other machine-wide path. Run only in the target project.
 - Setup is `/dhs-setup`.
 - Exactly four product agents: Architect, Implementer, Consultant, Reviewer. The brainstorm facilitator is a collector runner, not a fifth role and not in `agents/`.
-- Git allowlist helpers are POSIX `sh` files under package `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands. Agents call those scripts; they do not compose the matching `git`/`gh` themselves.
+- Git allowlist helpers are POSIX `sh` files under package `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands. Agents call those scripts; they do not compose the matching `git`/`gh` themselves. Implementer and Reviewer use a git worktree per task (`start-task`); Architect does not.
 - Status, log, and Jira writes are agent work against `harness.config.json`. They are not scripts in v1.
 - One tracker: files **or** Jira, never both. No mirroring.
 - Live agents are **copies** into every `agentsDir` in `references/hosts.json`, not symlinks to `.dhs/agents/`. Bodies do **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time. Role and brainstorm `model` values are maps keyed by host `id`; each live agent copy gets that host’s string only.
@@ -73,7 +74,7 @@ Not questions and not Consultant `must-fix`. One line:
 BLOCKED: <what stopped> — <what the user or another skill must do>
 ```
 
-Examples in the PRD (Stops): install missing, setup not run, VERSION mismatch, approval missing, open blocker task, merge not confirmed, dirty checkout, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
+Examples in the PRD (Stops): install missing, setup not run, VERSION mismatch, approval missing, open blocker task, merge not confirmed, dirty task worktree on `return-to-base`, `/dhs-feature` given a list, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
 
 Do not use a `BLOCKED: rule=<id>` shape. Published product uses the PRD line above.
 
@@ -108,6 +109,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 7 | Brainstorm | 5–6 | done |
 | 8 | Multi-host (Claude Code + Cursor) | 1–7 (`hosts.json`) | done |
 | 9 | Per-host role and brainstorm models | 8 | done |
+| 10 | Parallel worktrees (`start-task` + multi-task `/dhs-doit` / `/dhs-checkit`) | 2, 4, 6 | done |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.dhs/VERSION`.
 
