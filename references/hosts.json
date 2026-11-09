@@ -39,6 +39,25 @@
         "reviewer": "inherit",
         "brainstorm": "inherit"
       }
+    },
+    {
+      "id": "opencode",
+      "skillsDir": ".opencode/skills",
+      "agentsDir": ".opencode/agents",
+      "rulesDir": ".opencode/rules",
+      "rulesExt": ".md",
+      "brainstormDir": ".opencode/brainstorm",
+      "projectAgentsFile": null,
+      "hooksFile": ".opencode/plugins/dhs-check-update.js",
+      "hooksShape": "opencode-plugin",
+      "hooksHostArg": "opencode",
+      "modelSuggest": {
+        "architect": "anthropic/claude-opus-4-5",
+        "implementer": "anthropic/claude-sonnet-5-5",
+        "consultant": "anthropic/claude-haiku-4-5",
+        "reviewer": "anthropic/claude-sonnet-5-5",
+        "brainstorm": "anthropic/claude-sonnet-5-5"
+      }
     }
   ]
 }

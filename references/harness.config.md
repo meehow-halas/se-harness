@@ -28,10 +28,10 @@ Supported hosts are **not** a tree in this config. They live in `hosts.json` in 
       "done": "done"
     },
     "roles": {
-      "architect": { "model": { "claude-code": "opus", "cursor": "inherit" } },
-      "implementer": { "model": { "claude-code": "sonnet", "cursor": "inherit" } },
-      "consultant": { "model": { "claude-code": "haiku", "cursor": "inherit" } },
-      "reviewer": { "model": { "claude-code": "sonnet", "cursor": "inherit" } }
+      "architect": { "model": { "claude-code": "opus", "cursor": "inherit", "opencode": "anthropic/claude-opus-4-5" } },
+      "implementer": { "model": { "claude-code": "sonnet", "cursor": "inherit", "opencode": "anthropic/claude-sonnet-5-5" } },
+      "consultant": { "model": { "claude-code": "haiku", "cursor": "inherit", "opencode": "anthropic/claude-haiku-4-5" } },
+      "reviewer": { "model": { "claude-code": "sonnet", "cursor": "inherit", "opencode": "anthropic/claude-sonnet-5-5" } }
     },
     "brainstorm": { "consult": "significant" }
   }

@@ -20,25 +20,29 @@
       "architect": {
         "model": {
           "claude-code": "opus",
-          "cursor": "inherit"
+          "cursor": "inherit",
+          "opencode": "anthropic/claude-opus-4-5"
         }
       },
       "implementer": {
         "model": {
           "claude-code": "sonnet",
-          "cursor": "inherit"
+          "cursor": "inherit",
+          "opencode": "anthropic/claude-sonnet-5-5"
         }
       },
       "consultant": {
         "model": {
           "claude-code": "haiku",
-          "cursor": "inherit"
+          "cursor": "inherit",
+          "opencode": "anthropic/claude-haiku-4-5"
         }
       },
       "reviewer": {
         "model": {
           "claude-code": "sonnet",
-          "cursor": "inherit"
+          "cursor": "inherit",
+          "opencode": "anthropic/claude-sonnet-5-5"
         }
       }
     },

@@ -96,7 +96,17 @@ describe("dhs install", () => {
         "# setup\n"
       );
       assert.equal(
+        read(path.join(project, ".opencode", "skills", "dhs-setup", "SKILL.md")),
+        "# setup\n"
+      );
+      assert.equal(
         exists(path.join(project, ".dhs", "references", "hosts.json")),
+        true
+      );
+      assert.equal(
+        exists(
+          path.join(project, ".dhs", "references", "opencode-check-update.js")
+        ),
         true
       );
     });
@@ -168,6 +178,24 @@ describe("dhs install", () => {
     });
   });
 
+  test("fails when references/opencode-check-update.js is missing", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      fs.rmSync(path.join(pkg, "references", "opencode-check-update.js"));
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 1);
+      assert.match(
+        result.stderr,
+        /missing package file at references\/opencode-check-update\.js/
+      );
+    });
+  });
+
   test("fails when skills/dhs-setup is missing", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
@@ -220,6 +248,7 @@ describe("dhs install", () => {
       assert.equal(exists(path.join(project, ".dhs", "agents", "marker.txt")), true);
       assert.equal(exists(path.join(project, ".claude", "agents")), false);
       assert.equal(exists(path.join(project, ".cursor", "agents")), false);
+      assert.equal(exists(path.join(project, ".opencode", "agents")), false);
       assert.equal(
         read(path.join(project, "harness.config.json")),
         `${JSON.stringify({ agents: { baseBranch: "dev" } })}\n`
@@ -386,6 +415,13 @@ describe("dhs install", () => {
         ".dhs/scripts/check-update --host cursor"
       );
       assert.equal(cursor.hooks.sessionStart[0].timeout, 5);
+
+      const plugin = read(
+        path.join(project, ".opencode", "plugins", "dhs-check-update.js")
+      );
+      assert.match(plugin, /check-update/);
+      assert.match(plugin, /"--host", "opencode"/);
+      assert.match(plugin, /session\.created/);
     });
   });
 
@@ -403,6 +439,12 @@ describe("dhs install", () => {
       assert.equal(claude.hooks.SessionStart.length, 1);
       const cursor = JSON.parse(read(path.join(project, ".cursor", "hooks.json")));
       assert.equal(cursor.hooks.sessionStart.length, 1);
+      assert.equal(
+        exists(path.join(project, ".opencode", "plugins", "dhs-check-update.js")),
+        true
+      );
+      const pluginDir = path.join(project, ".opencode", "plugins");
+      assert.deepEqual(fs.readdirSync(pluginDir), ["dhs-check-update.js"]);
     });
   });
 
@@ -491,6 +533,20 @@ describe("dhs uninstall", () => {
       );
       fs.mkdirSync(path.join(project, ".cursor", "agents"), { recursive: true });
       fs.writeFileSync(path.join(project, ".cursor", "agents", "kept.md"), "live\n");
+      fs.mkdirSync(path.join(project, ".opencode", "skills", "other-skill"), {
+        recursive: true,
+      });
+      fs.writeFileSync(
+        path.join(project, ".opencode", "skills", "other-skill", "SKILL.md"),
+        "keep-opencode\n"
+      );
+      fs.mkdirSync(path.join(project, ".opencode", "agents"), { recursive: true });
+      fs.writeFileSync(path.join(project, ".opencode", "agents", "kept.md"), "live\n");
+      fs.mkdirSync(path.join(project, ".opencode", "plugins"), { recursive: true });
+      fs.writeFileSync(
+        path.join(project, ".opencode", "plugins", "keep-other.js"),
+        "keep-plugin\n"
+      );
 
       const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
@@ -504,6 +560,14 @@ describe("dhs uninstall", () => {
         false
       );
       assert.equal(
+        exists(path.join(project, ".opencode", "skills", "dhs-setup")),
+        false
+      );
+      assert.equal(
+        exists(path.join(project, ".opencode", "plugins", "dhs-check-update.js")),
+        false
+      );
+      assert.equal(
         read(path.join(project, ".claude", "skills", "other-skill", "SKILL.md")),
         "keep\n"
       );
@@ -511,8 +575,17 @@ describe("dhs uninstall", () => {
         read(path.join(project, ".cursor", "skills", "other-skill", "SKILL.md")),
         "keep-cursor\n"
       );
+      assert.equal(
+        read(path.join(project, ".opencode", "skills", "other-skill", "SKILL.md")),
+        "keep-opencode\n"
+      );
+      assert.equal(
+        read(path.join(project, ".opencode", "plugins", "keep-other.js")),
+        "keep-plugin\n"
+      );
       assert.equal(exists(path.join(project, ".claude", "agents", "kept.md")), true);
       assert.equal(exists(path.join(project, ".cursor", "agents", "kept.md")), true);
+      assert.equal(exists(path.join(project, ".opencode", "agents", "kept.md")), true);
       assert.equal(
         read(path.join(project, "harness.config.json")),
         `${JSON.stringify({ keep: true })}\n`
@@ -537,6 +610,7 @@ describe("dhs uninstall", () => {
       assert.equal(result.status, 0, result.stderr);
       assert.equal(exists(path.join(project, ".claude")), false);
       assert.equal(exists(path.join(project, ".cursor")), false);
+      assert.equal(exists(path.join(project, ".opencode")), false);
     });
   });
 
@@ -589,6 +663,10 @@ describe("dhs uninstall", () => {
       const cursor = JSON.parse(read(path.join(project, ".cursor", "hooks.json")));
       assert.equal(cursor.hooks.sessionStart[0].command, "echo keep-cursor");
       assert.equal(JSON.stringify(cursor).includes("check-update"), false);
+      assert.equal(
+        exists(path.join(project, ".opencode", "plugins", "dhs-check-update.js")),
+        false
+      );
     });
   });
 
@@ -606,6 +684,7 @@ describe("dhs uninstall", () => {
       assert.equal(exists(path.join(project, ".dhs")), false);
       assert.equal(exists(path.join(project, ".claude")), false);
       assert.equal(exists(path.join(project, ".cursor")), false);
+      assert.equal(exists(path.join(project, ".opencode")), false);
     });
   });
 });

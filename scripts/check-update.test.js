@@ -52,6 +52,20 @@ describe("check-update", () => {
     });
   });
 
+  test("prints a plain-text notice when --host is opencode", () => {
+    withTempDir((cwd) => {
+      writeFile(cwd, ".dhs/VERSION", "1.0.0\n");
+      const stub = writeStub(cwd, { tags: ["v1.2.0"] });
+      const result = runCheck(cwd, ["--host", "opencode"], {
+        DHS_GIT_LS_REMOTE: stub,
+        DHS_CHECK_NOW: "1000",
+      });
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, NOTICE);
+      assert.equal(result.stdout.includes("additional_context"), false);
+    });
+  });
+
   test("prints Cursor JSON when --host is cursor", () => {
     withTempDir((cwd) => {
       writeFile(cwd, ".dhs/VERSION", "1.0.0\n");

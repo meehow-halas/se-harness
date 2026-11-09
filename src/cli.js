@@ -16,6 +16,7 @@ const PAYLOAD_DIRS = [
 const SETUP_SKILL = "dhs-setup";
 const HOSTS_FILE = "hosts.json";
 const CHECK_UPDATE_SCRIPT = ".dhs/scripts/check-update";
+const OPENCODE_PLUGIN_SRC = path.join("references", "opencode-check-update.js");
 const GITIGNORE_ENTRIES = [
   {
     line: ".dhs/",
@@ -76,11 +77,18 @@ function loadHosts(packageRoot) {
     if (host.hooksFile) {
       if (
         typeof host.hooksFile !== "string" ||
-        typeof host.hooksEvent !== "string" ||
         typeof host.hooksShape !== "string" ||
         host.hooksFile === "" ||
-        host.hooksEvent === "" ||
         host.hooksShape === ""
+      ) {
+        console.error(
+          "dhs: references/hosts.json host hooksFile needs hooksShape"
+        );
+        process.exit(1);
+      }
+      if (
+        host.hooksShape !== "opencode-plugin" &&
+        (typeof host.hooksEvent !== "string" || host.hooksEvent === "")
       ) {
         console.error(
           "dhs: references/hosts.json host hooksFile needs hooksEvent and hooksShape"
@@ -290,8 +298,29 @@ function hooksFileIsDisposable(data, shape) {
   return keys.every((key) => key === "hooks");
 }
 
-function ensureHostHook(cwd, host) {
+function opencodePluginSource(packageRoot) {
+  return path.join(packageRoot, OPENCODE_PLUGIN_SRC);
+}
+
+function ensureOpencodePlugin(cwd, host, packageRoot) {
+  const src = opencodePluginSource(packageRoot);
+  if (!fs.existsSync(src)) {
+    console.error(
+      "dhs install: missing package file at references/opencode-check-update.js"
+    );
+    process.exit(1);
+  }
+  const dest = hooksFilePath(cwd, host);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, dest);
+}
+
+function ensureHostHook(cwd, host, packageRoot) {
   if (!host.hooksFile) {
+    return;
+  }
+  if (host.hooksShape === "opencode-plugin") {
+    ensureOpencodePlugin(cwd, host, packageRoot);
     return;
   }
   const filePath = hooksFilePath(cwd, host);
@@ -322,6 +351,11 @@ function removeHostHook(cwd, host) {
   }
   const filePath = hooksFilePath(cwd, host);
   if (!fs.existsSync(filePath)) {
+    return;
+  }
+  if (host.hooksShape === "opencode-plugin") {
+    fs.rmSync(filePath, { force: true });
+    pruneEmptyAncestors(path.dirname(filePath), cwd);
     return;
   }
   let data;
@@ -387,7 +421,7 @@ function install(ctx) {
   }
   for (const host of hosts) {
     copyTree(skillSrc, setupSkillDir(cwd, host));
-    ensureHostHook(cwd, host);
+    ensureHostHook(cwd, host, packageRoot);
   }
 
   ensureGitignore(cwd);
