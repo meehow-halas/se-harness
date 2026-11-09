@@ -7,7 +7,13 @@ description: First-time dhs setup and later parameter changes. Use when the user
 
 Finish first-time setup, or later change the same config. The CLI does not configure the project.
 
-Generate from `.dhs/` only. Do not invent CLI commands. Do not `npm install -g`. Do not write to `~/.claude/` or any other machine-wide path. Do not commit.
+Generate from `.dhs/` only. Do not invent CLI commands. Do not `npm install -g`. Do not write to `~/.claude/`, `~/.cursor/`, or any other machine-wide path. Do not commit.
+
+Read `.dhs/references/hosts.json`. Install and this skill **always write every row**. Do not ask which hosts to use. If that file is missing, stop:
+
+```text
+BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harness-layer dhs install or npx -p github:nbmh/dev-harness-layer dhs install), then /dhs-setup again
+```
 
 Ask **one question at a time**. Wait. Do not dump a questionnaire. Stops (not questions) are one line:
 
@@ -19,7 +25,7 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 
 ## Entry
 
-1. If `.dhs/` is missing, or this `/dhs-setup` skill is not present in the project host skills directory (typically `.claude/skills/dhs-setup`):
+1. If `.dhs/` is missing, or `/dhs-setup` is absent from **every** `skillsDir` in `.dhs/references/hosts.json` (present in **any** listed `skillsDir` is enough):
 
 ```text
 BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harness-layer dhs install or npx -p github:nbmh/dev-harness-layer dhs install), then /dhs-setup again
@@ -39,7 +45,7 @@ Do not overwrite keys the user did not confirm. Do not regenerate generated file
 
 ### 1. Read the repo
 
-Read the tree (README, manifests, existing docs, default-branch clues, `AGENTS.md` / `CLAUDE.md` / `.claude/`). State inferred choices so the user can object. Do not silently take `main`, `master`, or the current checkout as the base branch.
+Read the tree (README, manifests, existing docs, default-branch clues, `AGENTS.md` / `CLAUDE.md` / host dirs from `hosts.json`). State inferred choices so the user can object. Do not silently take `main`, `master`, or the current checkout as the base branch.
 
 ### 2. Project PRD
 
@@ -125,7 +131,7 @@ Then **one change at a time**. Show current and new value, wait for confirmation
 
 | Change | Effect |
 |--------|--------|
-| Role `model` | Rewrite that live agent’s **frontmatter** `model:` only. Do not regenerate the body. |
+| Role `model` | Rewrite that live agent’s **frontmatter** `model:` only, in **every** `agentsDir`. Do not regenerate the body. |
 | `packsIgnored` or detected frameworks | Regenerate rule packs. |
 | `agents.baseBranch` | `harness.config.json` only. |
 | Statuses, tracker maps, `fetchFields`, content language, product line | Config only. Do **not** regenerate agent bodies. |
@@ -165,28 +171,34 @@ Decline on first run: `jiraOffer: "declined"`. Do not ask again until a later ru
 
 Sources are always `.dhs/`. Live agent bodies must **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time.
 
+Loop **every** object in `.dhs/references/hosts.json` `hosts`. Drive paths from the row (`skillsDir`, `agentsDir`, `rulesDir`, `rulesExt`). Do not hardcode a single host directory. Do not skip a row.
+
 ### Live agents
 
-Copy `.dhs/agents/` files into the host agent directory (typically `.claude/agents/`). **Copies, not symlinks.**
+Copy `.dhs/agents/` files into **each** `agentsDir`. **Copies, not symlinks.**
 
 | Source | Live file | Role key |
 |--------|-----------|----------|
-| `.dhs/agents/architect.md` | `.claude/agents/architect.md` | `architect` |
-| `.dhs/agents/implementer.md` | `.claude/agents/implementer.md` | `implementer` |
-| `.dhs/agents/consultant.md` | `.claude/agents/consultant.md` | `consultant` |
-| `.dhs/agents/reviewer.md` | `.claude/agents/reviewer.md` | `reviewer` |
+| `.dhs/agents/architect.md` | `<agentsDir>/architect.md` | `architect` |
+| `.dhs/agents/implementer.md` | `<agentsDir>/implementer.md` | `implementer` |
+| `.dhs/agents/consultant.md` | `<agentsDir>/consultant.md` | `consultant` |
+| `.dhs/agents/reviewer.md` | `<agentsDir>/reviewer.md` | `reviewer` |
 
-Set frontmatter `model:` from `agents.roles.<key>.model`. Leave `name`, `description`, and `tools` as in the template. Do not add a fifth agent. Do not copy brainstorm templates from `.dhs/brainstorm/` into `agents/`.
+Set frontmatter `model:` from `agents.roles.<key>.model` (the same string in every copy). Leave `name`, `description`, and `tools` as in the template. Hosts that ignore `tools:` still get the field.
 
-On VERSION mismatch regeneration: replace those four live files from `.dhs/agents/` and re-apply `model:` from **current** config.
+When the host `id` is `cursor` and the role is `consultant`, also set `readonly: true`. Do not set `readonly` on architect, implementer, or reviewer.
 
-On a confirmed role `model` change only: rewrite that one file’s `model:` line.
+Do not add a fifth agent. Do not copy brainstorm templates from `.dhs/brainstorm/` into any `agentsDir`.
+
+On VERSION mismatch regeneration: replace those four live files in **every** `agentsDir` from `.dhs/agents/` and re-apply `model:` (and Cursor `readonly` on consultant) from **current** config.
+
+On a confirmed role `model` change only: rewrite that one file’s `model:` line in **every** `agentsDir`.
 
 ### Work skills
 
-Install writes **only** `/dhs-setup` live. This skill generates the rest.
+Install writes **only** `/dhs-setup` live (already in every `skillsDir`). This skill generates the rest.
 
-Copy these directories from `.dhs/skills/` to the host skills directory (typically `.claude/skills/`), if they exist in `.dhs/skills/`:
+Copy these directories from `.dhs/skills/` to **each** `skillsDir`, if they exist in `.dhs/skills/`:
 
 - `dhs-planit`
 - `dhs-doit`
@@ -195,6 +207,8 @@ Copy these directories from `.dhs/skills/` to the host skills directory (typical
 - `dhs-brainstorm` (when present)
 
 Do **not** overwrite the install-owned `/dhs-setup` skill from this copy step. If a listed template is missing, still copy the others; the copied stub (when present) stops with `BLOCKED:` until a later package fills the body.
+
+When the host `id` is `cursor`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/dhs-setup`). The package templates may omit that field.
 
 ### Rule packs
 
@@ -213,7 +227,12 @@ Detect frameworks from the repo. Generate from `.dhs/packs/`. Monorepo: pack onl
 
 A tree may match more than one pack (e.g. TypeScript + Next.js). State the set so the user can object.
 
-Write live rules under `.claude/rules/` as regular files named `dhs-<packId>-<basename>.md` (keep each pack file’s `paths:` frontmatter, rewritten for monorepo trees). On regenerate: delete existing `.claude/rules/dhs-*.md` that this skill wrote, then write the current filtered set. Do not delete rule files that are not `dhs-` prefixed.
+Write live rules under **each** `rulesDir` as `dhs-<packId>-<basename><rulesExt>`. Same markdown body. Frontmatter from `rulesExt`:
+
+- `.md`: keep `paths:` (YAML list), rewritten for monorepo trees.
+- `.mdc`: `description` (short, from the pack title), `globs` from the same path list (comma-separated if the host wants a string), `alwaysApply: false`. Cursor ignores plain `.md` in `.cursor/rules/`.
+
+On regenerate: in **each** `rulesDir`, delete existing `dhs-*` files this skill wrote, then write the current filtered set. Do not delete rule files that are not `dhs-` prefixed.
 
 ---
 
@@ -227,3 +246,5 @@ Write live rules under `.claude/rules/` as regular files named `dhs-<packId>-<ba
 - Interpolate runtime config into agent markdown bodies.
 - Add CLI subcommands or a global install.
 - Use a product name other than `dhs`.
+- Ask the user which hosts to write. Write every row in `hosts.json`.
+- Invent a Codex or `.agents/` tree in this version.

@@ -2,16 +2,18 @@
 
 This project uses **dhs**. Read `harness.config.json` at run time for the one-line product, doc paths, base git branch, file-tracker status strings, content language, tracker maps, `fetchFields`, and role models. Do not bake those values into agent files. Do not guess `main`, `master`, or the current checkout as the base branch.
 
-The product and CLI binary are `dhs`. The npm package is `dev-harness-layer`. Run the CLI only in this project. Never `npm install -g`. Never write skills, templates, or a CLI to `~/.claude/` or any other machine-wide path.
+The product and CLI binary are `dhs`. The npm package is `dev-harness-layer`. Run the CLI only in this project. Never `npm install -g`. Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, or any other machine-wide path.
+
+Supported hosts are the rows in `.dhs/references/hosts.json`. Live skills, agents, rules, and brainstorm files are copies under **every** listed `skillsDir` / `agentsDir` / `rulesDir` / `brainstormDir`. In this session use the copy this host loaded. Bodies match across copies. Role `model` is one string in `harness.config.json`, written into every live agent file.
 
 ## Binding flow
 
 The only supported adoption path:
 
-1. **Bootstrap** — `npx -p dev-harness-layer dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill. Setup is not done. Do not offer work skills yet.
+1. **Bootstrap** — `npx -p dev-harness-layer dhs install` (npm or GitHub). Result: `.dhs/` plus the install-owned `/dhs-setup` skill in every `skillsDir`. Setup is not done. Do not offer work skills yet.
 2. **Finish setup** — `/dhs-setup` only. The CLI does not configure the project.
 3. **Work** — `/dhs-feature`, `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-brainstorm`, or later `/dhs-setup`.
-4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/` and the install-owned `/dhs-setup` skill. Leaves `harness.config.json` and files `/dhs-setup` generated.
+4. **Remove bootstrap (optional)** — `dhs uninstall` with the **same source** as install. Removes `.dhs/` and the install-owned `/dhs-setup` skill from every `skillsDir`. Leaves `harness.config.json` and files `/dhs-setup` generated.
 
 CLI in v1: `dhs install` and `dhs uninstall` only.
 
@@ -19,7 +21,7 @@ Work skills stop before doing work when `harness.config.json` is missing **or** 
 
 ## Roles
 
-Exactly four product agents. Live copies typically live under `.claude/agents/` (not symlinks to `.dhs/agents/`). Brainstorm members are not agents and are not `@`-addressable. The brainstorm facilitator is a collector runner, not a fifth role.
+Exactly four product agents. Live copies live under every `agentsDir` in `.dhs/references/hosts.json` (not symlinks to `.dhs/agents/`). Brainstorm members are not agents and are not `@`-addressable. The brainstorm facilitator is a collector runner, not a fifth role.
 
 | Role | Job |
 |------|-----|

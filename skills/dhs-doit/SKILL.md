@@ -39,7 +39,7 @@ BLOCKED: setup is incomplete — run /dhs-setup
 BLOCKED: generated files do not match the installed templates — run /dhs-setup
 ```
 
-If the live Implementer file is missing (typically `.claude/agents/implementer.md`):
+If the live Implementer file is missing from **this host’s** `agentsDir` in `.dhs/references/hosts.json`:
 
 ```text
 BLOCKED: live agents are missing — run /dhs-setup
@@ -78,7 +78,7 @@ A basename/key in `depends` that is not at the configured `done` status is a sto
 
 ## Launch Implementer
 
-Follow the live Implementer file (typically `.claude/agents/implementer.md` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`). Do not duplicate that procedure here. Consultant stays inside Implementer: do not expose Consultant as a skill.
+Follow the live Implementer file for this host (`<agentsDir>/implementer.md` from `.dhs/references/hosts.json` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`). Do not duplicate that procedure here. Consultant stays inside Implementer: do not expose Consultant as a skill.
 
 Pass at least:
 

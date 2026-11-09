@@ -17,7 +17,7 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 
 Shape: `.dhs/references/BLOCKED.md`.
 
-Templates live under `.dhs/brainstorm/` (package `brainstorm/`): `member.md`, `persona-output-format.md`, `facilitator.md`, `report-template.md`, `app-context.md`. Live member files and app context are typically under `.claude/brainstorm/`.
+Templates live under `.dhs/brainstorm/` (package `brainstorm/`): `member.md`, `persona-output-format.md`, `facilitator.md`, `report-template.md`, `app-context.md`. Live member files and app context go under **every** `brainstormDir` in `.dhs/references/hosts.json`. Config is the source of truth; regenerate those files from config. Do not keep live members under `.dhs/` (install replaces that tree).
 
 ---
 
@@ -52,7 +52,7 @@ From the user message. Ask **one question** if it is unclear. Do not dump a menu
 | Intent | Do |
 |--------|----|
 | Members CRUD | Create, edit, or remove members. List if they ask. |
-| App context | Build or update `.claude/brainstorm/app-context.md`. |
+| App context | Build or update `app-context.md` in every `brainstormDir`. |
 | Direct consult | A question or a spec. Threshold does **not** apply. |
 | During specification | `/dhs-planit` or Architect inside `/dhs-feature` asked for a round. |
 
@@ -76,7 +76,7 @@ Do not add a facilitator (or any brainstorm runner) to `agents.roles`.
 
 ## Members CRUD
 
-Live files: `.claude/brainstorm/members/<id>.md`, generated from `.dhs/brainstorm/member.md` plus the member object. Fill `{{id}}`, `{{description}}`, and bullet lists for `identity`, `cares`, `dislikes`. After create, edit, or remove: **regenerate** that file from config. Do not hand-edit generated member markdown. On remove, delete the file and drop the object from `members`.
+Live files: `<brainstormDir>/members/<id>.md` for **every** `brainstormDir` in `.dhs/references/hosts.json`, generated from `.dhs/brainstorm/member.md` plus the member object. Fill `{{id}}`, `{{description}}`, and bullet lists for `identity`, `cares`, `dislikes`. After create, edit, or remove: **regenerate** those files from config. Do not hand-edit generated member markdown. On remove, delete the file in every `brainstormDir` and drop the object from `members`.
 
 **Create — first member in this project** (no `members` yet, or the array is empty). Ask once, one question at a time:
 
@@ -93,11 +93,11 @@ Members are markdown personae, not `@`-targets and not dhs roles.
 
 ## App context
 
-Path: `.claude/brainstorm/app-context.md`. Skeleton: `.dhs/brainstorm/app-context.md`.
+Path: `<brainstormDir>/app-context.md` in every `brainstormDir`. Skeleton: `.dhs/brainstorm/app-context.md`. Write the same confirmed body to each copy.
 
 Build from the repo: one-line `product`, `agents.docs`, README, and those docs. State inferences so the user can object. Gaps: **one question at a time**. Show the proposed file. Write only after the user confirms.
 
-A consult needs this file ready. If it is missing or the user has not confirmed it:
+A consult needs this file ready in **this host’s** `brainstormDir`. If it is missing there or the user has not confirmed it:
 
 ```text
 BLOCKED: app context is not ready — finish app context in /dhs-brainstorm
@@ -147,9 +147,9 @@ material (spec or question)
 ```
 
 1. Ready app context (or stop and finish it).
-2. **Persona turns.** Isolated one-shot per member. Parallel when the runtime allows. Launch prompt = that member file + `.dhs/brainstorm/persona-output-format.md` + app context + material. Name `Conversation language: <name>` when you know it. Model: `agents.brainstorm.model`. Tools: Read only. No git. No spec edits. Personae do not see each other, Architect notes, `Q<n>` leanings, or a “corrected” spec.
+2. **Persona turns.** Isolated one-shot per member. Parallel when the runtime allows. Launch prompt = this host’s member file (`<brainstormDir>/members/<id>.md`) + `.dhs/brainstorm/persona-output-format.md` + this host’s app context + material. Name `Conversation language: <name>` when you know it. Model: `agents.brainstorm.model`. Tools: Read only. No git. No spec edits. Personae do not see each other, Architect notes, `Q<n>` leanings, or a “corrected” spec.
 3. **Facilitator** when two or more members were asked: isolated one-shot from `.dhs/brainstorm/facilitator.md`. Input = persona replies + `.dhs/brainstorm/report-template.md`. Same model. Read only. Do not write a file. Do not read the spec to correct anyone. One member → that reply **is** PART A; skip the facilitator.
-4. **Architect** with **PART A only** plus the material. Follow the live Architect file (typically `.claude/agents/architect.md`). Do not pass persona transcripts. Pass `Mode:` from intent (default `interactive`). Architect decides on every blocker, conflict, and gap. Agreement among personae is not required and is not proof. A persona opinion is not user approval.
+4. **Architect** with **PART A only** plus the material. Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.dhs/references/hosts.json`). Do not pass persona transcripts. Pass `Mode:` from intent (default `interactive`). Architect decides on every blocker, conflict, and gap. Agreement among personae is not required and is not proof. A persona opinion is not user approval.
 5. Show the Architect’s decisions. The user resolves leftover conflicts. Do **not** hide a blocker the Architect rejected.
 6. **Interactive:** write `docs/brainstorm/<slug>-<YYYY-MM-DD>.md` only after the user confirms the round. Use the settled-record section of the report template. Leave out persona replies and PART A. **Critical/autonomous:** Architect consumes PART A; do **not** write that file.
 7. One round unless the user asks for another, and then only for what changed.
@@ -163,7 +163,7 @@ Settled records stay files under `docs/brainstorm/`. They are not the task track
 ## Do not
 
 - Role-play a persona or the facilitator in this skill.
-- Copy facilitator templates into `.claude/agents/` or `agents.roles`.
+- Copy facilitator templates into any `agentsDir` or `agents.roles`.
 - Interview personae from Architect, Implementer, Consultant, or Reviewer.
 - Hand-edit generated member markdown.
 - Touch `agents.roles` for a brainstorm model.

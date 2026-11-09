@@ -41,7 +41,7 @@ BLOCKED: setup is incomplete — run /dhs-setup
 BLOCKED: generated files do not match the installed templates — run /dhs-setup
 ```
 
-If the live Reviewer file is missing (typically `.claude/agents/reviewer.md`):
+If the live Reviewer file is missing from **this host’s** `agentsDir` in `.dhs/references/hosts.json`:
 
 ```text
 BLOCKED: live agents are missing — run /dhs-setup
@@ -87,7 +87,7 @@ BLOCKED: spec and prompt are missing — run /dhs-planit or /dhs-feature
 
 ## Launch Reviewer once
 
-Follow the live Reviewer file (typically `.claude/agents/reviewer.md` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`). Do not duplicate that procedure here.
+Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md` from `.dhs/references/hosts.json` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`). Do not duplicate that procedure here.
 
 Pass at least:
 
