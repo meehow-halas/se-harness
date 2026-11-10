@@ -8,6 +8,7 @@ const net = require("net");
 const path = require("path");
 
 const { withTempDir } = require("../test/helpers");
+const { createFakeAgentCli } = require("../test/fake-agent-cli");
 const { BIND_HOST, createRequestHandler, shutdownMonitor, startServer } = require("./index");
 const { createSessionRegistry } = require("./sessions");
 const { listTasks } = require("./tasks");
@@ -15,15 +16,10 @@ const { buildFirstPlanitPrompt } = require("./chat");
 
 const ARCHITECT_MODEL = "architect-wire-99";
 const WRONG_MODEL = "client-guess-model";
-const API_KEY = "cursor_test_key_planit";
 const TASK_A = "001-keep-aa";
 const NEW_KEY = "021-logout-qq";
 const USER_REQUEST = "spec the logout ribbon for vaulted-ee";
 const TODO_STATUS = "queued-aa";
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function writeConfig(cwd, extraAgents = {}) {
   fs.mkdirSync(path.join(cwd, ".dhs", "monitor"), { recursive: true });
@@ -100,61 +96,13 @@ relates: []
   );
 }
 
-function createFakeSdk({ sendDelayMs = 20, onSend } = {}) {
-  const creates = [];
-  const sends = [];
-  const disposes = [];
-  let seq = 0;
-
-  function makeAgent(id) {
-    return {
-      agentId: id,
-      async send(text) {
-        sends.push({ agentId: id, text });
-        if (typeof onSend === "function") {
-          onSend(text, id);
-        }
-        await delay(sendDelayMs);
-        return {
-          async *stream() {
-            yield {
-              type: "assistant",
-              message: {
-                content: [{ type: "text", text: `echo:${text.slice(0, 80)}` }],
-              },
-            };
-          },
-          async wait() {
-            return { status: "finished" };
-          },
-        };
-      },
-      async [Symbol.asyncDispose]() {
-        disposes.push(id);
-      },
-    };
-  }
-
-  return {
-    creates,
-    sends,
-    disposes,
-    async create(opts) {
-      creates.push(opts);
-      return makeAgent(`fake-planit-${++seq}`);
-    },
-    async resume() {
-      throw new Error("agent id is not live");
-    },
-  };
-}
-
-function registryFor(cwd, { sdk, maxAgents = 4 } = {}) {
+function registryFor(cwd, { cli, maxAgents = 4 } = {}) {
+  const fake = cli || createFakeAgentCli();
   return createSessionRegistry({
     cwd,
     maxAgents,
-    env: { CURSOR_API_KEY: API_KEY },
-    sdk: sdk || createFakeSdk(),
+    env: { PATH: "/usr/bin", HOME: "/tmp" },
+    spawn: fake.spawn,
   });
 }
 
@@ -209,8 +157,8 @@ describe("Add → /dhs-planit", () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
       const jiraLog = writeJiraSpy(cwd);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli();
+      const sessions = registryFor(cwd, { cli });
       await sessions.createSession({ taskKey: TASK_A, model: ARCHITECT_MODEL });
       const created = await sessions.createSession({ intent: "planit" });
       await sessions.send(created.taskKey, USER_REQUEST, { intent: "planit" });
@@ -223,17 +171,17 @@ describe("Add → /dhs-planit", () => {
   test("the first agent prompt carries /dhs-planit and the user text, not /dhs-shipit", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli();
+      const sessions = registryFor(cwd, { cli });
       const created = await sessions.createSession({
         intent: "planit",
         model: WRONG_MODEL,
       });
-      assert.equal(sdk.creates[0].model.id, ARCHITECT_MODEL);
+      assert.equal(cli.creates[0].model.id, ARCHITECT_MODEL);
       assert.notEqual(ARCHITECT_MODEL, WRONG_MODEL);
       await sessions.send(created.taskKey, USER_REQUEST);
-      assert.equal(sdk.sends.length, 1);
-      const prompt = sdk.sends[0].text;
+      assert.equal(cli.sends.length, 1);
+      const prompt = cli.sends[0].text;
       assert.equal(prompt, buildFirstPlanitPrompt(USER_REQUEST));
       assert.match(prompt, /\/dhs-planit/);
       assert.match(prompt, new RegExp(USER_REQUEST));
@@ -242,31 +190,32 @@ describe("Add → /dhs-planit", () => {
       assert.equal(visible.role, "user");
       assert.equal(visible.text, USER_REQUEST);
       await sessions.send(created.taskKey, "Q1: keep the ribbon");
-      assert.equal(sdk.sends[1].text, "Q1: keep the ribbon");
-      assert.doesNotMatch(sdk.sends[1].text, /\/dhs-planit/);
+      assert.equal(cli.sends[1].text, "Q1: keep the ribbon");
+      assert.doesNotMatch(cli.sends[1].text, /\/dhs-planit/);
     });
   });
 
   test("Add does not reuse another task's agent process", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli();
+      const sessions = registryFor(cwd, { cli });
       const existing = await sessions.createSession({
         taskKey: TASK_A,
         model: ARCHITECT_MODEL,
       });
       const added = await sessions.createSession({ intent: "planit" });
-      assert.equal(sdk.creates.length, 2);
+      assert.equal(cli.creates.length, 2);
+      assert.notEqual(cli.creates[0].pid, cli.creates[1].pid);
       assert.notEqual(added.agentId, existing.agentId);
       assert.notEqual(added.taskKey, TASK_A);
       await Promise.all([
         sessions.send(TASK_A, "stay-on-a"),
         sessions.send(added.taskKey, USER_REQUEST, { intent: "planit" }),
       ]);
-      assert.equal(sdk.sends.length, 2);
-      assert.notEqual(sdk.sends[0].agentId, sdk.sends[1].agentId);
-      assert.equal(sdk.disposes.length, 0);
+      assert.equal(cli.sends.length, 2);
+      assert.notEqual(cli.sends[0].agentId, cli.sends[1].agentId);
+      assert.equal(cli.disposes.length, 0);
     });
   });
 
@@ -275,12 +224,12 @@ describe("Add → /dhs-planit", () => {
       writeConfig(cwd);
       writeJiraSpy(cwd);
       writeFeature(cwd, TASK_A, "Keep me");
-      const sdk = createFakeSdk({
+      const cli = createFakeAgentCli({
         onSend() {
           writeFeature(cwd, NEW_KEY, "Logout ribbon");
         },
       });
-      const sessions = registryFor(cwd, { sdk });
+      const sessions = registryFor(cwd, { cli });
       const port = await allocPort();
       const server = await startServer({
         port,

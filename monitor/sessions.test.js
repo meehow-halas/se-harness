@@ -8,16 +8,17 @@ const net = require("net");
 const path = require("path");
 
 const { withTempDir } = require("../test/helpers");
+const { createFakeAgentCli } = require("../test/fake-agent-cli");
 const { BIND_HOST, createRequestHandler, shutdownMonitor, startServer } = require("./index");
 const {
-  MISSING_API_KEY,
+  LOGGED_OUT_CLI,
+  MISSING_CLI,
   PLANIT_LOCK_REL,
   SessionError,
   createSessionRegistry,
 } = require("./sessions");
 
 const MODEL = "composer-fixture-omega";
-const API_KEY = "cursor_test_key_zeta";
 const TASK_A = "001-alpha";
 const TASK_B = "002-beta";
 
@@ -36,84 +37,17 @@ function writeConfig(cwd, extraAgents = {}) {
   );
 }
 
-function createFakeSdk({ sendDelayMs = 40, streamFor } = {}) {
-  const creates = [];
-  const resumes = [];
-  const sends = [];
-  const disposes = [];
-  const liveIds = new Set();
-  let seq = 0;
-  let inFlight = 0;
-  let maxInFlight = 0;
-
-  function makeAgent(id) {
-    return {
-      agentId: id,
-      async send(text) {
-        inFlight += 1;
-        maxInFlight = Math.max(maxInFlight, inFlight);
-        sends.push({ agentId: id, text });
-        try {
-          await delay(sendDelayMs);
-          return {
-            async *stream() {
-              if (typeof streamFor === "function") {
-                for (const event of streamFor(text)) {
-                  yield event;
-                }
-                return;
-              }
-              yield {
-                type: "assistant",
-                message: {
-                  content: [{ type: "text", text: `echo:${text}` }],
-                },
-              };
-            },
-            async wait() {
-              return { status: "finished" };
-            },
-          };
-        } finally {
-          inFlight -= 1;
-        }
-      },
-      async [Symbol.asyncDispose]() {
-        disposes.push(id);
-        liveIds.delete(id);
-      },
-    };
-  }
-
-  return {
-    creates,
-    resumes,
-    sends,
-    disposes,
-    liveIds,
-    maxInFlight: () => maxInFlight,
-    async create(opts) {
-      creates.push(opts);
-      const id = `fake-${++seq}`;
-      liveIds.add(id);
-      return makeAgent(id);
-    },
-    async resume(id, opts) {
-      resumes.push({ id, opts });
-      if (!liveIds.has(id)) {
-        throw new Error("agent id is not live");
-      }
-      return makeAgent(id);
-    },
-  };
-}
-
-function registryFor(cwd, { sdk, maxAgents = 4, env } = {}) {
+function registryFor(cwd, { cli, maxAgents = 4, env } = {}) {
+  const fake = cli || createFakeAgentCli();
   return createSessionRegistry({
     cwd,
     maxAgents,
-    env: env || { CURSOR_API_KEY: API_KEY },
-    sdk: sdk || createFakeSdk(),
+    env: env || {
+      PATH: "/usr/bin",
+      HOME: "/tmp",
+      CURSOR_API_KEY: "must-not-reach-child-omega",
+    },
+    spawn: fake.spawn,
   });
 }
 
@@ -217,34 +151,37 @@ function collectSse(port, urlPath, { until, timeoutMs = 4000 } = {}) {
 }
 
 describe("session registry", () => {
-  test("uses a distinct Agent per task key and does not recycle one across keys", async () => {
+  test("uses a distinct CLI process per task key and does not recycle one across keys", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli();
+      const sessions = registryFor(cwd, { cli });
       const a = await sessions.createSession({ taskKey: TASK_A, model: MODEL });
       const b = await sessions.createSession({ taskKey: TASK_B, model: MODEL });
-      assert.equal(sdk.creates.length, 2);
+      assert.equal(cli.creates.length, 2);
       assert.notEqual(a.agentId, b.agentId);
-      assert.equal(sdk.creates[0].model.id, MODEL);
-      assert.equal(sdk.creates[0].apiKey, API_KEY);
-      assert.equal(sdk.creates[0].local.cwd, cwd);
-      assert.equal(sdk.creates[1].local.cwd, cwd);
+      assert.notEqual(cli.creates[0].pid, cli.creates[1].pid);
+      assert.equal(cli.creates[0].model.id, MODEL);
+      assert.equal(cli.creates[0].env.CURSOR_API_KEY, undefined);
+      assert.equal(cli.creates[0].args.includes("--api-key"), false);
+      assert.equal(cli.creates[0].cwd, cwd);
+      assert.equal(cli.creates[1].cwd, cwd);
       await Promise.all([
         sessions.send(TASK_A, "ping-a"),
         sessions.send(TASK_B, "ping-b"),
       ]);
-      assert.equal(sdk.sends.length, 2);
-      assert.equal(sdk.maxInFlight(), 2);
-      assert.equal(sdk.disposes.length, 0);
+      assert.equal(cli.sends.length, 2);
+      assert.notEqual(cli.sends[0].pid, cli.sends[1].pid);
+      assert.equal(cli.maxInFlight(), 2);
+      assert.equal(cli.disposes.length, 0);
     });
   });
 
   test("selecting session A does not dispose session B", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli();
+      const sessions = registryFor(cwd, { cli });
       await sessions.createSession({ taskKey: TASK_A, model: MODEL });
       await sessions.createSession({ taskKey: TASK_B, model: MODEL });
       const sendB = sessions.send(TASK_B, "keep-running");
@@ -252,9 +189,9 @@ describe("session registry", () => {
       assert.equal(sessions.selected(), TASK_A);
       sessions.select(TASK_B);
       await sendB;
-      assert.equal(sdk.disposes.length, 0);
+      assert.equal(cli.disposes.length, 0);
       assert.equal(
-        sdk.sends.some((row) => row.text === "keep-running"),
+        cli.sends.some((row) => row.text === "keep-running"),
         true
       );
     });
@@ -263,8 +200,8 @@ describe("session registry", () => {
   test("selecting B while A is in flight does not dispose or pause A", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk({ sendDelayMs: 80 });
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli({ sendDelayMs: 80 });
+      const sessions = registryFor(cwd, { cli });
       await sessions.createSession({ taskKey: TASK_A, model: MODEL });
       await sessions.createSession({ taskKey: TASK_B, model: MODEL });
       const sendA = sessions.send(TASK_A, "long-a");
@@ -272,7 +209,7 @@ describe("session registry", () => {
       assert.equal(sessions.selected(), TASK_B);
       const result = await sendA;
       assert.equal(result.status, "finished");
-      assert.equal(sdk.disposes.length, 0);
+      assert.equal(cli.disposes.length, 0);
       assert.equal(
         sessions.snapshot(TASK_A).messages.some((row) => row.text === "echo:long-a"),
         true
@@ -283,7 +220,7 @@ describe("session registry", () => {
   test("consultant stream output is not stored as a chat turn", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk({
+      const cli = createFakeAgentCli({
         streamFor(text) {
           return [
             {
@@ -308,7 +245,7 @@ describe("session registry", () => {
           ];
         },
       });
-      const sessions = registryFor(cwd, { sdk });
+      const sessions = registryFor(cwd, { cli });
       await sessions.createSession({ taskKey: TASK_A, model: MODEL });
       await sessions.send(TASK_A, "review-me");
       const texts = sessions.snapshot(TASK_A).messages.map((row) => row.text);
@@ -321,23 +258,24 @@ describe("session registry", () => {
   test("four live agents at default --max-agents 4 have distinct ids and independent send", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli();
+      const sessions = registryFor(cwd, { cli });
       const created = [];
       for (let i = 1; i <= 4; i += 1) {
         created.push(
           await sessions.createSession({ taskKey: `n4-${i}`, model: MODEL })
         );
       }
-      assert.equal(sdk.creates.length, 4);
+      assert.equal(cli.creates.length, 4);
+      assert.equal(new Set(cli.creates.map((row) => row.pid)).size, 4);
       assert.equal(new Set(created.map((row) => row.agentId)).size, 4);
       await Promise.all(
         created.map((row, i) => sessions.send(`n4-${i + 1}`, `ping-${i + 1}`))
       );
-      assert.equal(sdk.sends.length, 4);
-      assert.equal(sdk.maxInFlight(), 4);
+      assert.equal(cli.sends.length, 4);
+      assert.equal(cli.maxInFlight(), 4);
       assert.equal(
-        sdk.sends.map((row) => row.agentId).sort().join(","),
+        cli.sends.map((row) => row.agentId).sort().join(","),
         created.map((row) => row.agentId).sort().join(",")
       );
     });
@@ -346,9 +284,9 @@ describe("session registry", () => {
   test("the (N+1)th live agent is refused, not queued", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
+      const cli = createFakeAgentCli();
       const cap = 3;
-      const sessions = registryFor(cwd, { sdk, maxAgents: cap });
+      const sessions = registryFor(cwd, { cli, maxAgents: cap });
       await sessions.createSession({ taskKey: "t-1", model: MODEL });
       await sessions.createSession({ taskKey: "t-2", model: MODEL });
       await sessions.createSession({ taskKey: "t-3", model: MODEL });
@@ -362,7 +300,7 @@ describe("session registry", () => {
           return true;
         }
       );
-      assert.equal(sdk.creates.length, cap);
+      assert.equal(cli.creates.length, cap);
       assert.equal(sessions.liveCount(), cap);
     });
   });
@@ -370,8 +308,8 @@ describe("session registry", () => {
   test("fifth live agent at --max-agents 4 is refused, not queued", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk, maxAgents: 4 });
+      const cli = createFakeAgentCli();
+      const sessions = registryFor(cwd, { cli, maxAgents: 4 });
       for (let i = 1; i <= 4; i += 1) {
         await sessions.createSession({ taskKey: `n4-${i}`, model: MODEL });
       }
@@ -386,7 +324,7 @@ describe("session registry", () => {
           return true;
         }
       );
-      assert.equal(sdk.creates.length, 4);
+      assert.equal(cli.creates.length, 4);
       assert.equal(sessions.liveCount(), 4);
     });
   });
@@ -394,8 +332,8 @@ describe("session registry", () => {
   test("two overlapping files-tracker planit runs do not both proceed", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk({ sendDelayMs: 80 });
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli({ sendDelayMs: 80 });
+      const sessions = registryFor(cwd, { cli });
       await sessions.createSession({ taskKey: TASK_A, model: MODEL });
       await sessions.createSession({ taskKey: TASK_B, model: MODEL });
       const first = sessions.send(TASK_A, "spec the login form", {
@@ -418,8 +356,8 @@ describe("session registry", () => {
         }
       );
       await first;
-      assert.equal(sdk.sends.length, 1);
-      assert.equal(sdk.sends[0].text, "spec the login form");
+      assert.equal(cli.sends.length, 1);
+      assert.equal(cli.sends[0].text, "spec the login form");
       assert.equal(fs.existsSync(lockFile), false);
     });
   });
@@ -432,69 +370,120 @@ describe("session registry", () => {
           url: "https://jira.example.test",
         },
       });
-      const sdk = createFakeSdk({ sendDelayMs: 50 });
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli({ sendDelayMs: 50 });
+      const sessions = registryFor(cwd, { cli });
       await sessions.createSession({ taskKey: "WXYZ-11", model: MODEL });
       await sessions.createSession({ taskKey: "WXYZ-12", model: MODEL });
       await Promise.all([
         sessions.send("WXYZ-11", "/dhs-planit one", { intent: "planit" }),
         sessions.send("WXYZ-12", "/dhs-planit two", { intent: "planit" }),
       ]);
-      assert.equal(sdk.sends.length, 2);
+      assert.equal(cli.sends.length, 2);
       assert.equal(fs.existsSync(path.join(cwd, PLANIT_LOCK_REL)), false);
     });
   });
 
-  test("missing CURSOR_API_KEY does not call Agent.create", async () => {
+  test("create without CURSOR_API_KEY still spawns CLI and never loads @cursor/sdk", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
-      const sessions = createSessionRegistry({
-        cwd,
-        maxAgents: 4,
-        env: {},
-        sdk,
-      });
+      const cli = createFakeAgentCli();
+      const loaded = [];
+      const Module = require("module");
+      const orig = Module._load;
+      Module._load = function hooked(request, ...rest) {
+        if (String(request).includes("@cursor/sdk")) {
+          loaded.push(request);
+        }
+        return orig.apply(this, [request, ...rest]);
+      };
+      try {
+        const sessions = createSessionRegistry({
+          cwd,
+          maxAgents: 4,
+          env: { PATH: "/usr/bin", HOME: "/tmp" },
+          spawn: cli.spawn,
+        });
+        const created = await sessions.createSession({
+          taskKey: TASK_A,
+          model: MODEL,
+        });
+        assert.ok(created.agentId);
+        assert.equal(cli.creates.length, 1);
+        assert.equal(cli.creates[0].env.CURSOR_API_KEY, undefined);
+        assert.equal(loaded.length, 0);
+      } finally {
+        Module._load = orig;
+      }
+    });
+  });
+
+  test("missing CLI binary does not spawn a session process", async () => {
+    await withTempDir(async (cwd) => {
+      writeConfig(cwd);
+      const cli = createFakeAgentCli({ missingBinary: true });
+      const sessions = registryFor(cwd, { cli });
       await assert.rejects(
         () => sessions.createSession({ taskKey: TASK_A, model: MODEL }),
         (err) => {
           assert.ok(err instanceof SessionError);
-          assert.equal(err.message, MISSING_API_KEY);
+          assert.equal(err.message, MISSING_CLI);
+          assert.match(err.message, /^BLOCKED:/);
           return true;
         }
       );
-      assert.equal(sdk.creates.length, 0);
-      assert.equal(sdk.resumes.length, 0);
+      assert.equal(cli.creates.length, 0);
+      assert.equal(cli.acpSpawns().length, 0);
     });
   });
 
-  test("Agent.resume is used when the stored id is live; otherwise a new agent keeps old messages", async () => {
+  test("logged-out CLI does not spawn a session process", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
+      const cli = createFakeAgentCli({ loggedIn: false });
+      const sessions = registryFor(cwd, { cli });
+      await assert.rejects(
+        () => sessions.createSession({ taskKey: TASK_A, model: MODEL }),
+        (err) => {
+          assert.ok(err instanceof SessionError);
+          assert.equal(err.message, LOGGED_OUT_CLI);
+          assert.match(err.message, /agent login/);
+          return true;
+        }
+      );
+      assert.equal(cli.creates.length, 0);
+      assert.equal(cli.acpSpawns().length, 0);
+      assert.equal(cli.statusSpawns().length, 1);
+    });
+  });
+
+  test("stored CLI session id is resumed when live; otherwise a new process keeps old messages", async () => {
+    await withTempDir(async (cwd) => {
+      writeConfig(cwd);
+      const cli = createFakeAgentCli();
       const liveId = "stored-live-id";
-      sdk.liveIds.add(liveId);
+      cli.liveIds.add(liveId);
       const dir = path.join(cwd, ".dhs", "monitor", "sessions", TASK_A);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(
         path.join(dir, "agent.json"),
         `${JSON.stringify({ agentId: liveId })}\n`
       );
-      const sessions = registryFor(cwd, { sdk });
+      const sessions = registryFor(cwd, { cli });
       const created = await sessions.createSession({
         taskKey: TASK_A,
         model: MODEL,
       });
       assert.equal(created.agentId, liveId);
-      assert.equal(sdk.resumes.length, 1);
-      assert.equal(sdk.creates.length, 0);
+      assert.equal(cli.resumes.length, 1);
+      assert.equal(cli.sessionNews.length, 0);
+      assert.equal(cli.creates.length, 1);
     });
   });
 
-  test("dead stored agent id creates a new agent and leaves prior chat readable", async () => {
+  test("dead stored session id starts a new CLI session and leaves prior chat readable", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
+      const cli = createFakeAgentCli();
       const dir = path.join(cwd, ".dhs", "monitor", "sessions", TASK_A);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(
@@ -503,24 +492,24 @@ describe("session registry", () => {
       );
       const prior = [{ role: "user", text: "old question", at: "2020-01-01T00:00:00.000Z" }];
       fs.writeFileSync(path.join(dir, "messages.json"), `${JSON.stringify(prior)}\n`);
-      const sessions = registryFor(cwd, { sdk });
+      const sessions = registryFor(cwd, { cli });
       const created = await sessions.createSession({
         taskKey: TASK_A,
         model: MODEL,
       });
-      assert.equal(sdk.resumes.length, 1);
-      assert.equal(sdk.creates.length, 1);
+      assert.equal(cli.resumes.length, 1);
+      assert.equal(cli.sessionNews.length, 1);
       assert.notEqual(created.agentId, "dead-agent");
       const snap = sessions.snapshot(TASK_A);
       assert.equal(snap.messages[0].text, "old question");
     });
   });
 
-  test("disposeAll on shutdown disposes every live agent", async () => {
+  test("disposeAll on shutdown kills every live CLI child", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli();
+      const sessions = registryFor(cwd, { cli });
       await sessions.createSession({ taskKey: TASK_A, model: MODEL });
       await sessions.createSession({ taskKey: TASK_B, model: MODEL });
       const port = await allocPort();
@@ -529,7 +518,7 @@ describe("session registry", () => {
         handler: createRequestHandler({ sessions }),
       });
       await shutdownMonitor({ cwd, server, sessions, exitProcess: false });
-      assert.equal(sdk.disposes.length, 2);
+      assert.equal(cli.disposes.length, 2);
       assert.equal(sessions.liveCount(), 0);
     });
   });
@@ -539,8 +528,8 @@ describe("session HTTP", () => {
   test("two sessions stream independently over SSE", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk({ sendDelayMs: 20 });
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli({ sendDelayMs: 20 });
+      const sessions = registryFor(cwd, { cli });
       const port = await allocPort();
       const server = await startServer({
         port,
@@ -601,7 +590,7 @@ describe("session HTTP", () => {
         ]);
         assert.equal(resA.status, 200, resA.body);
         assert.equal(resB.status, 200, resB.body);
-        assert.equal(sdk.maxInFlight(), 2);
+        assert.equal(cli.maxInFlight(), 2);
 
         const selectA = await requestJson({
           port,
@@ -609,7 +598,7 @@ describe("session HTTP", () => {
           urlPath: `/api/sessions/${TASK_A}/select`,
         });
         assert.equal(selectA.status, 200);
-        assert.equal(sdk.disposes.length, 0);
+        assert.equal(cli.disposes.length, 0);
         assert.equal(
           eventsA.some(
             (ev) =>
@@ -632,15 +621,15 @@ describe("session HTTP", () => {
     });
   });
 
-  test("HTTP create without an API key returns instructions and skips Agent.create", async () => {
+  test("HTTP create with a missing CLI returns BLOCKED login/install text and skips ACP spawn", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
-      const sdk = createFakeSdk();
+      const cli = createFakeAgentCli({ missingBinary: true });
       const sessions = createSessionRegistry({
         cwd,
         maxAgents: 4,
-        env: {},
-        sdk,
+        env: { PATH: "/usr/bin" },
+        spawn: cli.spawn,
       });
       const port = await allocPort();
       const server = await startServer({
@@ -655,8 +644,8 @@ describe("session HTTP", () => {
           body: { taskKey: TASK_A, model: MODEL },
         });
         assert.equal(res.status, 400);
-        assert.equal(res.json.error, MISSING_API_KEY);
-        assert.equal(sdk.creates.length, 0);
+        assert.equal(res.json.error, MISSING_CLI);
+        assert.equal(cli.creates.length, 0);
       } finally {
         await shutdownMonitor({ cwd, server, sessions, exitProcess: false });
       }

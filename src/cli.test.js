@@ -517,7 +517,7 @@ describe("dhs install", () => {
     });
   });
 
-  test("vendors @cursor/sdk and its runtime deps into .dhs/monitor/node_modules when the installer has them", () => {
+  test("does not vendor @cursor/sdk into .dhs/monitor even when the installer has it", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -525,47 +525,17 @@ describe("dhs install", () => {
       fs.mkdirSync(project);
       makePackageRoot(pkg);
       const sdkDir = path.join(pkg, "node_modules", "@cursor", "sdk");
-      const depName = "dhs-fake-sdk-runtime";
-      const depDir = path.join(pkg, "node_modules", depName);
-      const unrelated = path.join(pkg, "node_modules", "unrelated-pkg");
       fs.mkdirSync(sdkDir, { recursive: true });
-      fs.mkdirSync(depDir, { recursive: true });
-      fs.mkdirSync(unrelated, { recursive: true });
       fs.writeFileSync(
         path.join(sdkDir, "package.json"),
-        `${JSON.stringify({
-          name: "@cursor/sdk",
-          version: "0.0.0-test",
-          dependencies: { [depName]: "1.0.0" },
-        })}\n`
+        `${JSON.stringify({ name: "@cursor/sdk", version: "0.0.0-test" })}\n`
       );
       fs.writeFileSync(path.join(sdkDir, "index.js"), "module.exports = 'sdk';\n");
-      fs.writeFileSync(
-        path.join(depDir, "package.json"),
-        `${JSON.stringify({ name: depName, version: "1.0.0" })}\n`
-      );
-      fs.writeFileSync(path.join(depDir, "index.js"), "module.exports = 'dep';\n");
-      fs.writeFileSync(
-        path.join(unrelated, "package.json"),
-        `${JSON.stringify({ name: "unrelated-pkg", version: "1.0.0" })}\n`
-      );
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
       assert.equal(
-        exists(path.join(project, ".dhs", "monitor", "node_modules", "@cursor", "sdk", "index.js")),
-        true
-      );
-      assert.equal(
-        exists(
-          path.join(project, ".dhs", "monitor", "node_modules", depName, "index.js")
-        ),
-        true
-      );
-      assert.equal(
-        exists(
-          path.join(project, ".dhs", "monitor", "node_modules", "unrelated-pkg")
-        ),
+        exists(path.join(project, ".dhs", "monitor", "node_modules")),
         false
       );
     });
