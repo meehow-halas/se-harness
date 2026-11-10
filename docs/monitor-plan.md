@@ -114,7 +114,7 @@ Phase 2 landed the N-session registry on `@cursor/sdk`. **Phase 9 replaces that 
 | 2 | Cursor SDK: N sessions, stream, dispose, N cap, planit lock | 1 | done |
 | 3 | Two-column layout + localStorage | 1 | done |
 | 4 | Task list: file glob **and** `jira search` | 1 | done |
-| 5 | Chat for the selected session (switch does not kill others) | 9, 3 | todo |
+| 5 | Chat for the selected session (switch does not kill others) | 9, 3 | done |
 | 6 | Add → `/dhs-planit` in chat | 9, 5 | todo |
 | 7 | Stage buttons doit / review / close+confirm; `depends` visible | 4, 5, 6 | todo |
 | 8 | List refresh after tracker writes | 4, 7 | todo |

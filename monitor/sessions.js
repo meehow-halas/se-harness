@@ -4,6 +4,11 @@ const fs = require("fs");
 const path = require("path");
 const { EventEmitter } = require("events");
 const { pathToFileURL } = require("url");
+const {
+  MODE_INTERACTIVE,
+  isConsultantEvent,
+  visibleChatMessages,
+} = require("./chat");
 
 const SESSIONS_REL = path.join(".dhs", "monitor", "sessions");
 const PLANIT_LOCK_REL = path.join(".dhs", "monitor", "planit.lock");
@@ -83,6 +88,9 @@ function isPlanitSend(text, intent) {
 }
 
 function extractAssistantText(event) {
+  if (isConsultantEvent(event)) {
+    return "";
+  }
   if (!event || event.type !== "assistant" || !event.message) {
     return "";
   }
@@ -272,7 +280,11 @@ function createSessionRegistry(options) {
     const stored = readJsonIfPresent(agentPath(cwd, key), null);
     const resumeId =
       stored && typeof stored.agentId === "string" ? stored.agentId : null;
-    const placeholder = { creating: true, messages: loadMessages(key) };
+    const placeholder = {
+      creating: true,
+      busy: false,
+      messages: loadMessages(key),
+    };
     live.set(key, placeholder);
     let agent;
     try {
@@ -284,8 +296,10 @@ function createSessionRegistry(options) {
     const record = {
       agent,
       model,
+      mode: MODE_INTERACTIVE,
       messages: placeholder.messages,
       creating: false,
+      busy: false,
     };
     live.set(key, record);
     writeJson(agentPath(cwd, key), { agentId: agent.agentId });
@@ -324,6 +338,8 @@ function createSessionRegistry(options) {
       release = acquirePlanitLock();
     }
     appendMessage(key, { role: "user", text: String(text), at: nowIso() });
+    session.busy = true;
+    events.emit(`session:${key}`, { type: "run", status: "running" });
     try {
       const run = await session.agent.send(text);
       if (run && typeof run.stream === "function") {
@@ -344,6 +360,8 @@ function createSessionRegistry(options) {
       }
       return { status: "finished" };
     } finally {
+      session.busy = false;
+      events.emit(`session:${key}`, { type: "run", status: "idle" });
       if (release) {
         release();
       }
@@ -388,9 +406,11 @@ function createSessionRegistry(options) {
       taskKey: key,
       selected: selected === key,
       live: Boolean(session && session.agent),
+      busy: Boolean(session && session.busy),
+      mode: MODE_INTERACTIVE,
       agentId: session && session.agent ? session.agent.agentId : readJsonIfPresent(agentPath(cwd, key), {}).agentId,
       model: session ? session.model : undefined,
-      messages: session ? session.messages : loadMessages(key),
+      messages: visibleChatMessages(session ? session.messages : loadMessages(key)),
     };
   }
 

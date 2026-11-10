@@ -294,6 +294,9 @@ function resolveStaticFile(pathname) {
   if (pathname === "/layout.js") {
     return path.join(__dirname, "layout.js");
   }
+  if (pathname === "/chat.js") {
+    return path.join(__dirname, "chat.js");
+  }
   if (pathname.includes("..")) {
     return null;
   }
