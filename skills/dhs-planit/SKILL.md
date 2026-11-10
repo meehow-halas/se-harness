@@ -78,4 +78,4 @@ Offer the next step. Do **not** start it:
 - `/dhs-doit` — implement this spec (Consultant loop inside Implementer)
 - `/dhs-shipit` — full path from here
 
-Do not start Reviewer. Do not call `.dhs/scripts/`.
+Do not start Reviewer. Do not call git scripts. When Jira is the active tracker, the Architect calls `.dhs/scripts/jira`; this skill does not. Do not write spec, prompt, or log yourself.
