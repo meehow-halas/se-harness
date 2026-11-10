@@ -345,10 +345,13 @@ depends:
         assert.match(app.body, /task\.status/);
         assert.equal(fs.existsSync(spy.curlLog), false);
         assert.equal(fs.existsSync(spy.pathJiraLog), false);
-        assert.equal(
-          fs.readFileSync(path.join(cwd, ".dhs", "scripts", "jira.called"), "utf8").trim(),
-          "search"
-        );
+        const jiraCalls = fs
+          .readFileSync(path.join(cwd, ".dhs", "scripts", "jira.called"), "utf8")
+          .trim()
+          .split("\n")
+          .filter(Boolean);
+        assert.ok(jiraCalls.length >= 1);
+        assert.ok(jiraCalls.every((line) => line.trim() === "search"));
       } finally {
         await stopMonitor(started.child);
       }

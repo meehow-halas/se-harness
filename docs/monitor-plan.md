@@ -117,7 +117,7 @@ Phase 2 landed the N-session registry on `@cursor/sdk`. **Phase 9 replaces that 
 | 5 | Chat for the selected session (switch does not kill others) | 9, 3 | done |
 | 6 | Add → `/dhs-planit` in chat | 9, 5 | done |
 | 7 | Stage buttons doit / review / close+confirm; `depends` visible | 4, 5, 6 | done |
-| 8 | List refresh after tracker writes | 4, 7 | todo |
+| 8 | List refresh after tracker writes | 4, 7 | done |
 | 9 | Cursor Agent CLI: replace SDK runtime, N processes, stream, dispose, no API key | 2 | todo |
 
 ## Shared done rules
