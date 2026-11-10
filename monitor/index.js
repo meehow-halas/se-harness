@@ -6,6 +6,7 @@ const http = require("http");
 const path = require("path");
 const { createSessionRegistry, SessionError } = require("./sessions");
 const { uiConfigFromHarness } = require("./layout");
+const { createListRefresher } = require("./refresh");
 const { listTasks } = require("./tasks");
 
 const DEFAULT_PORT = 7310;
@@ -379,7 +380,18 @@ function handleSessionError(res, err) {
   json(res, 500, { error: err.message || String(err) });
 }
 
-async function handleApi(req, res, { sessions, cwd } = {}) {
+function writeTasksEvent(res, payload) {
+  const body = payload && typeof payload === "object" ? payload : { tasks: [] };
+  res.write(
+    `data: ${JSON.stringify({
+      type: "tasks",
+      tasks: Array.isArray(body.tasks) ? body.tasks : [],
+      ...(body.error ? { error: body.error } : {}),
+    })}\n\n`
+  );
+}
+
+async function handleApi(req, res, { sessions, cwd, refresher } = {}) {
   let pathname;
   try {
     pathname = parsePathname(req);
@@ -392,8 +404,38 @@ async function handleApi(req, res, { sessions, cwd } = {}) {
     json(res, 200, loadUiConfig(cwd));
     return;
   }
+  if (pathname === "/api/tasks/events" && req.method === "GET") {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    const listed =
+      refresher && typeof refresher.snapshot === "function"
+        ? refresher.snapshot()
+        : listTasks(cwd, { sessions, env: process.env });
+    writeTasksEvent(res, listed);
+    const unsubscribe =
+      refresher && typeof refresher.subscribe === "function"
+        ? refresher.subscribe((payload) => writeTasksEvent(res, payload))
+        : () => {};
+    const keepAlive = setInterval(() => {
+      res.write(": ping\n\n");
+    }, 15000);
+    req.on("close", () => {
+      clearInterval(keepAlive);
+      unsubscribe();
+    });
+    return;
+  }
   if (pathname === "/api/tasks" && (req.method === "GET" || req.method === "HEAD")) {
-    json(res, 200, listTasks(cwd, { sessions, env: process.env }));
+    json(
+      res,
+      200,
+      refresher && typeof refresher.snapshot === "function"
+        ? refresher.snapshot()
+        : listTasks(cwd, { sessions, env: process.env })
+    );
     return;
   }
   if (!sessions) {
@@ -477,7 +519,7 @@ async function handleApi(req, res, { sessions, cwd } = {}) {
   json(res, 405, { error: "method not allowed" });
 }
 
-function createRequestHandler({ sessions, cwd } = {}) {
+function createRequestHandler({ sessions, cwd, refresher } = {}) {
   return (req, res) => {
     const run = async () => {
       let pathname;
@@ -490,7 +532,7 @@ function createRequestHandler({ sessions, cwd } = {}) {
       }
       if (pathname.startsWith("/api/")) {
         try {
-          await handleApi(req, res, { sessions, cwd });
+          await handleApi(req, res, { sessions, cwd, refresher });
         } catch (err) {
           if (!res.headersSent) {
             handleSessionError(res, err);
@@ -523,7 +565,16 @@ function startServer({ port, handler }) {
   });
 }
 
-async function shutdownMonitor({ cwd, server, sessions, exitProcess = true }) {
+async function shutdownMonitor({
+  cwd,
+  server,
+  sessions,
+  refresher,
+  exitProcess = true,
+}) {
+  if (refresher && typeof refresher.stop === "function") {
+    refresher.stop();
+  }
   if (sessions) {
     await sessions.disposeAll();
   }
@@ -590,12 +641,23 @@ async function main(argv, ctx) {
     fail(`Host ${parsed.host} is not implemented.`);
   }
 
+  let refresher;
   const sessions = createSessionRegistry({
     cwd,
     maxAgents: parsed.maxAgents,
     env: process.env,
+    onListRefresh() {
+      if (refresher) {
+        refresher.nudge();
+      }
+    },
   });
-  const handler = createRequestHandler({ sessions, cwd });
+  refresher = createListRefresher({
+    cwd,
+    sessions,
+    env: process.env,
+  });
+  const handler = createRequestHandler({ sessions, cwd, refresher });
 
   let server;
   try {
@@ -612,7 +674,7 @@ async function main(argv, ctx) {
   });
 
   const shutdown = () => {
-    shutdownMonitor({ cwd, server, sessions, exitProcess: true }).catch(
+    shutdownMonitor({ cwd, server, sessions, refresher, exitProcess: true }).catch(
       (err) => {
         console.error(err.message || String(err));
         process.exit(1);

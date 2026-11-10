@@ -17,6 +17,7 @@ const {
   isConsultantEvent,
   onMessagesAppended,
   onUserScroll,
+  shouldRefreshListFromEvent,
   shouldSubmitKeydown,
   trimComposer,
   visibleChatMessages,
@@ -444,11 +445,51 @@ describe("Add → planit", () => {
     assert.equal(api.sends[0].text, "describe logout");
     assert.equal(api.sends[0].extra.intent, "planit");
     assert.equal(api.sends[0].extra.mode, MODE_INTERACTIVE);
-    assert.deepEqual(refreshes, ["tasks"]);
+    assert.ok(refreshes.includes("tasks"));
     const follow = await controller.submit("Q1: use vaulted-ee");
     assert.equal(follow.intent, undefined);
     assert.equal(api.sends[1].extra.intent, undefined);
     assert.equal(api.closed.some((row) => String(row).includes("dispose")), false);
+  });
+});
+
+describe("list refresh from stream events", () => {
+  test("run idle and tracker Write refresh the list; consultant tools do not", async () => {
+    assert.equal(
+      shouldRefreshListFromEvent({ type: "run", status: "idle" }),
+      true
+    );
+    assert.equal(
+      shouldRefreshListFromEvent({
+        type: "tool_call",
+        name: "Write",
+        path: "kb/features/013-gamma-xx.feature.md",
+      }),
+      true
+    );
+    assert.equal(
+      shouldRefreshListFromEvent({
+        type: "tool_call",
+        name: "consultant",
+        status: "completed",
+      }),
+      false
+    );
+    const refreshes = [];
+    const api = createFakeApi();
+    api.refreshTasks = async () => {
+      refreshes.push("tasks");
+    };
+    const controller = createChatController({ api, defaultModel: MODEL });
+    await controller.selectTask(TASK_A);
+    controller.ingest(TASK_A, {
+      type: "tool_call",
+      name: "Write",
+      path: "kb/features/013-gamma-xx.feature.md",
+    });
+    controller.ingest(TASK_A, { type: "run", status: "idle" });
+    await delay(10);
+    assert.ok(refreshes.length >= 2);
   });
 });
 

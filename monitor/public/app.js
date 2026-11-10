@@ -93,8 +93,7 @@
     },
     refreshTasks() {
       return jsonRequest("/api/tasks").then((payload) => {
-        allTasks = Array.isArray(payload.tasks) ? payload.tasks : [];
-        renderTasks();
+        applyTasksPayload(payload);
         return payload;
       });
     },
@@ -137,6 +136,12 @@
       chatLog.scrollTop = chatLog.scrollHeight;
       jumpLatest.hidden = true;
     }
+  }
+
+  function applyTasksPayload(payload) {
+    allTasks = Array.isArray(payload && payload.tasks) ? payload.tasks : [];
+    renderTasks();
+    renderStage();
   }
 
   function renderTasks() {
@@ -360,6 +365,15 @@
 
   restorePrefs();
 
+  const taskEvents = new EventSource("/api/tasks/events");
+  taskEvents.onmessage = (event) => {
+    try {
+      applyTasksPayload(JSON.parse(event.data));
+    } catch {
+      // ignore keep-alives / malformed
+    }
+  };
+
   Promise.all([
     fetch("/api/config").then((res) =>
       res.ok ? res.json() : { statuses: {}, doneStatus: null }
@@ -374,7 +388,7 @@
         doneLabel.textContent = doneStatus;
       }
       fillStatusOptions(config.statuses || {});
-      allTasks = Array.isArray(payload.tasks) ? payload.tasks : [];
+      applyTasksPayload(payload);
       const filters = layout.readFilters(window.localStorage);
       filterName.value = filters.name;
       filterHideDone.checked = filters.hideDone;
@@ -382,11 +396,8 @@
         filterStatus.value = filters.status;
       }
       controller.setDefaultModel(config.defaultModel);
-      renderTasks();
-      renderStage();
     })
     .catch(() => {
-      allTasks = [];
-      renderTasks();
+      applyTasksPayload({ tasks: [] });
     });
 })();

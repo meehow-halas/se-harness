@@ -8,6 +8,7 @@ const {
   MODE_INTERACTIVE,
   buildFirstPlanitPrompt,
   isConsultantEvent,
+  shouldRefreshListFromEvent,
   visibleChatMessages,
 } = require("./chat");
 const { uiConfigFromHarness } = require("./layout");
@@ -225,6 +226,7 @@ function createSessionRegistry(options) {
   const cwd = options.cwd;
   const maxAgents = options.maxAgents;
   const env = options.env || {};
+  const onListRefresh = options.onListRefresh;
   const events = new EventEmitter();
   events.setMaxListeners(0);
   const live = new Map();
@@ -471,6 +473,12 @@ function createSessionRegistry(options) {
       if (run && typeof run.stream === "function") {
         for await (const event of run.stream()) {
           events.emit(`session:${key}`, event);
+          if (
+            typeof onListRefresh === "function" &&
+            shouldRefreshListFromEvent(event)
+          ) {
+            onListRefresh(event);
+          }
           const assistant = extractAssistantText(event);
           if (assistant) {
             appendMessage(key, {
@@ -494,7 +502,11 @@ function createSessionRegistry(options) {
       return result;
     } finally {
       session.busy = false;
-      events.emit(`session:${key}`, { type: "run", status: "idle" });
+      const idle = { type: "run", status: "idle" };
+      events.emit(`session:${key}`, idle);
+      if (typeof onListRefresh === "function") {
+        onListRefresh(idle);
+      }
       if (release) {
         release();
       }

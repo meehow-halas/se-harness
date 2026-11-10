@@ -347,6 +347,8 @@ function listTasks(cwd, { sessions, env } = {}) {
 module.exports = {
   dhsWorktreeExists,
   featuresDir,
+  jiraTrackerActive,
   listTasks,
   promptDir,
+  readHarness,
 };

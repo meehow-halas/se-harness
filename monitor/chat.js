@@ -122,6 +122,39 @@
     };
   }
 
+  function eventBlob(event) {
+    try {
+      return JSON.stringify(event).toLowerCase();
+    } catch {
+      return "";
+    }
+  }
+
+  function shouldRefreshListFromEvent(event) {
+    if (!event || typeof event !== "object") {
+      return false;
+    }
+    if (event.type === "run" && event.status !== "running") {
+      return true;
+    }
+    const type = typeof event.type === "string" ? event.type : "";
+    if (type !== "tool_call" && type !== "tool_result" && type !== "tool") {
+      return false;
+    }
+    const blob = eventBlob(event);
+    if (blob.includes("consultant")) {
+      return false;
+    }
+    return (
+      blob.includes(".feature.md") ||
+      blob.includes(".prompt.md") ||
+      blob.includes("jira") ||
+      blob.includes("write") ||
+      blob.includes("strreplace") ||
+      blob.includes("applypatch")
+    );
+  }
+
   function applyStreamEvent(row, event) {
     const next = {
       ...(row && typeof row === "object" ? row : {}),
@@ -186,6 +219,12 @@
       const updated = applyStreamEvent(ensureRow(key), event);
       transcripts.set(key, updated);
       notify();
+      if (
+        shouldRefreshListFromEvent(event) &&
+        typeof client.refreshTasks === "function"
+      ) {
+        Promise.resolve(client.refreshTasks()).catch(() => {});
+      }
     }
 
     function watch(key) {
@@ -396,6 +435,7 @@
     isVisibleChatTurn,
     onMessagesAppended,
     onUserScroll,
+    shouldRefreshListFromEvent,
     shouldSubmitKeydown,
     trimComposer,
     visibleChatMessages,
