@@ -10,7 +10,9 @@ CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never
 
 ## Package directories
 
-Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, and `src/` (CLI). `dhs install` copies the first six into a consuming repo as `.dhs/<same-name>/` and writes `.dhs/VERSION`. Write files in those directories; do not invent a parallel tree and rename on copy.
+Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, `monitor/`, and `src/` (CLI). `dhs install` copies the first seven into a consuming repo as `.dhs/<same-name>/` and writes `.dhs/VERSION`. Write files in those directories; do not invent a parallel tree and rename on copy.
+
+`monitor/` is the Monitor server and UI. After install it runs from the project as `node .dhs/monitor --host <id>`. It is not a `dhs` subcommand. Install vendors Monitor runtime deps (`@cursor/sdk`) from the installer package into `.dhs/monitor/node_modules`. It does not copy `*.test.js`. If the project root has `package.json` and no `scripts["dhs:monitor"]`, install may add `"dhs:monitor": "node .dhs/monitor"`. Uninstall removes that script only when the value is exactly what install wrote.
 
 ## Deferred (not a backlog)
 

@@ -109,7 +109,7 @@ Parallel sessions are phase 2, not “later”. Files and Jira lists are the sam
 | Phase | Slice | Depends on | Status |
 |-------|--------|------------|--------|
 | 0 | Plan tree + Monitor PRD | — | done |
-| 1 | Payload `.dhs/monitor`, launcher, `--host`, loopback server, guards, lock/port, npm script | 0 | todo |
+| 1 | Payload `.dhs/monitor`, launcher, `--host`, loopback server, guards, lock/port, npm script | 0 | done |
 | 2 | Cursor SDK: N sessions, stream, dispose, N cap, planit lock | 1 | todo |
 | 3 | Two-column layout + localStorage | 1 | todo |
 | 4 | Task list: file glob **and** `jira search` | 1 | todo |

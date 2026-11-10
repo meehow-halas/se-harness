@@ -21,11 +21,20 @@ const GIT_ENV = {
 
 function withTempDir(fn) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dhs-test-"));
-  try {
-    return fn(dir);
-  } finally {
+  const cleanup = () => {
     fs.rmSync(dir, { recursive: true, force: true });
     fs.rmSync(`${dir}-bare.git`, { recursive: true, force: true });
+  };
+  try {
+    const result = fn(dir);
+    if (result && typeof result.then === "function") {
+      return Promise.resolve(result).finally(cleanup);
+    }
+    cleanup();
+    return result;
+  } catch (err) {
+    cleanup();
+    throw err;
   }
 }
 
