@@ -36,7 +36,7 @@ function writeConfig(cwd, extraAgents = {}) {
   );
 }
 
-function createFakeSdk({ sendDelayMs = 40 } = {}) {
+function createFakeSdk({ sendDelayMs = 40, streamFor } = {}) {
   const creates = [];
   const resumes = [];
   const sends = [];
@@ -57,6 +57,12 @@ function createFakeSdk({ sendDelayMs = 40 } = {}) {
           await delay(sendDelayMs);
           return {
             async *stream() {
+              if (typeof streamFor === "function") {
+                for (const event of streamFor(text)) {
+                  yield event;
+                }
+                return;
+              }
               yield {
                 type: "assistant",
                 message: {
@@ -251,6 +257,64 @@ describe("session registry", () => {
         sdk.sends.some((row) => row.text === "keep-running"),
         true
       );
+    });
+  });
+
+  test("selecting B while A is in flight does not dispose or pause A", async () => {
+    await withTempDir(async (cwd) => {
+      writeConfig(cwd);
+      const sdk = createFakeSdk({ sendDelayMs: 80 });
+      const sessions = registryFor(cwd, { sdk });
+      await sessions.createSession({ taskKey: TASK_A, model: MODEL });
+      await sessions.createSession({ taskKey: TASK_B, model: MODEL });
+      const sendA = sessions.send(TASK_A, "long-a");
+      sessions.select(TASK_B);
+      assert.equal(sessions.selected(), TASK_B);
+      const result = await sendA;
+      assert.equal(result.status, "finished");
+      assert.equal(sdk.disposes.length, 0);
+      assert.equal(
+        sessions.snapshot(TASK_A).messages.some((row) => row.text === "echo:long-a"),
+        true
+      );
+    });
+  });
+
+  test("consultant stream output is not stored as a chat turn", async () => {
+    await withTempDir(async (cwd) => {
+      writeConfig(cwd);
+      const sdk = createFakeSdk({
+        streamFor(text) {
+          return [
+            {
+              type: "assistant",
+              agent: { name: "consultant" },
+              message: {
+                role: "assistant",
+                content: [{ type: "text", text: "CONSULT hidden" }],
+              },
+            },
+            {
+              type: "tool_call",
+              name: "consultant",
+              status: "completed",
+            },
+            {
+              type: "assistant",
+              message: {
+                content: [{ type: "text", text: `echo:${text}` }],
+              },
+            },
+          ];
+        },
+      });
+      const sessions = registryFor(cwd, { sdk });
+      await sessions.createSession({ taskKey: TASK_A, model: MODEL });
+      await sessions.send(TASK_A, "review-me");
+      const texts = sessions.snapshot(TASK_A).messages.map((row) => row.text);
+      assert.equal(texts.includes("CONSULT hidden"), false);
+      assert.equal(texts.includes("echo:review-me"), true);
+      assert.equal(sessions.snapshot(TASK_A).mode, "interactive");
     });
   });
 

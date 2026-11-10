@@ -127,13 +127,25 @@
     return {};
   }
 
+  function defaultCursorModel(config) {
+    const roles = config && config.agents && config.agents.roles;
+    const architect = roles && roles.architect;
+    const model = architect && architect.model && architect.model.cursor;
+    return typeof model === "string" && model.trim() !== "" ? model.trim() : null;
+  }
+
   function uiConfigFromHarness(config) {
     const statuses = pickStatusMap(config);
     const done =
       typeof statuses.done === "string" && statuses.done.trim() !== ""
         ? statuses.done
         : null;
-    return { statuses, doneStatus: done };
+    return {
+      statuses,
+      doneStatus: done,
+      defaultModel: defaultCursorModel(config),
+      mode: "interactive",
+    };
   }
 
   function placeholderTasks(statuses) {

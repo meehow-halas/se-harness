@@ -39,7 +39,13 @@
       ></div>
       <main id="right-pane">
         <div id="chat-column">
-          <div id="chat-log" class="chat-log" aria-live="polite"></div>
+          <div id="chat-stage">
+            <div id="chat-log" class="chat-log" aria-live="polite"></div>
+            <div id="chat-loader" class="chat-loader" hidden>Working…</div>
+            <button type="button" id="jump-latest" class="jump-latest" hidden>
+              Latest
+            </button>
+          </div>
           <form id="composer" class="composer">
             <textarea
               id="composer-input"
@@ -52,6 +58,7 @@
       </main>
     </div>
     <script src="/layout.js"></script>
+    <script src="/chat.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>
