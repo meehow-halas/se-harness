@@ -78,6 +78,7 @@ Dziś `jira` nie listuje — to **praca w zakresie Monitora** (nowy czasownik al
 
 - Komenda w **katalogu projektu**. Gdy wejdzie w produkt: np. `dhs monitor --host <id>` (dokładna nazwa binarium — decyzja planu vs osobny pakiet).
 - **`--host` zawsze wymagany.** Bez flagi: nie startuje. **Brak defaultu.**
+- Udany start (i drugi start w tym samym cwd) otwiera wydrukowany URL pętli zwrotnej w domyślnej przeglądarce; `--port` jest opcjonalny (domyślnie 7310); Ctrl+C / SIGTERM zwalnia ten port od razu.
 - `<id>` = wiersz `hosts.json` (`cursor`, `claude-code`, `opencode`).
 - **Kolejność pisania adapterów** (to nie default flagi): 1) **Cursor Agent CLI** (headless z `PATH`, `cwd` = projekt, `agents.roles.<role>.model.cursor`; login terminalowego `agent`, nie `CURSOR_API_KEY`); 2) **Claude Code**; OpenCode nieustalone.
 - Nie `npm run monitor` jako jedyna droga (projekt nie musi być npm). `dhs install` nie musi ruszać `package.json`.

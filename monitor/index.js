@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
+const { spawn } = require("child_process");
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
@@ -109,6 +110,44 @@ function lockPath(cwd) {
 
 function monitorUrl(port) {
   return `http://${BIND_HOST}:${port}/`;
+}
+
+function openerArgs(url, platform, env) {
+  const openBin = env && env.DHS_MONITOR_OPEN_BIN;
+  if (openBin) {
+    return { command: openBin, args: [url] };
+  }
+  if (platform === "darwin") {
+    return { command: "open", args: [url] };
+  }
+  if (platform === "win32") {
+    return { command: "cmd", args: ["/c", "start", "", url] };
+  }
+  return { command: "xdg-open", args: [url] };
+}
+
+function openMonitorUrl(url, options = {}) {
+  const env = options.env || process.env;
+  if (String(env.DHS_MONITOR_NO_OPEN || "") === "1") {
+    return;
+  }
+  const platform = options.platform || process.platform;
+  const spawnFn = options.spawn || spawn;
+  const { command, args } = openerArgs(url, platform, env);
+  try {
+    const child = spawnFn(command, args, {
+      detached: true,
+      stdio: "ignore",
+    });
+    if (child && typeof child.on === "function") {
+      child.on("error", () => {});
+    }
+    if (child && typeof child.unref === "function") {
+      child.unref();
+    }
+  } catch {
+    // Opener failure must not fail start.
+  }
 }
 
 function pidAlive(pid) {
@@ -571,21 +610,38 @@ async function shutdownMonitor({
   sessions,
   refresher,
   exitProcess = true,
+  shutdownDeadlineMs = 2000,
 }) {
+  if (server && server._dhsMonitorShuttingDown) {
+    return;
+  }
+  if (server) {
+    server._dhsMonitorShuttingDown = true;
+  }
+  const deadline =
+    exitProcess && shutdownDeadlineMs > 0
+      ? setTimeout(() => {
+          process.exit(0);
+        }, shutdownDeadlineMs)
+      : null;
   if (refresher && typeof refresher.stop === "function") {
     refresher.stop();
+  }
+  if (server) {
+    if (typeof server.closeAllConnections === "function") {
+      server.closeAllConnections();
+    }
+    await new Promise((resolve) => {
+      server.close(() => resolve());
+    });
   }
   if (sessions) {
     await sessions.disposeAll();
   }
   removeOwnLock(cwd);
-  await new Promise((resolve) => {
-    if (!server) {
-      resolve();
-      return;
-    }
-    server.close(() => resolve());
-  });
+  if (deadline) {
+    clearTimeout(deadline);
+  }
   if (exitProcess) {
     process.exit(0);
   }
@@ -618,7 +674,9 @@ async function main(argv, ctx) {
 
   const existing = liveInstance(cwd);
   if (existing) {
-    console.log(monitorUrl(existing.port));
+    const url = monitorUrl(existing.port);
+    console.log(url);
+    openMonitorUrl(url);
     process.exit(0);
   }
 
@@ -673,7 +731,12 @@ async function main(argv, ctx) {
     maxAgents: parsed.maxAgents,
   });
 
+  let shuttingDown = false;
   const shutdown = () => {
+    if (shuttingDown) {
+      return;
+    }
+    shuttingDown = true;
     shutdownMonitor({ cwd, server, sessions, refresher, exitProcess: true }).catch(
       (err) => {
         console.error(err.message || String(err));
@@ -681,10 +744,12 @@ async function main(argv, ctx) {
       }
     );
   };
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
 
-  console.log(monitorUrl(parsed.port));
+  const url = monitorUrl(parsed.port);
+  console.log(url);
+  openMonitorUrl(url);
 }
 
 if (require.main === module) {
@@ -699,6 +764,9 @@ module.exports = {
   DEFAULT_PORT,
   createRequestHandler,
   main,
+  monitorUrl,
+  openMonitorUrl,
+  openerArgs,
   parseArgs,
   shutdownMonitor,
   startServer,
