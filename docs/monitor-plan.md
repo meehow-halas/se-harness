@@ -26,6 +26,7 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 7 | [monitor-plan/07-stage-buttons.md](monitor-plan/07-stage-buttons.md) | [monitor-plan/07-stage-buttons.prompt.md](monitor-plan/07-stage-buttons.prompt.md) |
 | Phase 8 | [monitor-plan/08-list-refresh.md](monitor-plan/08-list-refresh.md) | [monitor-plan/08-list-refresh.prompt.md](monitor-plan/08-list-refresh.prompt.md) |
 | Phase 9 | [monitor-plan/09-cursor-agent-cli.md](monitor-plan/09-cursor-agent-cli.md) | [monitor-plan/09-cursor-agent-cli.prompt.md](monitor-plan/09-cursor-agent-cli.prompt.md) |
+| Phase 10 | [monitor-plan/10-open-and-stop.md](monitor-plan/10-open-and-stop.md) | [monitor-plan/10-open-and-stop.prompt.md](monitor-plan/10-open-and-stop.prompt.md) |
 
 Cite the idea file and Monitor PRD instead of copying long procedure.
 
@@ -40,7 +41,9 @@ From the commissioning conversation. Do not reopen them in a phase.
 - **Add** starts only `/dhs-planit`. Not `/dhs-shipit`. Full path = planit, then stage buttons.
 - **`jira search`:** new allowlisted verb. The script builds JQL from `agents.tracker.projectKey` and `issueTypes` (feature + bug). UI does not compose `curl` or JQL.
 - **Transcript:** `.dhs/monitor/sessions/<task-key>/` (CLI session id + UI messages). Restart resumes the CLI session when that id is live; otherwise a new process, old chat stays readable.
-- **Port:** `127.0.0.1:7310`, override `--port`. Lock `.dhs/monitor/instance.lock` per cwd. Second start in the same checkout prints the URL and exits 0. Another checkout is another instance.
+- **Port:** `127.0.0.1:7310`, override `--port`. Lock `.dhs/monitor/instance.lock` per cwd. Second start in the same checkout prints the **live** URL (port from the lock, even if this invocation passed a different `--port`) and exits 0. Another checkout is another instance.
+- **Open URL:** successful start (and second start in the same cwd) opens that URL in the OS default browser. No extra npm package. Opener failure does not fail the process. Tests skip via `DHS_MONITOR_NO_OPEN=1`. Not the `/dhs-monitor` skill.
+- **Stop:** SIGINT/SIGTERM drop SSE/keep-alive and unbind so the same port can be bound again immediately. Hang on dispose must not keep LISTEN.
 - **Ceiling N:** start at 4, flag `--max-agents`. Above the cap: visible refusal, not a silent queue. Measure CLI behaviour at N=4 in phase 9 docs; do not promise infinity.
 - **Architect lock (files tracker):** one `/dhs-planit` per checkout (`flock` on `.dhs/monitor/planit.lock`). Second attempt: `BLOCKED:` that an Architect is already writing a spec. Jira: no basename lock (Jira assigns the key).
 - **IDE + Monitor on the same key:** warn in UI if a worktree already exists; do not hard-block (`start-task` reuses).
@@ -119,6 +122,7 @@ Phase 2 landed the N-session registry on `@cursor/sdk`. **Phase 9 replaces that 
 | 7 | Stage buttons doit / review / close+confirm; `depends` visible | 4, 5, 6 | done |
 | 8 | List refresh after tracker writes | 4, 7 | done |
 | 9 | Cursor Agent CLI: replace SDK runtime, N processes, stream, dispose, no API key | 2 | done |
+| 10 | Open default browser on start; SIGINT/SIGTERM unbind `--port` | 1, 5, 8 | todo |
 
 ## Shared done rules
 
