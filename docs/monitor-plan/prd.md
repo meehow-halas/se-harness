@@ -22,7 +22,7 @@ Harness stays: skills, agents, `.dhs/scripts/`. Monitor does not replace the IDE
 
 ## What install writes (Monitor delta)
 
-In addition to the v1 payload, `dhs install` copies package `monitor/` to `.dhs/monitor/` and vendors runtime Node dependencies needed to start (`@cursor/sdk`) from the installer package’s `node_modules`. It does not run `npm install` in the consumer project root. It does not copy `*.test.js`.
+In addition to the v1 payload, `dhs install` copies package `monitor/` to `.dhs/monitor/`. It does not vendor `@cursor/sdk`. It does not run `npm install` in the consumer project root. It does not copy `*.test.js`. First delivery runs host `cursor` as **Cursor Agent CLI** on `PATH` (terminal login). Not `CURSOR_API_KEY`.
 
 ## Guards
 

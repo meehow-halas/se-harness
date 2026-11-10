@@ -6,7 +6,7 @@ The right column is the conversation with the **selected** task’s Monitor agen
 
 ## In scope
 
-- Bind the phase 2 stream to the selected session
+- Bind the phase 9 stream to the selected session
 - Composer: text, Send, Enter
 - Scrollable history, autoscroll to latest; after the user scrolls up, a control to jump to the latest
 - Loader while that session’s run is active
@@ -24,7 +24,7 @@ The right column is the conversation with the **selected** task’s Monitor agen
 ## Inputs
 
 - Idea §§6, 9
-- Phase 2 stream API
+- Phase 9 stream API (CLI adapter; registry from phase 2)
 
 ## Outputs
 

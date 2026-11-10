@@ -35,14 +35,14 @@ Harness zostaje: skille, agenci, `.dhs/scripts/`. Monitor to **UI + N procesów 
 - przycisk etapu na B startuje lub wznawia **sesję B**;
 - `Q<n>` na A nie pauzuje B.
 
-To jest **N× Cursor Agent** (pierwszy adapter), nie jeden `Agent.create` na aplikację.
+To jest **N× Cursor Agent CLI** (pierwszy adapter), nie jeden proces agenta na aplikację.
 
 **Realność: tak, jeśli N sesji jest rdzeniem, nie dodatkiem.** Worktree dhs izolują implementację/recenzję — to sprzyja. Ryzyka:
 
 | Ryzyko | Skutek |
 | --- | --- |
 | Jeden proces agenta w Monitorze | Cel **nieosiągalny** |
-| Cursor SDK: limity równoległych agentów, rate, RAM | Sufit N; plan musi to zmierzyć, nie obiecywać „nieskończoność” |
+| Cursor Agent CLI: limity równoległych procesów, rate, RAM | Sufit N; plan musi to zmierzyć, nie obiecywać „nieskończoność” |
 | Dwa `/dhs-planit` naraz (files) | Wyścig o następny `NNN-` basename — plan musi serializować Architectów albo dać lock |
 | `/dhs-shipit` | Świadomie 1 task; równoległy full-path = N osobnych shipit/planit+doit, nie jedna lista shipit |
 | `depends` | Niespełnione `depends` stopuje **to** zadanie, reszta idzie — UI musi to pokazać |
@@ -50,7 +50,7 @@ To jest **N× Cursor Agent** (pierwszy adapter), nie jeden `Agent.create` na apl
 | Nakładające się pliki | dhs nie stopuje; konflikty w review/merge zostają ludzkie |
 | Architect bez worktree | Równoległy spec na launch checkout — kolizja zapisu trzech plików różnych basename raczej OK; ten sam klucz — nie |
 
-**Werdykt:** przy N niezależnych przebiegach + worktree + przełączany czat, podstawowy cel jest **osiągalny w średnim ryzyku** (SDK i Architect-race). Przy jednym czacie/jednym agencie — **nie**. To trzeba traktować jako wymaganie pierwszej dostawy, nie fazę „potem parallel”.
+**Werdykt:** przy N niezależnych przebiegach + worktree + przełączany czat, podstawowy cel jest **osiągalny w średnim ryzyku** (CLI i Architect-race). Przy jednym czacie/jednym agencie — **nie**. To trzeba traktować jako wymaganie pierwszej dostawy, nie fazę „potem parallel”.
 
 ## 2. Czym Monitor nie jest
 
@@ -79,7 +79,7 @@ Dziś `jira` nie listuje — to **praca w zakresie Monitora** (nowy czasownik al
 - Komenda w **katalogu projektu**. Gdy wejdzie w produkt: np. `dhs monitor --host <id>` (dokładna nazwa binarium — decyzja planu vs osobny pakiet).
 - **`--host` zawsze wymagany.** Bez flagi: nie startuje. **Brak defaultu.**
 - `<id>` = wiersz `hosts.json` (`cursor`, `claude-code`, `opencode`).
-- **Kolejność pisania adapterów** (to nie default flagi): 1) **Cursor Agent** (`@cursor/sdk`, `local.cwd` = projekt, `agents.roles.<role>.model.cursor`); 2) **Claude Code**; OpenCode nieustalone.
+- **Kolejność pisania adapterów** (to nie default flagi): 1) **Cursor Agent CLI** (headless z `PATH`, `cwd` = projekt, `agents.roles.<role>.model.cursor`; login terminalowego `agent`, nie `CURSOR_API_KEY`); 2) **Claude Code**; OpenCode nieustalone.
 - Nie `npm run monitor` jako jedyna droga (projekt nie musi być npm). `dhs install` nie musi ruszać `package.json`.
 - Skill `/dhs-monitor` (opcjonalnie później): odpala **ten sam** CLI z `--host` i otwiera URL. Nie jest agentem w IDE.
 - Nie zgadywać hosta z `.cursor/` vs `.claude/` — setup zapisuje **wszystkie** drzewa.
@@ -92,17 +92,17 @@ Guardy jak work skille: brak `.dhs/` / configu / mismatch `.dhs/VERSION` vs `dhs
 User (przeglądarka, localhost)
     → UI (lista, czat, przyciski)
     → serwer w cwd projektu (bind pętli zwrotnej, nie LAN)
-    → N procesów agenta Monitora (--host wymagany; jeden żywy przebieg na zadanie)
+    → N procesów Cursor Agent CLI (--host wymagany; jeden żywy przebieg na zadanie)
          SKILL.md + agenci + harness.config.json + .dhs/scripts/
     → tracker: pliki XOR Jira (zapisują agenci)
     → UI: stream czatu + odświeżenie listy z trackera
 ```
 
-Monitor nie implementuje. Headless < IDE — przyjęte. Ryzyko fazy agenta: podagenci, Consultant bez edycji, worktree tylko przez `start-task`, parallel `/dhs-doit`.
+Monitor nie implementuje. Headless = Cursor Agent CLI (ten sam login co w terminalu), nie `@cursor/sdk` i nie `CURSOR_API_KEY`. Ryzyko fazy agenta: podagenci, Consultant bez edycji, worktree tylko przez `start-task`, parallel `/dhs-doit`.
 
-Auth SDK (Cursor API key itd.) i to, czy Monitor to nowy `id` w `hosts.json` czy reuse `cursor` — do planu.
+Auth = login CLI na `PATH`. Reuse `hosts.json` id `cursor` (nie nowy wiersz). Brak binarium albo brak loginu: `BLOCKED:` z instrukcją logowania do CLI.
 
-Kolizja IDE + Monitor na tym samym kluczu (dwa worktree callers) — plan: zakaz albo ostrzeżenie.
+Kolizja IDE + Monitor na tym samym kluczu (dwa worktree callers) — plan: ostrzeżenie, nie twardy zakaz.
 
 ## 6. UI
 
@@ -197,7 +197,7 @@ W wizji Monitora: `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-shipit`.
 - Monitor jako nowy `hosts.json` `id` vs reuse `cursor`.
 - Jak listować Jirę (JQL, które issue types, które statusy).
 - Transkrypt czatu na dysku.
-- Sufit N równoległych agentów Cursor SDK; lock na `/dhs-planit` (files).
+- Sufit N równoległych procesów Cursor Agent CLI; lock na `/dhs-planit` (files).
 - Port, już działająca instancja, kilka checkoutów.
 - Stop brainstorm w UI.
 - Przycisk update-from-base.
@@ -205,7 +205,7 @@ W wizji Monitora: `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-shipit`.
 ## 14. Szkielet pod fazy (kolejność do planu)
 
 1. Opakowanie CLI, `--host` required, serwer `127.0.0.1`, guardy setupu.
-2. Adapter Cursor Agent SDK: **N równoległych** przebiegów (stream, narzędzia, `cwd` launch + worktree per task).
+2. Adapter Cursor Agent CLI: **N równoległych** przebiegów (stream, narzędzia, `cwd` launch + worktree per task). Runtime SDK z wczesnego planu jest zastąpiony (faza 9 planu Monitora).
 3. Layout + localStorage.
 4. Lista aktywnego trackera w pełnym zakresie: glob plików **i** listowanie Jira (nowy odczyt w allowliście) — ta sama dostawa.
 5. Czat.
@@ -218,7 +218,7 @@ W wizji Monitora: `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-shipit`.
 
 - Layout, filtry, lista plików: wysoka.
 - Lista (files i Jira): wysoka; Jira wymaga nowego listowania w `jira` **w tej samej dostawie**.
-- Czat i przyciski: średnia — koszt = Cursor SDK pod UI, nie HTML.
-- **N równoległych zadań (cel główny):** osiągalne tylko jako N procesów + czat-przełącznik; jeden agent na Monitor = porażka celu. Ryzyko SDK i wyścig Architect (files).
+- Czat i przyciski: średnia — koszt = Cursor Agent CLI pod UI, nie HTML.
+- **N równoległych zadań (cel główny):** osiągalne tylko jako N procesów + czat-przełącznik; jeden agent na Monitor = porażka celu. Ryzyko CLI i wyścig Architect (files).
 - Panel na okno IDE: odrzucony.
 - Zlecanie spec/implementacji/review/close z www: osiągalne przy tym kontrakcie i **nowym zakresie** poza dhs v1.

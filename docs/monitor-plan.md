@@ -25,6 +25,7 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 6 | [monitor-plan/06-add-planit.md](monitor-plan/06-add-planit.md) | [monitor-plan/06-add-planit.prompt.md](monitor-plan/06-add-planit.prompt.md) |
 | Phase 7 | [monitor-plan/07-stage-buttons.md](monitor-plan/07-stage-buttons.md) | [monitor-plan/07-stage-buttons.prompt.md](monitor-plan/07-stage-buttons.prompt.md) |
 | Phase 8 | [monitor-plan/08-list-refresh.md](monitor-plan/08-list-refresh.md) | [monitor-plan/08-list-refresh.prompt.md](monitor-plan/08-list-refresh.prompt.md) |
+| Phase 9 | [monitor-plan/09-cursor-agent-cli.md](monitor-plan/09-cursor-agent-cli.md) | [monitor-plan/09-cursor-agent-cli.prompt.md](monitor-plan/09-cursor-agent-cli.prompt.md) |
 
 Cite the idea file and Monitor PRD instead of copying long procedure.
 
@@ -38,14 +39,14 @@ From the commissioning conversation. Do not reopen them in a phase.
 - **Models:** reuse `hosts.json` id `cursor`. Role models from `agents.roles.<role>.model.cursor`. No new host row.
 - **Add** starts only `/dhs-planit`. Not `/dhs-shipit`. Full path = planit, then stage buttons.
 - **`jira search`:** new allowlisted verb. The script builds JQL from `agents.tracker.projectKey` and `issueTypes` (feature + bug). UI does not compose `curl` or JQL.
-- **Transcript:** `.dhs/monitor/sessions/<task-key>/` (SDK agent id + UI messages). Restart uses `Agent.resume` when the id is live; otherwise a new agent, old chat stays readable.
+- **Transcript:** `.dhs/monitor/sessions/<task-key>/` (CLI session id + UI messages). Restart resumes the CLI session when that id is live; otherwise a new process, old chat stays readable.
 - **Port:** `127.0.0.1:7310`, override `--port`. Lock `.dhs/monitor/instance.lock` per cwd. Second start in the same checkout prints the URL and exits 0. Another checkout is another instance.
-- **Ceiling N:** start at 4, flag `--max-agents`. Above the cap: visible refusal, not a silent queue. Measure SDK behaviour at N=4 in phase 2 docs; do not promise infinity.
+- **Ceiling N:** start at 4, flag `--max-agents`. Above the cap: visible refusal, not a silent queue. Measure CLI behaviour at N=4 in phase 9 docs; do not promise infinity.
 - **Architect lock (files tracker):** one `/dhs-planit` per checkout (`flock` on `.dhs/monitor/planit.lock`). Second attempt: `BLOCKED:` that an Architect is already writing a spec. Jira: no basename lock (Jira assigns the key).
 - **IDE + Monitor on the same key:** warn in UI if a worktree already exists; do not hard-block (`start-task` reuses).
-- **Auth:** `CURSOR_API_KEY` from the environment. Missing key: stop with instructions, not chat.
+- **Auth:** Cursor Agent CLI already on `PATH`, using the same login as the user’s terminal `agent`. Missing binary or not logged in: `BLOCKED:` with CLI login instructions, not a chat guess. Not `CURSOR_API_KEY`. Not `Cursor.auth.login()`. Not credentials from the Cursor desktop app.
 - **npm convenience:** if cwd has `package.json`, install adds only `"dhs:monitor": "node .dhs/monitor"` when that key is absent. Does not touch `dependencies`. Does not overwrite an existing key. `--host` stays required: `npm run dhs:monitor -- --host cursor`. Uninstall removes the script only when the value is exactly what install wrote.
-- **SDK on disk:** `dhs install` copies package `monitor/` and runtime `node_modules` (`@cursor/sdk`) from the installer package into `.dhs/monitor/`. No second `npm install` in the consumer project. `*.test.js` are not copied.
+- **On disk:** `dhs install` copies package `monitor/` into `.dhs/monitor/`. No `@cursor/sdk` vendor. No second `npm install` in the consumer project. `*.test.js` are not copied. (Phase 1 vendored the SDK; phase 9 removes that.)
 
 ## Product invariants
 
@@ -70,7 +71,7 @@ Published sources stay at the package root. Monitor adds a seventh payload direc
 | Directory | Role | Copied into `.dhs/`? |
 |-----------|------|----------------------|
 | `agents/` … `scripts/` | unchanged v1 payload | yes |
-| `monitor/` | Monitor server + UI + vendored runtime deps at install | yes (`.dhs/monitor/`) |
+| `monitor/` | Monitor server + UI | yes (`.dhs/monitor/`) |
 | `src/` | `dhs` CLI (`install` / `uninstall` only) | no |
 
 `docs/` is not copied into a consuming project.
@@ -83,7 +84,7 @@ Daily Monitor start is `node .dhs/monitor --host <id>`, not a new `dhs` subcomma
 User (browser, 127.0.0.1)
   → UI in .dhs/monitor (list, chat, buttons)
   → Node server in the project cwd
-  → N × Agent.create (@cursor/sdk, local.cwd = project)
+  → N × Cursor Agent CLI (cwd = project)
        skills + agents + harness.config.json + .dhs/scripts/
   → tracker: files XOR Jira (agents write; UI does not)
 ```
@@ -104,19 +105,20 @@ Do not use `BLOCKED: rule=<id>`.
 
 Status is `todo` or `done`. Update only the row just completed, and only after the shared done rules hold.
 
-Parallel sessions are phase 2, not “later”. Files and Jira lists are the same phase 4.
+Phase 2 landed the N-session registry on `@cursor/sdk`. **Phase 9 replaces that runtime** with Cursor Agent CLI (same N-session contract, no `CURSOR_API_KEY`). Phase 2 stays `done`. Files and Jira lists are the same phase 4. Phases 3 and 4 may run in parallel with 9; chat (5) must not start until 9 is `done`.
 
 | Phase | Slice | Depends on | Status |
 |-------|--------|------------|--------|
 | 0 | Plan tree + Monitor PRD | — | done |
 | 1 | Payload `.dhs/monitor`, launcher, `--host`, loopback server, guards, lock/port, npm script | 0 | done |
 | 2 | Cursor SDK: N sessions, stream, dispose, N cap, planit lock | 1 | done |
-| 3 | Two-column layout + localStorage | 1 | todo |
+| 3 | Two-column layout + localStorage | 1 | done |
 | 4 | Task list: file glob **and** `jira search` | 1 | todo |
-| 5 | Chat for the selected session (switch does not kill others) | 2, 3 | todo |
-| 6 | Add → `/dhs-planit` in chat | 2, 5 | todo |
+| 5 | Chat for the selected session (switch does not kill others) | 9, 3 | todo |
+| 6 | Add → `/dhs-planit` in chat | 9, 5 | todo |
 | 7 | Stage buttons doit / review / close+confirm; `depends` visible | 4, 5, 6 | todo |
 | 8 | List refresh after tracker writes | 4, 7 | todo |
+| 9 | Cursor Agent CLI: replace SDK runtime, N processes, stream, dispose, no API key | 2 | todo |
 
 ## Shared done rules
 

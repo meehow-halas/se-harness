@@ -254,6 +254,31 @@ describe("session registry", () => {
     });
   });
 
+  test("four live agents at default --max-agents 4 have distinct ids and independent send", async () => {
+    await withTempDir(async (cwd) => {
+      writeConfig(cwd);
+      const sdk = createFakeSdk();
+      const sessions = registryFor(cwd, { sdk });
+      const created = [];
+      for (let i = 1; i <= 4; i += 1) {
+        created.push(
+          await sessions.createSession({ taskKey: `n4-${i}`, model: MODEL })
+        );
+      }
+      assert.equal(sdk.creates.length, 4);
+      assert.equal(new Set(created.map((row) => row.agentId)).size, 4);
+      await Promise.all(
+        created.map((row, i) => sessions.send(`n4-${i + 1}`, `ping-${i + 1}`))
+      );
+      assert.equal(sdk.sends.length, 4);
+      assert.equal(sdk.maxInFlight(), 4);
+      assert.equal(
+        sdk.sends.map((row) => row.agentId).sort().join(","),
+        created.map((row) => row.agentId).sort().join(",")
+      );
+    });
+  });
+
   test("the (N+1)th live agent is refused, not queued", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);
@@ -275,6 +300,30 @@ describe("session registry", () => {
       );
       assert.equal(sdk.creates.length, cap);
       assert.equal(sessions.liveCount(), cap);
+    });
+  });
+
+  test("fifth live agent at --max-agents 4 is refused, not queued", async () => {
+    await withTempDir(async (cwd) => {
+      writeConfig(cwd);
+      const sdk = createFakeSdk();
+      const sessions = registryFor(cwd, { sdk, maxAgents: 4 });
+      for (let i = 1; i <= 4; i += 1) {
+        await sessions.createSession({ taskKey: `n4-${i}`, model: MODEL });
+      }
+      await assert.rejects(
+        () => sessions.createSession({ taskKey: "n4-5", model: MODEL }),
+        (err) => {
+          assert.ok(err instanceof SessionError);
+          assert.equal(err.code, "cap");
+          assert.equal(err.httpStatus, 409);
+          assert.match(err.message, /live agent cap is 4 \(--max-agents\)/);
+          assert.doesNotMatch(err.message, /queue/i);
+          return true;
+        }
+      );
+      assert.equal(sdk.creates.length, 4);
+      assert.equal(sessions.liveCount(), 4);
     });
   });
 

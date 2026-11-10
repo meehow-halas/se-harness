@@ -5,6 +5,7 @@ const fs = require("fs");
 const http = require("http");
 const path = require("path");
 const { createSessionRegistry, SessionError } = require("./sessions");
+const { uiConfigFromHarness } = require("./layout");
 
 const DEFAULT_PORT = 7310;
 const DEFAULT_MAX_AGENTS = 4;
@@ -270,7 +271,44 @@ function sessionRoute(pathname) {
   return { kind: "item", taskKey, action };
 }
 
-function serveStub(req, res) {
+const PUBLIC_DIR = path.join(__dirname, "public");
+
+function contentTypeFor(file) {
+  if (file.endsWith(".html")) {
+    return "text/html; charset=utf-8";
+  }
+  if (file.endsWith(".css")) {
+    return "text/css; charset=utf-8";
+  }
+  if (file.endsWith(".js")) {
+    return "text/javascript; charset=utf-8";
+  }
+  return "application/octet-stream";
+}
+
+function resolveStaticFile(pathname) {
+  if (pathname === "/" || pathname === "/index.html") {
+    return path.join(PUBLIC_DIR, "index.html");
+  }
+  if (pathname === "/layout.js") {
+    return path.join(__dirname, "layout.js");
+  }
+  if (pathname.includes("..")) {
+    return null;
+  }
+  const rel = pathname.replace(/^\/+/, "");
+  if (!rel || path.isAbsolute(rel)) {
+    return null;
+  }
+  const resolved = path.resolve(PUBLIC_DIR, rel);
+  const root = path.resolve(PUBLIC_DIR);
+  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+    return null;
+  }
+  return resolved;
+}
+
+function serveStatic(req, res) {
   let pathname;
   try {
     pathname = parsePathname(req);
@@ -282,25 +320,25 @@ function serveStub(req, res) {
   if (req.method !== "GET" && req.method !== "HEAD") {
     return false;
   }
-  if (pathname === "/" || pathname === "/index.html") {
-    const file = path.join(__dirname, "public", "index.html");
-    const body = fs.readFileSync(file);
-    res.writeHead(200, {
-      "Content-Type": "text/html; charset=utf-8",
-      "Content-Length": body.length,
-    });
-    if (req.method === "HEAD") {
-      res.end();
-      return true;
-    }
-    res.end(body);
+  const file = resolveStaticFile(pathname);
+  if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+    return false;
+  }
+  const body = fs.readFileSync(file);
+  res.writeHead(200, {
+    "Content-Type": contentTypeFor(file),
+    "Content-Length": body.length,
+  });
+  if (req.method === "HEAD") {
+    res.end();
     return true;
   }
-  return false;
+  res.end(body);
+  return true;
 }
 
 function requestHandler(req, res) {
-  if (serveStub(req, res)) {
+  if (serveStatic(req, res)) {
     return;
   }
   if (req.method !== "GET" && req.method !== "HEAD") {
@@ -312,6 +350,20 @@ function requestHandler(req, res) {
   res.end();
 }
 
+function loadUiConfig(cwd) {
+  if (!cwd) {
+    return { statuses: {}, doneStatus: null };
+  }
+  try {
+    const config = JSON.parse(
+      fs.readFileSync(path.join(cwd, "harness.config.json"), "utf8")
+    );
+    return uiConfigFromHarness(config);
+  } catch {
+    return { statuses: {}, doneStatus: null };
+  }
+}
+
 function handleSessionError(res, err) {
   if (err instanceof SessionError) {
     json(res, err.httpStatus, { error: err.message, code: err.code });
@@ -320,13 +372,21 @@ function handleSessionError(res, err) {
   json(res, 500, { error: err.message || String(err) });
 }
 
-async function handleApi(req, res, sessions) {
+async function handleApi(req, res, { sessions, cwd } = {}) {
   let pathname;
   try {
     pathname = parsePathname(req);
   } catch {
     res.writeHead(400);
     res.end();
+    return;
+  }
+  if (pathname === "/api/config" && (req.method === "GET" || req.method === "HEAD")) {
+    json(res, 200, loadUiConfig(cwd));
+    return;
+  }
+  if (!sessions) {
+    json(res, 404, { error: "not found" });
     return;
   }
   const route = sessionRoute(pathname);
@@ -395,7 +455,7 @@ async function handleApi(req, res, sessions) {
   json(res, 405, { error: "method not allowed" });
 }
 
-function createRequestHandler({ sessions } = {}) {
+function createRequestHandler({ sessions, cwd } = {}) {
   return (req, res) => {
     const run = async () => {
       let pathname;
@@ -406,9 +466,9 @@ function createRequestHandler({ sessions } = {}) {
         res.end();
         return;
       }
-      if (sessions && pathname.startsWith("/api/")) {
+      if (pathname.startsWith("/api/")) {
         try {
-          await handleApi(req, res, sessions);
+          await handleApi(req, res, { sessions, cwd });
         } catch (err) {
           if (!res.headersSent) {
             handleSessionError(res, err);
@@ -513,7 +573,7 @@ async function main(argv, ctx) {
     maxAgents: parsed.maxAgents,
     env: process.env,
   });
-  const handler = createRequestHandler({ sessions });
+  const handler = createRequestHandler({ sessions, cwd });
 
   let server;
   try {
