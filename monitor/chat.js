@@ -85,6 +85,17 @@
     return typeof text === "string" ? text.trim() : "";
   }
 
+  function buildFirstPlanitPrompt(userText) {
+    const text = trimComposer(userText);
+    if (!text) {
+      return "";
+    }
+    if (text.startsWith("/dhs-planit")) {
+      return text;
+    }
+    return `/dhs-planit\n\n${text}`;
+  }
+
   function distanceFromBottom({ scrollTop, scrollHeight, clientHeight }) {
     const top = Number(scrollTop) || 0;
     const height = Number(scrollHeight) || 0;
@@ -113,6 +124,7 @@
 
   function applyStreamEvent(row, event) {
     const next = {
+      ...(row && typeof row === "object" ? row : {}),
       messages: Array.isArray(row && row.messages) ? row.messages.slice() : [],
       busy: Boolean(row && row.busy),
     };
@@ -184,6 +196,38 @@
       unsubs.set(key, typeof off === "function" ? off : () => {});
     }
 
+    async function startAdd() {
+      if (typeof client.createSession !== "function") {
+        return { started: false };
+      }
+      try {
+        const created = await client.createSession({
+          intent: "planit",
+          model: modelId,
+          mode: modeName,
+        });
+        const key = created && created.taskKey;
+        if (!key) {
+          return { started: false };
+        }
+        await selectTask(key);
+        const row = ensureRow(key);
+        row.intent = "planit";
+        row.planitStarted = false;
+        return { started: true, taskKey: key, mode: modeName };
+      } catch (err) {
+        const fallback = selected || "new-error";
+        const row = ensureRow(fallback);
+        row.messages.push({
+          role: "status",
+          text: err && err.message ? err.message : String(err),
+        });
+        selected = fallback;
+        notify();
+        return { started: false, error: err };
+      }
+    }
+
     async function selectTask(key) {
       selected = key;
       const alreadyWatching = unsubs.has(key);
@@ -235,10 +279,50 @@
         }
       }
       watch(taskKey);
-      if (typeof client.send === "function") {
-        await client.send(taskKey, trimmed, { mode: modeName });
+      const row = ensureRow(taskKey);
+      const firstPlanit = row.intent === "planit" && !row.planitStarted;
+      const extra = { mode: modeName };
+      if (firstPlanit) {
+        extra.intent = "planit";
+        row.planitStarted = true;
       }
-      return { submitted: true, text: trimmed, mode: modeName, taskKey };
+      let result;
+      if (typeof client.send === "function") {
+        try {
+          result = await client.send(taskKey, trimmed, extra);
+        } catch (err) {
+          const failed = ensureRow(taskKey);
+          if (firstPlanit) {
+            failed.planitStarted = false;
+          }
+          failed.messages.push({
+            role: "status",
+            text: err && err.message ? err.message : String(err),
+          });
+          notify();
+          return { submitted: false, error: err };
+        }
+      }
+      const liveRow = ensureRow(taskKey);
+      if (firstPlanit) {
+        liveRow.planitStarted = true;
+      }
+      const boundKey =
+        result && typeof result.taskKey === "string" ? result.taskKey : taskKey;
+      if (boundKey !== taskKey) {
+        transcripts.set(boundKey, liveRow);
+        await selectTask(boundKey);
+      }
+      if (typeof client.refreshTasks === "function") {
+        await client.refreshTasks();
+      }
+      return {
+        submitted: true,
+        text: trimmed,
+        mode: modeName,
+        taskKey: boundKey,
+        intent: firstPlanit ? "planit" : undefined,
+      };
     }
 
     return {
@@ -246,6 +330,7 @@
       setDefaultModel(next) {
         modelId = next;
       },
+      startAdd,
       selectTask,
       submit,
       view,
@@ -267,6 +352,7 @@
     MODE_INTERACTIVE,
     NEAR_BOTTOM_PX,
     applyStreamEvent,
+    buildFirstPlanitPrompt,
     createChatController,
     distanceFromBottom,
     isConsultantEvent,

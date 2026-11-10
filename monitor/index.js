@@ -411,6 +411,7 @@ async function handleApi(req, res, { sessions, cwd } = {}) {
     const created = await sessions.createSession({
       taskKey: body.taskKey,
       model: body.model,
+      intent: body.intent,
     });
     json(res, 201, created);
     return;

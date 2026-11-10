@@ -12,6 +12,7 @@ const { withTempDir } = require("../test/helpers");
 const { BIND_HOST } = require("./index");
 const {
   MODE_INTERACTIVE,
+  buildFirstPlanitPrompt,
   createChatController,
   isConsultantEvent,
   onMessagesAppended,
@@ -175,7 +176,10 @@ function createFakeApi() {
     closed,
     async createSession(body) {
       creates.push(body);
-      return { taskKey: body.taskKey, resumed: creates.length > 1 };
+      return {
+        taskKey: body.taskKey || `new-${creates.length}`,
+        resumed: Boolean(body.taskKey) && creates.length > 1,
+      };
     },
     async select(taskKey) {
       selects.push(taskKey);
@@ -400,6 +404,51 @@ describe("chat chrome over HTTP", () => {
         await stopMonitor(started.child);
       }
     });
+  });
+});
+
+describe("Add → planit", () => {
+  test("first planit prompt carries /dhs-planit and the user text", () => {
+    const request = "spec the logout ribbon";
+    const prompt = buildFirstPlanitPrompt(`  ${request}  `);
+    assert.match(prompt, /\/dhs-planit/);
+    assert.match(prompt, new RegExp(request));
+    assert.doesNotMatch(prompt, /\/dhs-shipit/);
+    assert.equal(buildFirstPlanitPrompt("/dhs-planit already"), "/dhs-planit already");
+  });
+
+  test("Add starts a new planit session and first send is interactive planit", async () => {
+    const api = createFakeApi();
+    const refreshes = [];
+    api.refreshTasks = async () => {
+      refreshes.push("tasks");
+    };
+    const controller = createChatController({
+      api,
+      defaultModel: MODEL,
+      mode: MODE_INTERACTIVE,
+    });
+    await controller.selectTask(TASK_A);
+    const added = await controller.startAdd();
+    assert.equal(added.started, true);
+    assert.notEqual(added.taskKey, TASK_A);
+    assert.equal(api.creates[api.creates.length - 1].intent, "planit");
+    assert.equal(api.creates[api.creates.length - 1].taskKey, undefined);
+    assert.equal(api.creates[api.creates.length - 1].model, MODEL);
+    assert.equal(controller.view().selected, added.taskKey);
+    const first = await controller.submit("  describe logout  ");
+    assert.equal(first.submitted, true);
+    assert.equal(first.intent, "planit");
+    assert.equal(first.mode, MODE_INTERACTIVE);
+    assert.equal(api.sends[0].taskKey, added.taskKey);
+    assert.equal(api.sends[0].text, "describe logout");
+    assert.equal(api.sends[0].extra.intent, "planit");
+    assert.equal(api.sends[0].extra.mode, MODE_INTERACTIVE);
+    assert.deepEqual(refreshes, ["tasks"]);
+    const follow = await controller.submit("Q1: use vaulted-ee");
+    assert.equal(follow.intent, undefined);
+    assert.equal(api.sends[1].extra.intent, undefined);
+    assert.equal(api.closed.some((row) => String(row).includes("dispose")), false);
   });
 });
 
