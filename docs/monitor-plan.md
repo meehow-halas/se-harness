@@ -28,6 +28,8 @@ When that phase’s “Done when” checklist and the shared done rules are true
 
 Cite the idea file and Monitor PRD instead of copying long procedure.
 
+Repo [AGENTS.md](../AGENTS.md) still describes dhs v1 (six payload dirs, CLI `install` / `uninstall`) until phase 1 updates it. For Monitor slices, this file and [monitor-plan/prd.md](monitor-plan/prd.md) override that six-dir list: `monitor/` is the seventh payload. Do not add a `dhs monitor` CLI subcommand.
+
 ## Accepted decisions
 
 From the commissioning conversation. Do not reopen them in a phase.
