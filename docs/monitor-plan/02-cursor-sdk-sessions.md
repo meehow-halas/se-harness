@@ -1,5 +1,7 @@
 # Phase 2 — Cursor SDK sessions
 
+**Superseded by phase 9** for the session runtime and auth: N sessions stay, but the adapter is Cursor Agent CLI, not `@cursor/sdk` / `CURSOR_API_KEY`. The checklist below is what phase 2 landed. Status stays `done`. Do not re-open this phase to swap the adapter — that is phase 9.
+
 ## Goal
 
 N independent Cursor Agent sessions in one Monitor process. This is the product goal; it is not optional later work. One `Agent.create` per task (not one agent recycled across tasks).

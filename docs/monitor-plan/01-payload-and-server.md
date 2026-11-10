@@ -1,5 +1,7 @@
 # Phase 1 — Payload and server
 
+**Superseded by phase 9** for `@cursor/sdk` vendoring: install copies `monitor/` only; it must not vendor the SDK. The checklist below is what phase 1 landed. Do not re-open this phase to undo vendoring — that is phase 9.
+
 ## Goal
 
 After `dhs install`, the consuming project can start Monitor locally: `node .dhs/monitor --host cursor`. The process binds loopback, enforces setup guards, and serves a stub page (no agent yet).

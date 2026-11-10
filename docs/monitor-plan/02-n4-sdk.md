@@ -1,5 +1,7 @@
 # Cursor SDK at N=4
 
+**Superseded by phase 9** for live runtime. This note records what the phase 2 fake SDK measured. CLI N=4: [09-n4-cli.md](09-n4-cli.md).
+
 CI in this phase uses a **fake Agent**. It does not spawn the real `@cursor/sdk` local executor, so there is no RSS or rate-limit sample from a live `CURSOR_API_KEY` in CI.
 
 What the fake measures (and the product must keep):
