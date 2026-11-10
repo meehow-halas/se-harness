@@ -75,7 +75,7 @@ function writeReadyProject(dir, { statuses } = {}) {
 function startMonitor(args, { cwd }) {
   const child = spawn(process.execPath, [path.join(cwd, ".dhs", "monitor"), ...args], {
     cwd,
-    env: { ...process.env },
+    env: { ...process.env, DHS_MONITOR_NO_OPEN: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";

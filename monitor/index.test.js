@@ -19,6 +19,9 @@ const {
   BIND_HOST,
   DEFAULT_MAX_AGENTS,
   DEFAULT_PORT,
+  monitorUrl,
+  openMonitorUrl,
+  openerArgs,
   parseArgs,
   startServer,
   usage,
@@ -66,21 +69,25 @@ function writeReadyProject(dir, { version, generatedFrom } = {}) {
   copyMonitorRuntime(path.join(dir, ".dhs", "monitor"));
 }
 
-function runMonitor(args, { cwd, entry } = {}) {
+function monitorTestEnv(extra = {}) {
+  return { ...process.env, DHS_MONITOR_NO_OPEN: "1", ...extra };
+}
+
+function runMonitor(args, { cwd, entry, env } = {}) {
   const script = entry || path.join(cwd, ".dhs", "monitor");
   return spawnSync(process.execPath, [script, ...args], {
     cwd,
     encoding: "utf8",
-    env: { ...process.env },
+    env: monitorTestEnv(env),
     timeout: 8000,
   });
 }
 
-function startMonitor(args, { cwd, entry } = {}) {
+function startMonitor(args, { cwd, entry, env } = {}) {
   const script = entry || path.join(cwd, ".dhs", "monitor");
   const child = spawn(process.execPath, [script, ...args], {
     cwd,
-    env: { ...process.env },
+    env: monitorTestEnv(env),
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";
@@ -182,6 +189,63 @@ function listenAddresses(port) {
     encoding: "utf8",
   });
   return `${result.stdout || ""}\n${result.stderr || ""}`;
+}
+
+function writeOpenRecorder(dir) {
+  const bin = path.join(dir, "record-open");
+  const logFile = path.join(dir, "open-argv.log");
+  fs.writeFileSync(
+    bin,
+    `#!/usr/bin/env node
+const fs = require("fs");
+fs.writeFileSync(process.env.DHS_MONITOR_OPEN_LOG, process.argv.slice(2).join("\\n") + "\\n");
+`
+  );
+  fs.chmodSync(bin, 0o755);
+  return { bin, logFile };
+}
+
+function waitForFile(file, timeoutMs = 4000) {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    const tick = () => {
+      if (fs.existsSync(file)) {
+        const text = fs.readFileSync(file, "utf8");
+        if (text.trim()) {
+          resolve(text);
+          return;
+        }
+      }
+      if (Date.now() - started >= timeoutMs) {
+        reject(new Error(`timeout waiting for ${file}`));
+        return;
+      }
+      setTimeout(tick, 25);
+    };
+    tick();
+  });
+}
+
+function openSse(port, urlPath) {
+  return new Promise((resolve, reject) => {
+    const req = http.get(
+      { host: BIND_HOST, port, path: urlPath },
+      (res) => {
+        res.once("data", () => resolve({ req, res }));
+      }
+    );
+    req.on("error", reject);
+  });
+}
+
+function assertPortBindable(port) {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once("error", reject);
+    server.listen(port, BIND_HOST, () => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
+  });
 }
 
 describe("parseArgs", () => {
@@ -460,6 +524,156 @@ describe("node .dhs/monitor", () => {
         const page = await get("/", port);
         assert.equal(page.status, 200);
         assert.match(page.body, /<title>Monitor<\/title>/);
+      } finally {
+        await stopMonitor(started.child);
+      }
+    });
+  });
+});
+
+describe("open URL and stop", () => {
+  test("without --port, printed URL and opener use 7310", () => {
+    const parsed = parseArgs(["--host", "cursor"]);
+    assert.equal(parsed.port, DEFAULT_PORT);
+    assert.equal(DEFAULT_PORT, 7310);
+    const url = monitorUrl(parsed.port);
+    assert.equal(url, "http://127.0.0.1:7310/");
+    const spec = openerArgs(url, "darwin", {});
+    assert.deepEqual(spec, { command: "open", args: ["http://127.0.0.1:7310/"] });
+    const calls = [];
+    openMonitorUrl(url, {
+      env: {},
+      platform: "darwin",
+      spawn: (command, args) => {
+        calls.push({ command, args });
+        return { unref() {}, on() {} };
+      },
+    });
+    assert.deepEqual(calls, [
+      { command: "open", args: ["http://127.0.0.1:7310/"] },
+    ]);
+  });
+
+  test("opener argv uses the effective --port, not 7310", async () => {
+    await withTempDir(async (cwd) => {
+      writeReadyProject(cwd);
+      const port = await allocPort();
+      assert.notEqual(port, 7310);
+      const { bin, logFile } = writeOpenRecorder(cwd);
+      const started = startMonitor(
+        ["--host", "cursor", "--port", String(port)],
+        {
+          cwd,
+          env: {
+            DHS_MONITOR_NO_OPEN: "",
+            DHS_MONITOR_OPEN_BIN: bin,
+            DHS_MONITOR_OPEN_LOG: logFile,
+          },
+        }
+      );
+      try {
+        const got = await started.waitForUrl();
+        assert.equal(got.url, `http://127.0.0.1:${port}/`);
+        const logged = await waitForFile(logFile);
+        assert.match(logged, new RegExp(`http://127\\.0\\.0\\.1:${port}/`));
+        assert.doesNotMatch(logged, /7310/);
+      } finally {
+        await stopMonitor(started.child);
+      }
+    });
+  });
+
+  test("opener does not run when DHS_MONITOR_NO_OPEN=1", async () => {
+    await withTempDir(async (cwd) => {
+      writeReadyProject(cwd);
+      const port = await allocPort();
+      const { bin, logFile } = writeOpenRecorder(cwd);
+      const calls = [];
+      openMonitorUrl(monitorUrl(port), {
+        env: { DHS_MONITOR_NO_OPEN: "1", DHS_MONITOR_OPEN_BIN: bin },
+        spawn: (command, args) => {
+          calls.push({ command, args });
+          return { unref() {}, on() {} };
+        },
+      });
+      assert.equal(calls.length, 0);
+      const started = startMonitor(
+        ["--host", "cursor", "--port", String(port)],
+        {
+          cwd,
+          env: {
+            DHS_MONITOR_NO_OPEN: "1",
+            DHS_MONITOR_OPEN_BIN: bin,
+            DHS_MONITOR_OPEN_LOG: logFile,
+          },
+        }
+      );
+      try {
+        await started.waitForUrl();
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        assert.equal(fs.existsSync(logFile), false);
+      } finally {
+        await stopMonitor(started.child);
+      }
+    });
+  });
+
+  test("second start opens the live lock URL and does not bind --port", async () => {
+    await withTempDir(async (cwd) => {
+      writeReadyProject(cwd);
+      const port = await allocPort();
+      const otherPort = await allocPort();
+      assert.notEqual(port, otherPort);
+      const first = startMonitor(["--host", "cursor", "--port", String(port)], {
+        cwd,
+      });
+      try {
+        const got = await first.waitForUrl();
+        const { bin, logFile } = writeOpenRecorder(cwd);
+        const second = runMonitor(
+          ["--host", "cursor", "--port", String(otherPort)],
+          {
+            cwd,
+            env: {
+              DHS_MONITOR_NO_OPEN: "",
+              DHS_MONITOR_OPEN_BIN: bin,
+              DHS_MONITOR_OPEN_LOG: logFile,
+            },
+          }
+        );
+        assert.equal(second.status, 0, second.stderr);
+        assert.equal(second.stdout.trim(), got.url);
+        const logged = await waitForFile(logFile);
+        assert.match(logged, new RegExp(`http://127\\.0\\.0\\.1:${port}/`));
+        assert.doesNotMatch(
+          logged,
+          new RegExp(`http://127\\.0\\.0\\.1:${otherPort}/`)
+        );
+        await assertPortBindable(otherPort);
+      } finally {
+        await stopMonitor(first.child);
+      }
+    });
+  });
+
+  test("SIGTERM with a live SSE client frees that --port", async () => {
+    await withTempDir(async (cwd) => {
+      writeReadyProject(cwd);
+      const port = await allocPort();
+      const started = startMonitor(
+        ["--host", "cursor", "--port", String(port)],
+        { cwd }
+      );
+      try {
+        await started.waitForUrl();
+        const sse = await openSse(port, "/api/tasks/events");
+        const exited = new Promise((resolve) => {
+          started.child.once("exit", resolve);
+        });
+        started.child.kill("SIGTERM");
+        await exited;
+        await assertPortBindable(port);
+        sse.req.destroy();
       } finally {
         await stopMonitor(started.child);
       }

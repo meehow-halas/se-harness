@@ -136,7 +136,7 @@ EOF
 function startMonitor(args, { cwd, env }) {
   const child = spawn(process.execPath, [path.join(cwd, ".dhs", "monitor"), ...args], {
     cwd,
-    env: { ...process.env, ...env },
+    env: { ...process.env, DHS_MONITOR_NO_OPEN: "1", ...env },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";
