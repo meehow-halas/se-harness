@@ -9,6 +9,7 @@ const path = require("path");
 const { spawn } = require("child_process");
 
 const { withTempDir, writeFile } = require("../test/helpers");
+const { createFakeAgentCli } = require("../test/fake-agent-cli");
 const { BIND_HOST, createRequestHandler, shutdownMonitor, startServer } =
   require("./index");
 const { filterTasks, parseFilters } = require("./layout");
@@ -595,43 +596,29 @@ describe("refresh after agent activity", () => {
         title: "Alpha zz panel",
         status: FILE_STATUSES.todo,
       });
-      const sdk = {
-        async create() {
-          return {
-            agentId: "fake-refresh-1",
-            async send() {
-              return {
-                async *stream() {
-                  yield {
-                    type: "tool_call",
-                    name: "Write",
-                    path: "kb/features/013-gamma-xx.feature.md",
-                  };
-                  yield {
-                    type: "assistant",
-                    message: {
-                      content: [{ type: "text", text: "wrote spec" }],
-                    },
-                  };
-                },
-                async wait() {
-                  return { status: "finished" };
-                },
-              };
+      const cli = createFakeAgentCli({
+        streamFor() {
+          return [
+            {
+              type: "tool_call",
+              name: "Write",
+              path: "kb/features/013-gamma-xx.feature.md",
             },
-            async [Symbol.asyncDispose]() {},
-          };
+            {
+              type: "assistant",
+              message: {
+                content: [{ type: "text", text: "wrote spec" }],
+              },
+            },
+          ];
         },
-        async resume() {
-          throw new Error("not live");
-        },
-      };
+      });
       const nudges = [];
       const sessions = createSessionRegistry({
         cwd,
         maxAgents: 4,
-        env: { CURSOR_API_KEY: "cursor_test_key_zeta" },
-        sdk,
+        env: { PATH: "/usr/bin", HOME: "/tmp" },
+        spawn: cli.spawn,
         onListRefresh(event) {
           nudges.push(event);
         },

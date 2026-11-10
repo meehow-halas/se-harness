@@ -3,7 +3,12 @@
 const fs = require("fs");
 const path = require("path");
 const { EventEmitter } = require("events");
-const { pathToFileURL } = require("url");
+const {
+  CliAgentError,
+  LOGGED_OUT_CLI,
+  MISSING_CLI,
+  createCliAgent,
+} = require("./cli-agent");
 const {
   MODE_INTERACTIVE,
   buildFirstPlanitPrompt,
@@ -11,7 +16,6 @@ const {
   shouldRefreshListFromEvent,
   visibleChatMessages,
 } = require("./chat");
-const { uiConfigFromHarness } = require("./layout");
 const { dhsWorktreeExists, listTasks } = require("./tasks");
 const {
   ACTION_CLOSE,
@@ -23,8 +27,6 @@ const {
 
 const SESSIONS_REL = path.join(".dhs", "monitor", "sessions");
 const PLANIT_LOCK_REL = path.join(".dhs", "monitor", "planit.lock");
-const MISSING_API_KEY =
-  "CURSOR_API_KEY is missing. Set it in the environment (Cursor Dashboard → Integrations), then retry. Do not paste the key in chat.";
 
 class SessionError extends Error {
   constructor(message, { code, httpStatus } = {}) {
@@ -157,56 +159,17 @@ function extractAssistantText(event) {
     .join("");
 }
 
-function apiKeyFromEnv(env) {
-  const raw = env && env.CURSOR_API_KEY;
-  if (typeof raw !== "string") {
-    return "";
+function asSessionError(err) {
+  if (err instanceof SessionError) {
+    return err;
   }
-  return raw.trim();
-}
-
-function resolveCursorSdkEntry() {
-  const dirs = [
-    path.join(__dirname, "node_modules", "@cursor", "sdk"),
-    path.join(__dirname, "..", "node_modules", "@cursor", "sdk"),
-  ];
-  for (const dir of dirs) {
-    const pkgFile = path.join(dir, "package.json");
-    if (!fs.existsSync(pkgFile)) {
-      continue;
-    }
-    let pkg;
-    try {
-      pkg = JSON.parse(fs.readFileSync(pkgFile, "utf8"));
-    } catch {
-      continue;
-    }
-    const exp = pkg.exports && pkg.exports["."];
-    let rel = pkg.main || pkg.module || "index.js";
-    if (typeof exp === "string") {
-      rel = exp;
-    } else if (exp && typeof exp === "object") {
-      rel = exp.import || exp.require || exp.default || rel;
-    }
-    return path.join(dir, rel);
+  if (err instanceof CliAgentError) {
+    return new SessionError(err.message, {
+      code: err.code,
+      httpStatus: 400,
+    });
   }
-  return "@cursor/sdk";
-}
-
-async function loadCursorSdk() {
-  const spec = resolveCursorSdkEntry();
-  const href = spec.startsWith("/") || spec.startsWith("file:")
-    ? pathToFileURL(spec).href
-    : spec;
-  const mod = await import(href);
-  const Agent = mod.Agent;
-  if (!Agent) {
-    throw new Error("Could not load Agent from @cursor/sdk");
-  }
-  return {
-    create: (opts) => Agent.create(opts),
-    resume: (id, opts) => Agent.resume(id, opts),
-  };
+  return err;
 }
 
 async function disposeAgent(agent) {
@@ -232,17 +195,6 @@ function createSessionRegistry(options) {
   const live = new Map();
   let selected = null;
   let planitHeld = false;
-  let sdkPromise;
-
-  function getSdk() {
-    if (options.sdk) {
-      return Promise.resolve(options.sdk);
-    }
-    if (!sdkPromise) {
-      sdkPromise = loadCursorSdk();
-    }
-    return sdkPromise;
-  }
 
   function liveCount() {
     return live.size;
@@ -287,30 +239,20 @@ function createSessionRegistry(options) {
   }
 
   async function attachAgent(taskKey, model, { resumeId } = {}) {
-    const apiKey = apiKeyFromEnv(env);
-    if (!apiKey) {
-      throw new SessionError(MISSING_API_KEY, {
-        code: "missing_api_key",
-        httpStatus: 400,
-      });
-    }
     if (!model || typeof model !== "string") {
       throw new SessionError("model is required", { code: "invalid_model" });
     }
-    const sdk = await getSdk();
-    const createOpts = {
-      apiKey,
-      model: { id: model },
-      local: { cwd },
-    };
-    if (resumeId) {
-      try {
-        return await sdk.resume(resumeId, createOpts);
-      } catch {
-        return sdk.create(createOpts);
-      }
+    try {
+      return await createCliAgent({
+        cwd,
+        env,
+        model,
+        resumeId,
+        spawn: options.spawn,
+      });
+    } catch (err) {
+      throw asSessionError(err);
     }
-    return sdk.create(createOpts);
   }
 
   function rebindSession(fromKey, toKey) {
@@ -620,7 +562,8 @@ function createSessionRegistry(options) {
 }
 
 module.exports = {
-  MISSING_API_KEY,
+  LOGGED_OUT_CLI,
+  MISSING_CLI,
   PLANIT_LOCK_REL,
   SESSIONS_REL,
   SessionError,
@@ -628,5 +571,4 @@ module.exports = {
   cursorModelForRole,
   createSessionRegistry,
   filesTrackerActive,
-  loadCursorSdk,
 };

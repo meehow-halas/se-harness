@@ -8,6 +8,7 @@ const net = require("net");
 const path = require("path");
 
 const { withTempDir } = require("../test/helpers");
+const { createFakeAgentCli } = require("../test/fake-agent-cli");
 const { BIND_HOST, createRequestHandler, shutdownMonitor, startServer } = require("./index");
 const { createSessionRegistry, SessionError } = require("./sessions");
 const { createChatController } = require("./chat");
@@ -31,11 +32,6 @@ const OTHER = "032-other-xx";
 const BASE = "release-lab";
 const IMPLEMENTER_MODEL = "implementer-wire-44";
 const REVIEWER_MODEL = "reviewer-wire-55";
-const API_KEY = "cursor_test_key_stage";
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function writeConfig(cwd, extraAgents = {}) {
   fs.mkdirSync(path.join(cwd, ".dhs", "monitor"), { recursive: true });
@@ -123,50 +119,13 @@ function featureStatus(file) {
   return match ? match[1].trim() : "";
 }
 
-function createFakeSdk({ onSend } = {}) {
-  const creates = [];
-  const sends = [];
-  let seq = 0;
-
-  function makeAgent(id) {
-    return {
-      agentId: id,
-      async send(text) {
-        sends.push({ agentId: id, text });
-        if (typeof onSend === "function") {
-          onSend(text, id);
-        }
-        await delay(5);
-        return {
-          async *stream() {},
-          async wait() {
-            return { status: "finished" };
-          },
-        };
-      },
-      async [Symbol.asyncDispose]() {},
-    };
-  }
-
-  return {
-    creates,
-    sends,
-    async create(opts) {
-      creates.push(opts);
-      return makeAgent(`fake-stage-${++seq}`);
-    },
-    async resume() {
-      throw new Error("agent id is not live");
-    },
-  };
-}
-
-function registryFor(cwd, { sdk, maxAgents = 4 } = {}) {
+function registryFor(cwd, { cli, maxAgents = 4 } = {}) {
+  const fake = cli || createFakeAgentCli({ sendDelayMs: 5 });
   return createSessionRegistry({
     cwd,
     maxAgents,
-    env: { CURSOR_API_KEY: API_KEY },
-    sdk: sdk || createFakeSdk(),
+    env: { PATH: "/usr/bin", HOME: "/tmp" },
+    spawn: fake.spawn,
   });
 }
 
@@ -320,18 +279,18 @@ describe("stage send does not write tracker status", () => {
       const jiraLog = writeJiraSpy(cwd);
       const file = writeFeature(cwd, TASK, { title: "Stage ww", status: TODO });
       writePrompt(cwd, TASK);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli({ sendDelayMs: 5 });
+      const sessions = registryFor(cwd, { cli });
       const before = featureStatus(file);
       assert.equal(before, TODO);
       await sessions.startStage(TASK, { action: ACTION_DOIT });
       assert.equal(featureStatus(file), before);
       assert.equal(jiraTransitionCalled(jiraLog), false);
       assert.equal(fs.existsSync(jiraLog) && fs.readFileSync(jiraLog, "utf8").trim() !== "", false);
-      assert.equal(sdk.sends.length, 1);
-      assert.match(sdk.sends[0].text, /\/dhs-doit/);
-      assert.match(sdk.sends[0].text, new RegExp(TASK));
-      assert.equal(sdk.creates[0].model.id, IMPLEMENTER_MODEL);
+      assert.equal(cli.sends.length, 1);
+      assert.match(cli.sends[0].text, /\/dhs-doit/);
+      assert.match(cli.sends[0].text, new RegExp(TASK));
+      assert.equal(cli.creates[0].model.id, IMPLEMENTER_MODEL);
     });
   });
 });
@@ -342,8 +301,8 @@ describe("close confirm and single key", () => {
       writeConfig(cwd);
       writeFeature(cwd, TASK, { title: "Stage ww", status: IN_REVIEW });
       writePrompt(cwd, TASK);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli({ sendDelayMs: 5 });
+      const sessions = registryFor(cwd, { cli });
       await assert.rejects(
         () => sessions.startStage(TASK, { action: ACTION_CLOSE }),
         (err) => {
@@ -352,7 +311,7 @@ describe("close confirm and single key", () => {
           return true;
         }
       );
-      assert.equal(sdk.sends.length, 0);
+      assert.equal(cli.sends.length, 0);
       assert.equal(gateStageSend({ action: ACTION_CLOSE }).allowed, false);
       const api = {
         stages: [],
@@ -377,8 +336,8 @@ describe("close confirm and single key", () => {
       writeFeature(cwd, OTHER, { title: "Other xx", status: IN_REVIEW });
       writePrompt(cwd, TASK);
       writePrompt(cwd, OTHER);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli({ sendDelayMs: 5 });
+      const sessions = registryFor(cwd, { cli });
       const keys = stageTaskKeys(TASK);
       assert.deepEqual(keys, [TASK]);
       assert.equal(keys.length, 1);
@@ -396,11 +355,11 @@ describe("close confirm and single key", () => {
         confirmed: true,
         keys: [TASK, OTHER],
       });
-      assert.equal(sdk.sends.length, 1);
-      assert.match(sdk.sends[0].text, new RegExp(TASK));
-      assert.doesNotMatch(sdk.sends[0].text, new RegExp(OTHER));
-      assert.doesNotMatch(sdk.sends[0].text, /,/);
-      assert.equal(sdk.creates[0].model.id, REVIEWER_MODEL);
+      assert.equal(cli.sends.length, 1);
+      assert.match(cli.sends[0].text, new RegExp(TASK));
+      assert.doesNotMatch(cli.sends[0].text, new RegExp(OTHER));
+      assert.doesNotMatch(cli.sends[0].text, /,/);
+      assert.equal(cli.creates[0].model.id, REVIEWER_MODEL);
     });
   });
 });
@@ -411,8 +370,8 @@ describe("stage HTTP and chrome", () => {
       writeConfig(cwd);
       writeFeature(cwd, TASK, { title: "Stage ww", status: IN_REVIEW });
       writePrompt(cwd, TASK);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli({ sendDelayMs: 5 });
+      const sessions = registryFor(cwd, { cli });
       const port = await allocPort();
       const server = await startServer({
         port,
@@ -427,7 +386,7 @@ describe("stage HTTP and chrome", () => {
         });
         assert.equal(refused.status, 400, refused.body);
         assert.equal(refused.json.code, "confirm_required");
-        assert.equal(sdk.sends.length, 0);
+        assert.equal(cli.sends.length, 0);
         const sent = await requestJson({
           port,
           method: "POST",
@@ -439,8 +398,8 @@ describe("stage HTTP and chrome", () => {
           },
         });
         assert.equal(sent.status, 200, sent.body);
-        assert.equal(sdk.sends.length, 1);
-        assert.doesNotMatch(sdk.sends[0].text, new RegExp(OTHER));
+        assert.equal(cli.sends.length, 1);
+        assert.doesNotMatch(cli.sends[0].text, new RegExp(OTHER));
         const page = await get("/", port);
         assert.match(page.body, /id="close-confirm"/);
         assert.match(page.body, /id="stage-buttons"/);
@@ -474,11 +433,11 @@ describe("stage HTTP and chrome", () => {
       writePrompt(cwd, TASK);
       const ready = listTasks(cwd).tasks.find((task) => task.key === TASK);
       assert.equal(ready.hasSpecPrompt, true);
-      const sdk = createFakeSdk();
-      const sessions = registryFor(cwd, { sdk });
+      const cli = createFakeAgentCli({ sendDelayMs: 5 });
+      const sessions = registryFor(cwd, { cli });
       const result = await sessions.startStage(TASK, { action: ACTION_DOIT });
       assert.equal(result.worktreeExists, true);
-      assert.equal(sdk.sends.length, 1);
+      assert.equal(cli.sends.length, 1);
     });
   });
 });
