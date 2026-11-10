@@ -1,12 +1,12 @@
 #!/bin/sh
 # jira <verb> ...
-# Jira Cloud REST v3 allowlist. Agents and /dhs-setup call this script.
+# Jira Cloud REST v3 allowlist. Agents, Monitor, and /dhs-setup call this script.
 # They do not compose curl. Token stays in harness.credentials.local.json.
 
 . "$(dirname "$0")/lib-jira.sh"
 
 usage() {
-  blocked "unexpected arguments" "usage: jira meta|get|create|set|comment|transition|link ..."
+  blocked "unexpected arguments" "usage: jira meta|get|create|set|comment|transition|link|search ..."
 }
 
 if [ $# -lt 1 ]; then
@@ -223,6 +223,25 @@ case $verb in
     jira_json transition-body "$_tid" > "$_payload"
     jira_http POST "/rest/api/3/issue/${_key}/transitions" "$_payload"
     ok "key: ${_key}" "status: ${_want}"
+    ;;
+
+  search)
+    if [ $# -ne 0 ]; then
+      usage
+    fi
+    load_jira
+    _payload=$(mktemp)
+    trap 'rm -f "$DHS_JIRA_CURL_CFG" "$DHS_JIRA_BODY" "$_payload"' EXIT
+    if ! jira_json search-body "$DHS_JIRA_CFG" > "$_payload"; then
+      blocked "cannot build Jira search" "set agents.tracker.projectKey and issueTypes in /dhs-setup"
+    fi
+    jira_http POST "/rest/api/3/search" "$_payload"
+    _out=$(jira_json format-search "$DHS_JIRA_BODY")
+    printf 'OK\n'
+    if [ -n "$_out" ]; then
+      printf '%s\n' "$_out"
+    fi
+    exit 0
     ;;
 
   link)

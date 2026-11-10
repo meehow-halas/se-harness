@@ -6,6 +6,7 @@ const http = require("http");
 const path = require("path");
 const { createSessionRegistry, SessionError } = require("./sessions");
 const { uiConfigFromHarness } = require("./layout");
+const { listTasks } = require("./tasks");
 
 const DEFAULT_PORT = 7310;
 const DEFAULT_MAX_AGENTS = 4;
@@ -383,6 +384,10 @@ async function handleApi(req, res, { sessions, cwd } = {}) {
   }
   if (pathname === "/api/config" && (req.method === "GET" || req.method === "HEAD")) {
     json(res, 200, loadUiConfig(cwd));
+    return;
+  }
+  if (pathname === "/api/tasks" && (req.method === "GET" || req.method === "HEAD")) {
+    json(res, 200, listTasks(cwd, { sessions, env: process.env }));
     return;
   }
   if (!sessions) {

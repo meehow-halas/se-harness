@@ -152,6 +152,18 @@ button {
   font-size: 12px;
 }
 
+.task-list .depends-badge,
+.task-list .run-state {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.task-list .depends-badge {
+  color: var(--text);
+}
+
 .chat-log {
   flex: 1 1 auto;
   overflow: auto;

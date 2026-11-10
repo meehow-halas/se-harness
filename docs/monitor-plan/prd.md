@@ -37,7 +37,7 @@ Same rule as dhs: exactly one tracker. Monitor lists whichever is active.
 
 Both list paths are in the first Monitor delivery. A files-only Monitor is unfinished.
 
-`jira search` is a conscious addition to the v1 Jira allowlist, implemented in Monitor phase 4. Until that phase lands, the verb does not exist.
+`jira search` is a conscious addition to the v1 Jira allowlist, implemented in Monitor phase 4.
 
 ## Chat and buttons
 
