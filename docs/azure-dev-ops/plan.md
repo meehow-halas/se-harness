@@ -33,7 +33,7 @@ A phase is `done` when its checklist is true **and**:
 | Phase | Slice | Depends on | Status |
 |-------|--------|------------|--------|
 | 1 | PRD + references (`kind`, skeleton, credentials key) | — | done |
-| 2 | `lib-ado.sh`, `ado-json.js`, `ado meta`, auth | 1 | todo |
+| 2 | `lib-ado.sh`, `ado-json.js`, `ado meta`, auth | 1 | done |
 | 3 | `get`, `create`, `set`, `comment` | 2 | todo |
 | 4 | `transition`, `link`, `UNCHANGED` / `BLOCKED` | 3 | todo |
 | 5 | `/dhs-setup` ADO add/change/remove | 2, 4 | todo |
