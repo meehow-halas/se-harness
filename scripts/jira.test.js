@@ -211,6 +211,26 @@ function defaultRoutes(extra = {}) {
       },
     },
     "POST /rest/api/3/issueLink": { code: 201, body: {} },
+    "POST /rest/api/3/search": {
+      code: 200,
+      body: {
+        issues: [
+          {
+            key: "QX7-42",
+            fields: {
+              summary: "Unique title from QX7",
+              status: { name: FIX.todoStatus },
+              issuelinks: [
+                {
+                  type: { name: "Blocks", inward: "is blocked by", outward: "blocks" },
+                  outwardIssue: { key: "QX7-7" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
     ...extra,
   };
 }
@@ -407,6 +427,93 @@ describe("jira", () => {
       const stub = writeCurlStub(cwd, defaultRoutes());
       const result = runJira(wt, ["meta"], stub.env);
       assertOk(result, { projectKey: FIX.projectKey });
+    });
+  });
+
+  test("search prints key, status, and title using project and types from config", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd);
+      const stub = writeCurlStub(cwd, defaultRoutes());
+      const result = runJira(cwd, ["search"], stub.env);
+      assert.equal(result.status, 0, result.stderr + result.stdout);
+      assert.match(result.stdout, /^OK\n/);
+      assert.match(result.stdout, /key: QX7-42/);
+      assert.match(result.stdout, /status: Queued For Build/);
+      assert.match(result.stdout, /title: Unique title from QX7/);
+      assert.match(result.stdout, /depends: QX7-7/);
+      assert.equal(result.stdout.includes(FIX.token), false);
+      const rows = fs
+        .readFileSync(stub.dataFile, "utf8")
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line));
+      const search = rows.find((row) => row.key === "POST /rest/api/3/search");
+      assert.ok(search, result.stdout);
+      const body = JSON.parse(search.data);
+      assert.match(body.jql, new RegExp(FIX.projectKey));
+      assert.match(body.jql, new RegExp(FIX.featureType));
+      assert.match(body.jql, new RegExp(FIX.bugType));
+      assert.equal(body.jql.includes("PROJ"), false);
+      assert.equal(body.jql.includes("Bug"), false);
+      const argv = JSON.parse(fs.readFileSync(stub.logFile, "utf8").split("\n")[0]);
+      assert.ok(argv.some((a) => String(a).includes(`${FIX.url}/rest/api/3/search`)));
+      assert.equal(argvHasToken(stub.logFile, FIX.token), false);
+    });
+  });
+
+  test("search JQL and URL follow a non-default project key, types, and host", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd, {
+        trackerOver: {
+          url: "https://jira.zy3.example.test",
+          projectKey: "ZY3",
+          issueTypes: { feature: "Work Packet", bug: "Incident Ticket" },
+        },
+      });
+      const routes = defaultRoutes({
+        "POST /rest/api/3/search": {
+          code: 200,
+          body: {
+            issues: [
+              {
+                key: "ZY3-18",
+                fields: {
+                  summary: "ZY3 packet title",
+                  status: { name: FIX.todoStatus },
+                  issuelinks: [],
+                },
+              },
+            ],
+          },
+        },
+      });
+      const stub = writeCurlStub(cwd, routes);
+      const result = runJira(cwd, ["search"], stub.env);
+      assert.equal(result.status, 0, result.stderr + result.stdout);
+      assert.match(result.stdout, /key: ZY3-18/);
+      assert.match(result.stdout, /title: ZY3 packet title/);
+      const rows = fs
+        .readFileSync(stub.dataFile, "utf8")
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line));
+      const search = rows.find((row) => row.key === "POST /rest/api/3/search");
+      const body = JSON.parse(search.data);
+      assert.match(body.jql, /ZY3/);
+      assert.match(body.jql, /Work Packet/);
+      assert.match(body.jql, /Incident Ticket/);
+      assert.equal(body.jql.includes(FIX.projectKey), false);
+      assert.equal(body.jql.includes(FIX.featureType), false);
+      const argv = JSON.parse(fs.readFileSync(stub.logFile, "utf8").split("\n")[0]);
+      assert.ok(
+        argv.some((a) =>
+          String(a).includes("https://jira.zy3.example.test/rest/api/3/search")
+        )
+      );
+      assert.equal(
+        argv.some((a) => String(a).includes(FIX.url)),
+        false
+      );
     });
   });
 

@@ -424,6 +424,7 @@ These scripts do not cover LLM procedure (phases, Consultant, review checklist, 
 | `jira comment <key> [--file <path>]` | Architect, Implementer, Reviewer | — | POST a comment. Body from `--file` or stdin. |
 | `jira transition <key> <todo\|inProgress\|codeReview\|inReview\|done>` | the role that owns that step | `statuses` | `null` → `UNCHANGED` and no HTTP. Else transition only to that exact workflow name. Missing on this issue type → `BLOCKED:` fix mapping in `/dhs-setup`. Already there → `UNCHANGED`. |
 | `jira link <key> depends\|relates <other>` | Architect | — | Create the issue link. If Jira refuses, `BLOCKED:` with that fact (the agent comments it; does not write feature files and does not stop the task). |
+| `jira search` | Monitor (task list) | `projectKey`, `issueTypes` | Search that project. The script builds JQL from `agents.tracker.projectKey` and mapped `feature` + `bug` issue types. Print `OK` then rows: `key`, `status`, `title` (and `depends` when present). UI does not compose `curl` or JQL. |
 
 ---
 

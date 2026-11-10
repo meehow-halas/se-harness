@@ -97,6 +97,56 @@ function mapped(t, kind) {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function jqlQuote(value) {
+  return `"${String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function buildSearchJql(t) {
+  const projectKey =
+    typeof t.projectKey === "string" ? t.projectKey.trim() : "";
+  if (!projectKey) {
+    fail("missing-project");
+  }
+  const types = [];
+  const mappedTypes = t.issueTypes && typeof t.issueTypes === "object" ? t.issueTypes : {};
+  for (const kind of ["feature", "bug"]) {
+    const name =
+      typeof mappedTypes[kind] === "string" ? mappedTypes[kind].trim() : "";
+    if (name) {
+      types.push(name);
+    }
+  }
+  if (types.length === 0) {
+    fail("missing-issue-types");
+  }
+  const typeList = types.map(jqlQuote).join(", ");
+  return `project = ${jqlQuote(projectKey)} AND issuetype in (${typeList})`;
+}
+
+function dependKeysFromIssue(issue) {
+  const fields = issue && issue.fields;
+  const links = (fields && fields.issuelinks) || [];
+  const keys = [];
+  const seen = new Set();
+  for (const link of links) {
+    if (!link || typeof link !== "object") {
+      continue;
+    }
+    const typeName = link.type && typeof link.type.name === "string" ? link.type.name : "";
+    if (typeName !== "Blocks") {
+      continue;
+    }
+    const other = link.outwardIssue && link.outwardIssue.key;
+    if (typeof other !== "string" || !other.trim() || seen.has(other.trim())) {
+      continue;
+    }
+    const key = other.trim();
+    seen.add(key);
+    keys.push(key);
+  }
+  return keys;
+}
+
 const cmd = process.argv[2];
 if (!cmd) {
   fail("usage: jira-json.js <command>");
@@ -199,6 +249,54 @@ if (cmd === "fetch-fields") {
     }
   }
   process.stdout.write(`${uniqueNames(names).join(",")}\n`);
+  process.exit(0);
+}
+
+if (cmd === "search-jql") {
+  process.stdout.write(`${buildSearchJql(trackerFrom(readJson(process.argv[3])))}\n`);
+  process.exit(0);
+}
+
+if (cmd === "search-body") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  const jql = buildSearchJql(t);
+  process.stdout.write(
+    JSON.stringify({
+      jql,
+      fields: ["summary", "status", "issuelinks"],
+      maxResults: 100,
+    })
+  );
+  process.exit(0);
+}
+
+if (cmd === "format-search") {
+  const body = readJson(process.argv[3]);
+  const issues = Array.isArray(body && body.issues) ? body.issues : [];
+  const blocks = [];
+  for (const issue of issues) {
+    if (!issue || typeof issue !== "object") {
+      continue;
+    }
+    const fields = issue.fields || {};
+    const key = typeof issue.key === "string" ? issue.key.trim() : "";
+    if (!key) {
+      continue;
+    }
+    const title = typeof fields.summary === "string" ? fields.summary : "";
+    const status =
+      fields.status && typeof fields.status.name === "string"
+        ? fields.status.name
+        : "";
+    const depends = dependKeysFromIssue(issue).join(",");
+    blocks.push(
+      `key: ${key}`,
+      `status: ${status}`,
+      `title: ${title}`,
+      `depends: ${depends}`
+    );
+  }
+  process.stdout.write(blocks.length ? `${blocks.join("\n")}\n` : "");
   process.exit(0);
 }
 

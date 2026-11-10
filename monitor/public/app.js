@@ -46,7 +46,18 @@
       const status = document.createElement("span");
       status.className = "status";
       status.textContent = task.status;
+      li.dataset.runState = task.runState || "idle";
       li.append(title, status);
+      if (task.dependsUnmet) {
+        const badge = document.createElement("span");
+        badge.className = "depends-badge";
+        badge.textContent = "depends";
+        li.append(badge);
+      }
+      const run = document.createElement("span");
+      run.className = "run-state";
+      run.textContent = task.runState || "idle";
+      li.append(run);
       taskList.append(li);
     }
   }
@@ -145,15 +156,19 @@
 
   restorePrefs();
 
-  fetch("/api/config")
-    .then((res) => (res.ok ? res.json() : { statuses: {}, doneStatus: null }))
-    .then((config) => {
+  Promise.all([
+    fetch("/api/config").then((res) =>
+      res.ok ? res.json() : { statuses: {}, doneStatus: null }
+    ),
+    fetch("/api/tasks").then((res) => (res.ok ? res.json() : { tasks: [] })),
+  ])
+    .then(([config, payload]) => {
       doneStatus = config.doneStatus || null;
       if (doneStatus) {
         doneLabel.textContent = doneStatus;
       }
       fillStatusOptions(config.statuses || {});
-      allTasks = layout.placeholderTasks(config.statuses || {});
+      allTasks = Array.isArray(payload.tasks) ? payload.tasks : [];
       const filters = layout.readFilters(window.localStorage);
       filterName.value = filters.name;
       filterHideDone.checked = filters.hideDone;
@@ -163,7 +178,7 @@
       renderTasks();
     })
     .catch(() => {
-      allTasks = layout.placeholderTasks({});
+      allTasks = [];
       renderTasks();
     });
 })();
