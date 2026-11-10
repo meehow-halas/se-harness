@@ -60,6 +60,16 @@ describe("cli dispatch", () => {
       assert.equal(exists(path.join(cwd, ".dhs")), false);
     });
   });
+
+  test("monitor is not a dhs subcommand", () => {
+    withTempDir((cwd) => {
+      const result = runCli(["monitor"], { cwd });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /Unknown command: monitor/);
+      assert.match(result.stderr, new RegExp(USAGE));
+      assert.equal(exists(path.join(cwd, ".dhs")), false);
+    });
+  });
 });
 
 describe("dhs install", () => {
@@ -123,12 +133,18 @@ describe("dhs install", () => {
       fs.writeFileSync(path.join(pkg, "scripts", "start-task.test.mjs"), "test\n");
       fs.writeFileSync(path.join(pkg, "scripts", "start-task.test.cjs"), "test\n");
       fs.writeFileSync(path.join(pkg, "agents", "architect.test.js"), "test\n");
+      fs.writeFileSync(path.join(pkg, "monitor", "index.test.js"), "test\n");
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
       assert.equal(exists(path.join(project, ".dhs", "scripts", "marker.txt")), true);
+      assert.equal(exists(path.join(project, ".dhs", "monitor", "marker.txt")), true);
       assert.equal(
         exists(path.join(project, ".dhs", "scripts", "start-task.test.js")),
+        false
+      );
+      assert.equal(
+        exists(path.join(project, ".dhs", "monitor", "index.test.js")),
         false
       );
       assert.equal(
@@ -500,6 +516,121 @@ describe("dhs install", () => {
       assert.ok(cursorCmds.includes(".dhs/scripts/check-update --host cursor"));
     });
   });
+
+  test("vendors @cursor/sdk and its runtime deps into .dhs/monitor/node_modules when the installer has them", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      const sdkDir = path.join(pkg, "node_modules", "@cursor", "sdk");
+      const depName = "dhs-fake-sdk-runtime";
+      const depDir = path.join(pkg, "node_modules", depName);
+      const unrelated = path.join(pkg, "node_modules", "unrelated-pkg");
+      fs.mkdirSync(sdkDir, { recursive: true });
+      fs.mkdirSync(depDir, { recursive: true });
+      fs.mkdirSync(unrelated, { recursive: true });
+      fs.writeFileSync(
+        path.join(sdkDir, "package.json"),
+        `${JSON.stringify({
+          name: "@cursor/sdk",
+          version: "0.0.0-test",
+          dependencies: { [depName]: "1.0.0" },
+        })}\n`
+      );
+      fs.writeFileSync(path.join(sdkDir, "index.js"), "module.exports = 'sdk';\n");
+      fs.writeFileSync(
+        path.join(depDir, "package.json"),
+        `${JSON.stringify({ name: depName, version: "1.0.0" })}\n`
+      );
+      fs.writeFileSync(path.join(depDir, "index.js"), "module.exports = 'dep';\n");
+      fs.writeFileSync(
+        path.join(unrelated, "package.json"),
+        `${JSON.stringify({ name: "unrelated-pkg", version: "1.0.0" })}\n`
+      );
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(
+        exists(path.join(project, ".dhs", "monitor", "node_modules", "@cursor", "sdk", "index.js")),
+        true
+      );
+      assert.equal(
+        exists(
+          path.join(project, ".dhs", "monitor", "node_modules", depName, "index.js")
+        ),
+        true
+      );
+      assert.equal(
+        exists(
+          path.join(project, ".dhs", "monitor", "node_modules", "unrelated-pkg")
+        ),
+        false
+      );
+    });
+  });
+
+  test("does not add dhs:monitor when the project has no package.json", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(exists(path.join(project, "package.json")), false);
+    });
+  });
+
+  test("adds dhs:monitor when package.json has no such script", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      fs.writeFileSync(
+        path.join(project, "package.json"),
+        `${JSON.stringify({
+          name: "consumer-app",
+          scripts: { build: "echo keep-build" },
+          dependencies: { leftpad: "1.0.0" },
+        })}\n`
+      );
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      const consumer = JSON.parse(read(path.join(project, "package.json")));
+      assert.equal(consumer.scripts.build, "echo keep-build");
+      assert.equal(consumer.scripts["dhs:monitor"], "node .dhs/monitor");
+      assert.deepEqual(consumer.dependencies, { leftpad: "1.0.0" });
+    });
+  });
+
+  test("does not overwrite an existing dhs:monitor script", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      const kept = "node ./keep-monitor.js";
+      fs.writeFileSync(
+        path.join(project, "package.json"),
+        `${JSON.stringify({
+          name: "consumer-app",
+          scripts: { "dhs:monitor": kept },
+        })}\n`
+      );
+
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      const consumer = JSON.parse(read(path.join(project, "package.json")));
+      assert.equal(consumer.scripts["dhs:monitor"], kept);
+    });
+  });
 });
 
 describe("dhs uninstall", () => {
@@ -667,6 +798,53 @@ describe("dhs uninstall", () => {
         exists(path.join(project, ".opencode", "plugins", "dhs-check-update.js")),
         false
       );
+    });
+  });
+
+  test("removes dhs:monitor only when the value is exactly what install wrote", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      fs.writeFileSync(
+        path.join(project, "package.json"),
+        `${JSON.stringify({
+          name: "consumer-app",
+          scripts: { build: "echo keep-build" },
+        })}\n`
+      );
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+
+      const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      const consumer = JSON.parse(read(path.join(project, "package.json")));
+      assert.equal(consumer.scripts.build, "echo keep-build");
+      assert.equal(Object.prototype.hasOwnProperty.call(consumer.scripts, "dhs:monitor"), false);
+    });
+  });
+
+  test("leaves a customized dhs:monitor script in place on uninstall", () => {
+    withTempDir((root) => {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      const kept = "node ./keep-monitor.js";
+      fs.writeFileSync(
+        path.join(project, "package.json"),
+        `${JSON.stringify({
+          name: "consumer-app",
+          scripts: { "dhs:monitor": kept },
+        })}\n`
+      );
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      const consumer = JSON.parse(read(path.join(project, "package.json")));
+      assert.equal(consumer.scripts["dhs:monitor"], kept);
     });
   });
 

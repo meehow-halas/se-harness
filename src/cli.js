@@ -12,7 +12,11 @@ const PAYLOAD_DIRS = [
   "brainstorm",
   "references",
   "scripts",
+  "monitor",
 ];
+const MONITOR_NPM_SCRIPT_KEY = "dhs:monitor";
+const MONITOR_NPM_SCRIPT_VALUE = "node .dhs/monitor";
+const CURSOR_SDK_PACKAGE = "@cursor/sdk";
 const SETUP_SKILL = "dhs-setup";
 const HOSTS_FILE = "hosts.json";
 const CHECK_UPDATE_SCRIPT = ".dhs/scripts/check-update";
@@ -116,6 +120,147 @@ function copyTree(src, dest) {
     force: true,
     filter: (from) => !isPackageTestFile(from),
   });
+}
+
+function resolvePackageDir(name, resolvePaths) {
+  try {
+    return path.dirname(
+      require.resolve(`${name}/package.json`, { paths: resolvePaths })
+    );
+  } catch {
+    try {
+      const entry = require.resolve(name, { paths: resolvePaths });
+      let dir = path.dirname(entry);
+      while (dir !== path.dirname(dir)) {
+        const pkgFile = path.join(dir, "package.json");
+        if (fs.existsSync(pkgFile)) {
+          try {
+            const pkg = JSON.parse(fs.readFileSync(pkgFile, "utf8"));
+            if (pkg.name === name) {
+              return dir;
+            }
+          } catch {
+            break;
+          }
+        }
+        dir = path.dirname(dir);
+      }
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function packageRuntimeDeps(pkg) {
+  return {
+    ...(pkg.dependencies || {}),
+    ...(pkg.optionalDependencies || {}),
+    ...(pkg.peerDependencies || {}),
+  };
+}
+
+function vendorNpmPackage(name, destNm, resolvePaths, seen) {
+  if (seen.has(name)) {
+    return;
+  }
+  seen.add(name);
+  const src = resolvePackageDir(name, resolvePaths);
+  if (!src) {
+    return;
+  }
+  const dest = path.join(destNm, name);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.cpSync(src, dest, {
+    recursive: true,
+    force: true,
+    dereference: true,
+    filter: (from) => {
+      const rel = path.relative(src, from);
+      if (rel === "") {
+        return true;
+      }
+      return rel.split(path.sep)[0] !== "node_modules";
+    },
+  });
+  let pkg;
+  try {
+    pkg = JSON.parse(fs.readFileSync(path.join(src, "package.json"), "utf8"));
+  } catch {
+    return;
+  }
+  const nextPaths = [src, ...resolvePaths];
+  for (const dep of Object.keys(packageRuntimeDeps(pkg))) {
+    vendorNpmPackage(dep, destNm, nextPaths, seen);
+  }
+}
+
+function vendorCursorSdk(packageRoot, destMonitorDir) {
+  const src = resolvePackageDir(CURSOR_SDK_PACKAGE, [packageRoot]);
+  if (!src) {
+    return;
+  }
+  const destNm = path.join(destMonitorDir, "node_modules");
+  vendorNpmPackage(CURSOR_SDK_PACKAGE, destNm, [packageRoot], new Set());
+}
+
+function readConsumerPackage(cwd) {
+  const pkgPath = path.join(cwd, "package.json");
+  if (!fs.existsSync(pkgPath)) {
+    return null;
+  }
+  try {
+    return {
+      path: pkgPath,
+      data: JSON.parse(fs.readFileSync(pkgPath, "utf8")),
+    };
+  } catch {
+    console.error("dhs install: invalid JSON at package.json");
+    process.exit(1);
+  }
+}
+
+function ensureMonitorNpmScript(cwd) {
+  const loaded = readConsumerPackage(cwd);
+  if (!loaded) {
+    return;
+  }
+  const pkg = loaded.data;
+  if (pkg.scripts == null) {
+    pkg.scripts = {};
+  }
+  if (typeof pkg.scripts !== "object" || Array.isArray(pkg.scripts)) {
+    return;
+  }
+  if (Object.prototype.hasOwnProperty.call(pkg.scripts, MONITOR_NPM_SCRIPT_KEY)) {
+    return;
+  }
+  pkg.scripts[MONITOR_NPM_SCRIPT_KEY] = MONITOR_NPM_SCRIPT_VALUE;
+  writeJsonFile(loaded.path, pkg);
+}
+
+function removeMonitorNpmScript(cwd) {
+  const pkgPath = path.join(cwd, "package.json");
+  if (!fs.existsSync(pkgPath)) {
+    return;
+  }
+  let pkg;
+  try {
+    pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+  } catch {
+    return;
+  }
+  if (!pkg.scripts || typeof pkg.scripts !== "object") {
+    return;
+  }
+  if (pkg.scripts[MONITOR_NPM_SCRIPT_KEY] !== MONITOR_NPM_SCRIPT_VALUE) {
+    return;
+  }
+  delete pkg.scripts[MONITOR_NPM_SCRIPT_KEY];
+  if (Object.keys(pkg.scripts).length === 0) {
+    delete pkg.scripts;
+  }
+  writeJsonFile(pkgPath, pkg);
 }
 
 function gitignorePattern(line) {
@@ -406,7 +551,11 @@ function install(ctx) {
     if (!fs.existsSync(src)) {
       continue;
     }
-    copyTree(src, path.join(dhsDir, name));
+    const dest = path.join(dhsDir, name);
+    copyTree(src, dest);
+    if (name === "monitor") {
+      vendorCursorSdk(packageRoot, dest);
+    }
   }
 
   const version = packageVersion(packageRoot);
@@ -425,6 +574,7 @@ function install(ctx) {
   }
 
   ensureGitignore(cwd);
+  ensureMonitorNpmScript(cwd);
 
   if (fs.existsSync(path.join(cwd, "harness.config.json"))) {
     console.log(
@@ -437,6 +587,7 @@ function uninstall(ctx) {
   const { cwd, packageRoot } = resolveCtx(ctx);
   const hosts = loadHosts(packageRoot);
   fs.rmSync(path.join(cwd, ".dhs"), { recursive: true, force: true });
+  removeMonitorNpmScript(cwd);
   for (const host of hosts) {
     const skillDir = setupSkillDir(cwd, host);
     fs.rmSync(skillDir, { recursive: true, force: true });
