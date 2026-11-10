@@ -6,9 +6,12 @@ const { EventEmitter } = require("events");
 const { pathToFileURL } = require("url");
 const {
   MODE_INTERACTIVE,
+  buildFirstPlanitPrompt,
   isConsultantEvent,
   visibleChatMessages,
 } = require("./chat");
+const { uiConfigFromHarness } = require("./layout");
+const { listTasks } = require("./tasks");
 
 const SESSIONS_REL = path.join(".dhs", "monitor", "sessions");
 const PLANIT_LOCK_REL = path.join(".dhs", "monitor", "planit.lock");
@@ -85,6 +88,23 @@ function isPlanitSend(text, intent) {
     return true;
   }
   return typeof text === "string" && text.includes("/dhs-planit");
+}
+
+function architectCursorModel(cwd) {
+  const config = readJsonIfPresent(path.join(cwd, "harness.config.json"), null);
+  const model = uiConfigFromHarness(config).defaultModel;
+  return model;
+}
+
+function allocateDraftKey(cwd, live) {
+  let n = 1;
+  for (;;) {
+    const key = `new-${n}`;
+    if (!live.has(key) && !fs.existsSync(sessionDir(cwd, key))) {
+      return key;
+    }
+    n += 1;
+  }
 }
 
 function extractAssistantText(event) {
@@ -259,8 +279,61 @@ function createSessionRegistry(options) {
     return sdk.create(createOpts);
   }
 
-  async function createSession({ taskKey, model }) {
-    const key = assertTaskKey(taskKey);
+  function rebindSession(fromKey, toKey) {
+    const from = assertTaskKey(fromKey);
+    const to = assertTaskKey(toKey);
+    if (from === to) {
+      return { taskKey: to };
+    }
+    if (live.has(to)) {
+      return { taskKey: from };
+    }
+    const session = live.get(from);
+    if (!session) {
+      return { taskKey: from };
+    }
+    const fromDir = sessionDir(cwd, from);
+    const toDir = sessionDir(cwd, to);
+    if (fs.existsSync(toDir)) {
+      return { taskKey: from };
+    }
+    live.delete(from);
+    live.set(to, session);
+    if (fs.existsSync(fromDir)) {
+      fs.mkdirSync(path.dirname(toDir), { recursive: true });
+      fs.renameSync(fromDir, toDir);
+    }
+    if (selected === from) {
+      selected = to;
+    }
+    return { taskKey: to, reboundFrom: from };
+  }
+
+  function bindNewTrackerKey(draftKey, keysBefore) {
+    const listed = listTasks(cwd, {
+      sessions: { list: () => list() },
+      env: env,
+    });
+    const before = new Set(Array.isArray(keysBefore) ? keysBefore : []);
+    const added = (listed.tasks || [])
+      .map((row) => row.key)
+      .filter((key) => typeof key === "string" && !before.has(key) && key !== draftKey);
+    if (added.length !== 1) {
+      return { taskKey: draftKey };
+    }
+    return rebindSession(draftKey, added[0]);
+  }
+
+  async function createSession({ taskKey, model, intent } = {}) {
+    const planit = intent === "planit";
+    let key = taskKey;
+    if (planit && (key == null || key === "")) {
+      key = allocateDraftKey(cwd, live);
+    }
+    key = assertTaskKey(key);
+    const resolvedModel = planit
+      ? architectCursorModel(cwd) || model
+      : model;
     const existing = live.get(key);
     if (existing) {
       selected = key;
@@ -284,22 +357,26 @@ function createSessionRegistry(options) {
       creating: true,
       busy: false,
       messages: loadMessages(key),
+      intent: planit ? "planit" : undefined,
+      planitStarted: false,
     };
     live.set(key, placeholder);
     let agent;
     try {
-      agent = await attachAgent(key, model, { resumeId });
+      agent = await attachAgent(key, resolvedModel, { resumeId });
     } catch (err) {
       live.delete(key);
       throw err;
     }
     const record = {
       agent,
-      model,
+      model: resolvedModel,
       mode: MODE_INTERACTIVE,
       messages: placeholder.messages,
       creating: false,
       busy: false,
+      intent: planit ? "planit" : undefined,
+      planitStarted: false,
     };
     live.set(key, record);
     writeJson(agentPath(cwd, key), { agentId: agent.agentId });
@@ -309,6 +386,8 @@ function createSessionRegistry(options) {
       agentId: agent.agentId,
       resumed: Boolean(resumeId && agent.agentId === resumeId),
       selected: true,
+      intent: record.intent,
+      model: resolvedModel,
     };
   }
 
@@ -333,15 +412,32 @@ function createSessionRegistry(options) {
         httpStatus: 404,
       });
     }
+    const firstPlanit = session.intent === "planit" && !session.planitStarted;
+    const effectiveIntent = intent || (firstPlanit ? "planit" : undefined);
+    const visibleText = String(text);
+    const agentText = firstPlanit
+      ? buildFirstPlanitPrompt(visibleText)
+      : visibleText;
     let release;
-    if (isPlanitSend(text, intent) && filesTrackerActive(cwd)) {
+    if (
+      (firstPlanit || isPlanitSend(agentText, effectiveIntent)) &&
+      filesTrackerActive(cwd)
+    ) {
       release = acquirePlanitLock();
     }
-    appendMessage(key, { role: "user", text: String(text), at: nowIso() });
+    if (firstPlanit) {
+      session.planitStarted = true;
+    }
+    const keysBefore = firstPlanit
+      ? listTasks(cwd, { sessions: { list: () => list() }, env }).tasks.map(
+          (row) => row.key
+        )
+      : null;
+    appendMessage(key, { role: "user", text: visibleText, at: nowIso() });
     session.busy = true;
     events.emit(`session:${key}`, { type: "run", status: "running" });
     try {
-      const run = await session.agent.send(text);
+      const run = await session.agent.send(agentText);
       if (run && typeof run.stream === "function") {
         for await (const event of run.stream()) {
           events.emit(`session:${key}`, event);
@@ -355,10 +451,17 @@ function createSessionRegistry(options) {
           }
         }
       }
-      if (run && typeof run.wait === "function") {
-        return run.wait();
+      let result =
+        run && typeof run.wait === "function"
+          ? await run.wait()
+          : { status: "finished" };
+      if (firstPlanit) {
+        const bound = bindNewTrackerKey(key, keysBefore);
+        result = { ...result, ...bound };
+      } else if (!result.taskKey) {
+        result = { ...result, taskKey: key };
       }
-      return { status: "finished" };
+      return result;
     } finally {
       session.busy = false;
       events.emit(`session:${key}`, { type: "run", status: "idle" });
@@ -441,6 +544,7 @@ module.exports = {
   PLANIT_LOCK_REL,
   SESSIONS_REL,
   SessionError,
+  architectCursorModel,
   createSessionRegistry,
   filesTrackerActive,
   loadCursorSdk,

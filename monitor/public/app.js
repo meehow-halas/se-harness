@@ -67,11 +67,22 @@
     send(taskKey, text, extra) {
       return jsonRequest(`/api/sessions/${encodeURIComponent(taskKey)}/send`, {
         method: "POST",
-        body: { text, mode: extra && extra.mode },
+        body: {
+          text,
+          mode: extra && extra.mode,
+          intent: extra && extra.intent,
+        },
       });
     },
     snapshot(taskKey) {
       return jsonRequest(`/api/sessions/${encodeURIComponent(taskKey)}`);
+    },
+    refreshTasks() {
+      return jsonRequest("/api/tasks").then((payload) => {
+        allTasks = Array.isArray(payload.tasks) ? payload.tasks : [];
+        renderTasks();
+        return payload;
+      });
     },
     openEvents(taskKey, onEvent) {
       const source = new EventSource(
@@ -211,7 +222,10 @@
   filterHideDone.addEventListener("change", persistFilters);
 
   addTask.addEventListener("click", () => {
-    composerInput.focus();
+    controller.startAdd().then(() => {
+      renderTasks();
+      composerInput.focus();
+    });
   });
 
   taskList.addEventListener("click", (event) => {
