@@ -8,7 +8,7 @@ Store a distinct model id per supported host for each product role and for brain
 
 - `agents.roles.<role>.model` and `agents.brainstorm.model` as maps keyed by `hosts.json` `id`.
 - `modelSuggest` on each host row (interview defaults only; no translation between hosts).
-- `/dhs-setup` first-run questions per `(host, role)`, generation, later-run one cell, legacy string migration.
+- `/dhs-setup` first-run one question per host (four-role table, optional overrides), generation, later-run one cell, legacy string migration.
 - `/dhs-brainstorm` first-member model map, launch from this host’s key, legacy string migration.
 - PRD Decision 17, Runtime config, setup/brainstorm detail, consumer `AGENTS.md`, config skeleton.
 
@@ -43,7 +43,7 @@ Cite the PRD. Do not restate every question.
 
 - Hosts stay in `hosts.json`. Config holds only model strings keyed by those ids.
 - Missing or empty `model[<host.id>]` at generation → `BLOCKED:`. Do not copy another host’s model.
-- Legacy `"model": "<string>"` is not valid for generation. Prefill every host with that string, then confirm per host.
+- Legacy `"model": "<string>"` is not valid for generation. Prefill every role on every host with that string, then one confirm-or-change question per host (setup: four-role table; brainstorm: single default per host).
 - Later-run role `model` change rewrites **one** `agentsDir`.
 - Brainstorm launch uses `agents.brainstorm.model[<host.id>]`. Resolve `id` by matching this skill’s `skillsDir` to the host table.
 - Suggest from `modelSuggest`. Do not `if (id === "claude-code")` for suggestion text.
@@ -51,7 +51,7 @@ Cite the PRD. Do not restate every question.
 ## Done when
 
 - Skeleton role `model` values are maps with a key per `hosts.json` `id`.
-- `/dhs-setup` documents per-host questions, per-host `model:` stamp, one-cell later-run, and string migration.
+- `/dhs-setup` documents per-host confirm (table + optional overrides), per-host `model:` stamp, one-cell later-run, and string migration.
 - `/dhs-brainstorm` documents a model map, host resolve, and launch from this host’s key.
 - PRD Deferred no longer lists per-host role models.
 

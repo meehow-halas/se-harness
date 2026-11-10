@@ -319,6 +319,47 @@ describe("jira", () => {
     });
   });
 
+  test("get reads spec prompt and log from repo files when artifactsOnTrackerOnly is false", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd, {
+        trackerOver: { artifactsOnTrackerOnly: false },
+      });
+      writeFile(
+        cwd,
+        "docs/features/QX7-42.feature.md",
+        "---\nid: QX7-42\ntitle: Q\nstatus: todo\ntype: feature\ndepends: []\nrelates: []\n---\n\nrepo spec body qx7 unique\n"
+      );
+      writeFile(cwd, "docs/prompt/QX7-42.prompt.md", "repo prompt body qx7 unique\n");
+      writeFile(cwd, "docs/feature-log/QX7-42.log.md", "repo log body qx7 unique\n");
+      const stub = writeCurlStub(cwd, defaultRoutes());
+      const result = runJira(cwd, ["get", "QX7-42"], stub.env);
+      assert.equal(result.status, 0, result.stderr + result.stdout);
+      assert.match(result.stdout, /^OK\n/);
+      assert.match(result.stdout, /BEGIN spec\nrepo spec body qx7 unique\nEND spec/);
+      assert.match(result.stdout, /BEGIN prompt\nrepo prompt body qx7 unique\nEND prompt/);
+      assert.match(result.stdout, /BEGIN log\nrepo log body qx7 unique\nEND log/);
+      assert.doesNotMatch(result.stdout, /BEGIN spec\nspec body qx7\nEND spec/);
+    });
+  });
+
+  test("set BLOCKED when artifactsOnTrackerOnly is false", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd, {
+        trackerOver: { artifactsOnTrackerOnly: false },
+      });
+      const specFile = path.join(cwd, "spec.md");
+      fs.writeFileSync(specFile, "ignored\n");
+      const stub = writeCurlStub(cwd, defaultRoutes());
+      const result = runJira(
+        cwd,
+        ["set", "QX7-42", "spec", "--file", specFile],
+        stub.env
+      );
+      assertBlocked(result, /artifact content is stored in repository files/);
+      assert.equal(fs.existsSync(stub.dataFile), false);
+    });
+  });
+
   test("set PUTs spec onto the mapped custom field", () => {
     withTempDir((cwd) => {
       writeProject(cwd);

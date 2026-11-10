@@ -53,7 +53,7 @@ Reply in the conversation language.
 
 ## Resolve the tasks
 
-Need an existing spec **and** prompt on the **active tracker** (files if `agents.tracker` is absent; Jira if it is present). Never look at the other tracker. Never mirror.
+Need an existing spec **and** prompt on the **active tracker** (files if `agents.tracker` is absent; Jira if present — bodies on issue or in repo per `agents.tracker.artifactsOnTrackerOnly`). Never mirror.
 
 - User named one or more basenames or issue keys → those tasks, in that order.
 - Otherwise pick the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:

@@ -67,7 +67,7 @@ Reply in the conversation language.
 
 ## Resolve the task
 
-Active tracker only: files if `agents.tracker` is absent; Jira if it is present. Never both. Never mirror.
+Active tracker only: files if `agents.tracker` is absent; Jira if present (artifact bodies per `agents.tracker.artifactsOnTrackerOnly`). Never mirror.
 
 - New work (a sentence, no key) → no spec yet.
 - Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /dhs-shipit is one task` above).

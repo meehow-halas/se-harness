@@ -40,8 +40,11 @@ Supported hosts are **not** a tree in this config. They live in `hosts.json` in 
 
 When Jira is connected, add `agents.tracker`:
 
+`artifactsOnTrackerOnly` (boolean, default `true` when missing): when `true`, spec, prompt, and log live on the issue (map `fields.spec` / `prompt` / `log` in `/dhs-setup`). When `false`, those three artifacts live in `docs/features/`, `docs/prompt/`, `docs/feature-log/` named by issue key; Jira is used for the issue key, metadata reads, workflow transitions, and allowed script calls — not for `jira set` on spec/prompt/log. Status in spec frontmatter uses `agents.statuses` while transitions use `agents.tracker.statuses`.
+
 ```json
 {
+  "artifactsOnTrackerOnly": true,
   "url": "",
   "user": "",
   "projectKey": "",

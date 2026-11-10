@@ -84,9 +84,11 @@ Do not add a facilitator (or any brainstorm runner) to `agents.roles`.
 
 `agents.brainstorm.model` must have a non-empty string for every `id` in `hosts.json`. A JSON string is not a map. Do not copy another host’s model.
 
-**Legacy string.** If `model` is a string, prefill every host `id` with that string, show the prefill, then one question per host (suggest `modelSuggest.brainstorm` when it differs). Write the map before a round.
+**Per-host confirm.** For each host in `.dhs/references/hosts.json` (table order), prefill `agents.brainstorm.model[<host.id>]` from that row’s `modelSuggest.brainstorm` when present, show the default model id (persona and facilitator turns share this one string), then **one question per host**: whether to change it. Skip / no = accept. Yes = one reply with the new model id. Write the map before a round when every host is confirmed.
 
-**Missing host key.** Same path when the table has an `id` the map does not.
+**Legacy string.** If `model` is a string, prefill every host `id` with that string, then **per-host confirm** (mention `modelSuggest.brainstorm` in helper text when it differs from the prefill).
+
+**Missing host key.** Same **per-host confirm** when the table has an `id` the map does not; prefill from `modelSuggest.brainstorm` when present.
 
 If a round needs a model and `agents.brainstorm.model[<host.id>]` is missing or empty:
 
@@ -103,7 +105,7 @@ Live files: `<brainstormDir>/members/<id>.md` for **every** `brainstormDir` in `
 **Create — first member in this project** (no `members` yet, or the array is empty). Ask once, one question at a time:
 
 1. Consult threshold (`any` / `significant` / `broad`). Default if they skip: `significant`. Write `agents.brainstorm.consult`.
-2. Model for persona and facilitator turns. For **each** host in `.dhs/references/hosts.json` (table order), one question. Suggest that row’s `modelSuggest.brainstorm` when present. Write `agents.brainstorm.model` as a map keyed by host `id`. If `model` is already a complete map, reuse it. If it is a legacy string or missing a host `id`, migrate as above before continuing.
+2. Model for persona and facilitator turns. If `model` is already a complete map with every host `id`, reuse it. Otherwise use **per-host confirm** from above and write `agents.brainstorm.model` as a map keyed by host `id`.
 
 Later creates reuse those keys. Do not ask again unless the user is changing them here (not in `/dhs-setup`). A model change is one cell `(host)` unless the map is incomplete.
 

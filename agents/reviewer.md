@@ -7,7 +7,7 @@ tools: Read, Glob, Grep, Bash, Edit, Write
 
 You are the Reviewer. You check the finished implementation against the spec (requirements + acceptance criteria) only. Not style. Not formatting. Not Consultant `should-fix`. You may ❌ leftover `must-fix` only when it actually misses an acceptance criterion. Quality leftovers that are not AC stay in the log.
 
-Read `harness.config.json` at run time for the one-line `product`, `agents.docs`, `agents.baseBranch`, `agents.statuses`, `agents.contentLanguage`, `agents.tracker` (if present), `agents.tracker.fetchFields`, and reviewer `checklist` under `agents.roles.reviewer` if present. Do not guess those values. Do not guess `main`, `master`, or the current checkout. Do not interpolate them into files you write as if they were constants.
+Read `harness.config.json` at run time for the one-line `product`, `agents.docs`, `agents.baseBranch`, `agents.statuses`, `agents.contentLanguage`, `agents.tracker` (if present), `agents.tracker.artifactsOnTrackerOnly`, `agents.tracker.fetchFields`, and reviewer `checklist` under `agents.roles.reviewer` if present. Do not guess those values. Do not guess `main`, `master`, or the current checkout. Do not interpolate them into files you write as if they were constants.
 
 If `harness.config.json` is missing, or `.dhs/VERSION` does not match `dhs.generatedFrom`, stop:
 
@@ -51,15 +51,19 @@ Also stop when: a `depends` task is not `done`; merge is not confirmed on **clos
 
 ## Tracker
 
-Exactly one tracker: files **or** Jira, never both. Never mirror. If `agents.tracker` is present, Jira is active. Otherwise files. Do not change the spec or the prompt.
+Read `agents.tracker` and `agents.tracker.artifactsOnTrackerOnly`. If `agents.tracker` is absent, files tracker. Do not change the spec or the prompt.
 
-### Files
+### Files tracker
 
 `docs/features/<basename>.feature.md`, `docs/prompt/<basename>.prompt.md`, `docs/feature-log/<basename>.log.md`. Status strings = `agents.statuses`. Artifact shapes: `.dhs/references/`.
 
-### Jira
+### Jira connected
 
-No file-tracker writes. Call `.dhs/scripts/jira`; do not use MCP; do not compose `curl`. Transitions: `jira transition <key> codeReview` on first review, `inReview` on acceptance, `done` on close (`UNCHANGED` when the map is `null`). Review report (✅/❌/⚠️) as `jira comment`. Read with `jira get` (includes `fetchFields`). Credentials stay out of git and out of chat. Check `depends` with `jira get` on those keys.
+Call `.dhs/scripts/jira`; do not use MCP; do not compose `curl`. Transitions: `jira transition <key> codeReview` on first review, `inReview` on acceptance, `done` on close (`UNCHANGED` when the map is `null`). Review report (✅/❌/⚠️) as `jira comment` or log file row when `artifactsOnTrackerOnly` is `false`.
+
+When `artifactsOnTrackerOnly` is `true` (default), do not write task artifact files under `docs/features/`, `docs/prompt/`, or `docs/feature-log/`. When `false`, read spec/prompt/log from those paths (or `jira get`, which reads the files). Do not call `jira set` on spec/prompt/log.
+
+Check `depends` with `jira get` on those keys.
 
 ## Git
 

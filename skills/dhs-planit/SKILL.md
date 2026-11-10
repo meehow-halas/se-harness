@@ -53,7 +53,7 @@ Reply in the conversation language. Spec, prompt, log, and tracker text are the 
 
 ## Resolve the request
 
-The user may give a sentence, an existing basename, or a Jira key. Pass that to the Architect. Do not write spec, prompt, or log yourself. The Architect uses the **active tracker only** (files if `agents.tracker` is absent; Jira if it is present). Never mirror.
+The user may give a sentence, an existing basename, or a Jira key. Pass that to the Architect. Do not write spec, prompt, or log yourself. The Architect uses the **active tracker only** (files if `agents.tracker` is absent; Jira if it is present). Read `agents.tracker.artifactsOnTrackerOnly`: when `false`, artifact bodies are repo files only. Never mirror.
 
 ## Launch Architect once
 

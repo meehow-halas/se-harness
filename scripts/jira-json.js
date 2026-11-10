@@ -2,6 +2,7 @@
 "use strict";
 
 const fs = require("fs");
+const path = require("path");
 
 function fail(msg) {
   process.stderr.write(`${msg}\n`);
@@ -95,6 +96,29 @@ function mapped(t, kind) {
   const fields = t.fields || {};
   const v = fields[kind];
   return typeof v === "string" ? v.trim() : "";
+}
+
+function artifactsOnTrackerOnly(t) {
+  return t.artifactsOnTrackerOnly !== false;
+}
+
+function readArtifactFile(root, rel) {
+  const p = path.join(root, rel);
+  if (!fs.existsSync(p)) {
+    return "";
+  }
+  return fs.readFileSync(p, "utf8").replace(/\n$/, "");
+}
+
+function stripYamlFrontmatter(text) {
+  if (!text.startsWith("---")) {
+    return text;
+  }
+  const end = text.indexOf("\n---", 3);
+  if (end === -1) {
+    return text;
+  }
+  return text.slice(end + 4).replace(/^\n/, "");
 }
 
 const cmd = process.argv[2];
@@ -396,8 +420,15 @@ if (cmd === "format-meta") {
   process.exit(0);
 }
 
-if (cmd === "format-get") {
+if (cmd === "artifacts-on-tracker-only") {
   const t = trackerFrom(readJson(process.argv[3]));
+  process.stdout.write(artifactsOnTrackerOnly(t) ? "true\n" : "false\n");
+  process.exit(0);
+}
+
+if (cmd === "format-get") {
+  const cfgPath = process.argv[3];
+  const t = trackerFrom(readJson(cfgPath));
   const issue = readJson(process.argv[4]);
   const comments = process.argv[5] ? readJson(process.argv[5]) : { comments: [] };
   const fields = (issue && issue.fields) || {};
@@ -405,24 +436,36 @@ if (cmd === "format-get") {
   const summary = fields.summary || "";
   const status = (fields.status && fields.status.name) || "";
   const issuetype = (fields.issuetype && fields.issuetype.name) || "";
-  const locText = (kind) => {
-    const loc = mapped(t, kind);
-    if (!loc || loc === "comment") {
-      return loc === "comment" ? commentsText(comments) : "";
+  let spec;
+  let prompt;
+  let log;
+  if (!artifactsOnTrackerOnly(t)) {
+    const root = path.dirname(cfgPath);
+    spec = stripYamlFrontmatter(
+      readArtifactFile(root, `docs/features/${key}.feature.md`)
+    ).trim();
+    prompt = readArtifactFile(root, `docs/prompt/${key}.prompt.md`).trim();
+    log = readArtifactFile(root, `docs/feature-log/${key}.log.md`).trim();
+  } else {
+    const locText = (kind) => {
+      const loc = mapped(t, kind);
+      if (!loc || loc === "comment") {
+        return loc === "comment" ? commentsText(comments) : "";
+      }
+      if (loc === "description") {
+        return fieldText(fields.description);
+      }
+      return fieldText(fields[loc]);
+    };
+    spec = locText("spec");
+    prompt = locText("prompt");
+    log = locText("log");
+    if (!mapped(t, "spec") && fields.description) {
+      spec = fieldText(fields.description);
     }
-    if (loc === "description") {
-      return fieldText(fields.description);
+    if (!mapped(t, "log")) {
+      log = commentsText(comments);
     }
-    return fieldText(fields[loc]);
-  };
-  let spec = locText("spec");
-  let prompt = locText("prompt");
-  let log = locText("log");
-  if (!mapped(t, "spec") && fields.description) {
-    spec = fieldText(fields.description);
-  }
-  if (!mapped(t, "log")) {
-    log = commentsText(comments);
   }
   const lines = [
     `key: ${key}`,

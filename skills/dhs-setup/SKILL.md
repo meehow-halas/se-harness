@@ -51,9 +51,11 @@ If generation needs a model and `agents.roles.<key>.model[<host.id>]` is missing
 BLOCKED: role model missing for host <id> — run /dhs-setup
 ```
 
-**Legacy string.** If `model` is a string, the map is incomplete. Prefill a map with that string on every host `id`. Show the prefill. Then one question per host (suggest `modelSuggest` for that host when it differs from the prefill). Write the map. Do not stamp live `model:` until the map is confirmed.
+**Per-host confirm (first run, legacy, missing host).** For each host in `.dhs/references/hosts.json` (table order), prefill all four roles for that host’s `id`, show a table (architect / implementer / consultant / reviewer → model), then **one question per host**: whether to change any of those models. Skip / no = accept the table. Yes = the user may reply once with overrides (e.g. `architect: opus`); apply only named roles; leave the rest from prefill. If parsing is unclear, one follow-up question only. Do not stamp live `model:` until every host is confirmed.
 
-**Missing host key.** Same path when the table has an `id` the map does not (for example a new row after upgrade). Prefill only from a legacy string; otherwise ask with `modelSuggest`.
+**Legacy string.** If `model` is a string, the map is incomplete. Prefill every role on every host `id` with that string. Then use **per-host confirm** on each host (mention `modelSuggest` for that host in helper text when a role’s suggest differs from the prefill). Write the map when all hosts are confirmed.
+
+**Missing host key.** Same **per-host confirm** when the table has an `id` the map does not (for example a new row after upgrade). Prefill that host’s four roles from that row’s `modelSuggest` when present; if `modelSuggest` is missing for a role, ask for that role in the follow-up for that host only.
 
 ---
 
@@ -78,7 +80,7 @@ Config stores a one-line `product` plus doc paths, **not** the PRD body.
 
 Do not write `harness.config.json` or generate live files until these are confirmed.
 
-**Roles.** Only architect, implementer, consultant, reviewer. No other roles. No brainstorm-facilitator model question. For **each** host in `.dhs/references/hosts.json` (table order), then for each of those four roles, one question. Write `agents.roles.<role>.model` as a map keyed by host `id`. Suggest that row’s `modelSuggest.<role>` when present. The value must be a non-empty string. Do not translate one host’s model id into another’s.
+**Roles.** Only architect, implementer, consultant, reviewer. No other roles. No brainstorm-facilitator model question. For **each** host in `.dhs/references/hosts.json` (table order), use **per-host confirm** from **Role model maps**: prefill each role from that row’s `modelSuggest.<role>` when present; one question per host with the four-role table and optional overrides. Write `agents.roles.<role>.model` as a map keyed by host `id`. Each value must be a non-empty string. Do not translate one host’s model id into another’s.
 
 **`agents.contentLanguage`.** Language of files and tracker text. Ask once. Suggest the conversation language.
 
@@ -171,12 +173,28 @@ If the user names another config key (model, base branch, …), do that key firs
 
 First-run offer and every later run. Do not invent a `dhs` CLI for Jira. Call `.dhs/scripts/jira meta` (Jira Cloud REST; not MCP, not raw `curl`) and write config. Switching does **not** migrate old tasks. Token never in chat or git.
 
-Credentials: the user puts the token in a project-local ignored file `harness.credentials.local.json` (`{"jiraToken":"…"}`). `dhs install` already ignores that filename. Never paste the token in chat. Never write it into `harness.config.json`.
+Credentials: the user puts the token in a project-local ignored file `harness.credentials.local.json` (`{"jiraToken":"…"}`). `dhs install` already ignores that filename. Never paste the token in chat. Never write a real token into `harness.config.json`.
+
+**Token step (Add and token rotation on Change).** After URL, user, and project key are in `agents.tracker` (write to `harness.config.json` as needed so `jira meta` can run):
+
+1. If `harness.credentials.local.json` is missing at the project root, create it with `{"jiraToken":""}` only. If it exists, do not overwrite an existing token — show the path and ask the user to set or update `jiraToken` locally.
+2. Tell the user to paste the token in that file (never in chat). One question: confirm when the token is in the file.
+3. Run `.dhs/scripts/jira meta`. On `OK`, briefly confirm the connection and continue. On `BLOCKED:`, show the full `BLOCKED:` line, explain what to fix (token, URL, user, project key, or access), and loop: user fixes → confirm again → `jira meta` until `OK` or they stop.
+4. Then fetch mapping data from the successful `meta` output (statuses, issue types, custom fields) and continue mapping below.
+
+**Artifact storage (one question, after meta OK, before status/field mapping).** Default: no or skip → `artifactsOnTrackerOnly: true`. Yes → `false`.
+
+- **EN:** “Should Jira be used only to read task information, with spec, prompt, and log stored independently in files?”
+- **PL:** “Czy Jira ma służyć tylko do odczytu informacji o zadaniu, a spec, prompt i logi mają być przechowywane niezależnie w plikach?”
+
+When `artifactsOnTrackerOnly` is `false`, do not ask where spec, prompt, or log live on the issue; leave `fields.spec`, `fields.prompt`, and `fields.log` empty. Still map statuses, issue types, and `fetchFields`. After **yes**, you may state in one sentence that workflow still uses Jira transitions and `jira get` reads file bodies — agents do not call `jira set` for spec/prompt/log.
+
+On **Change**, the user may toggle `artifactsOnTrackerOnly` one at a time. Moving to `true` requires mapping `fields.*` again; moving to `false` drops those mappings. No automatic migration of ticket content into files.
 
 | Intent | What happens |
 |--------|----------------|
-| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Token: user puts it in `harness.credentials.local.json`. Write those three keys into `agents.tracker`, then run `.dhs/scripts/jira meta` to fetch that project’s statuses, issue types and custom fields. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that project’s real list (numbered), or skip = `null`. Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments). Issue types for `feature` and `bug`. Write `agents.tracker` from `.dhs/references/harness.tracker.json` plus answers (`statuses`, `issueTypes`, `fields`, `fetchFields` as needed, `url`, `user`, `projectKey`). Agents must not pick a Jira status that is not in this map. Do not compose `curl`. If the script prints `BLOCKED:`, copy that line and stop. |
-| **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named; keep the token unless they rotate it in the credentials file. |
+| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Write those three keys into `agents.tracker`, then do **Token step**. Then **Artifact storage**. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that project’s real list (numbered), or skip = `null`. Map `blocker` if they use dependencies. If `artifactsOnTrackerOnly` is `true`, map where spec and prompt live (two custom fields, description, or comments) and map log if used. Issue types for `feature` and `bug`. Write `agents.tracker` from `.dhs/references/harness.tracker.json` plus answers (`artifactsOnTrackerOnly`, `statuses`, `issueTypes`, `fields`, `fetchFields` as needed, `url`, `user`, `projectKey`). Agents must not pick a Jira status that is not in this map. Do not compose `curl`. |
+| **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named, including **Artifact storage** when they ask. If they rotate the token or you need fresh project metadata, run **Token step** and `jira meta` once; do not re-run `meta` for every small mapping edit. |
 | **Remove** | Confirm, drop `agents.tracker` from config, delete or clear `harness.credentials.local.json`. Project is files-only again. `jiraOffer` does not block a later **Add**. |
 
 `null` on a tracker status means that step does not transition. There is no file fallback and no invented name.

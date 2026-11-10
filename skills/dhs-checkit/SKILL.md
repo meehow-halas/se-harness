@@ -73,7 +73,7 @@ BLOCKED: merge not confirmed — confirm the GitHub PR is merged, then /dhs-chec
 
 ## Resolve the tasks
 
-Need an existing spec + prompt on the **active tracker**. User named one or more basenames or issue keys → those tasks. Otherwise the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
+Need an existing spec + prompt on the **active tracker** (repo files when Jira has `artifactsOnTrackerOnly: false`). User named one or more basenames or issue keys → those tasks. Otherwise the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
 
 ```text
 BLOCKED: task is ambiguous — name the feature basename or Jira key

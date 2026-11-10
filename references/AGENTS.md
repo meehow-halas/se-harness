@@ -47,9 +47,9 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 
 ## Tracker
 
-Exactly one tracker: files **or** Jira, never both. Never mirror.
+One tracker connection: files-only when `agents.tracker` is absent, or Jira when it is present. Do not mirror the same artifact text in two places.
 
-Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, Jira is active: write spec, prompt, log, and status only on the ticket through `.dhs/scripts/jira` (Jira Cloud REST; not MCP, not raw `curl`), using that map (`null` means skip that transition). Do not invent Jira status names. Credentials are in a local ignored file, never in git and never in chat.
+Which mode is active is in `harness.config.json`. If `agents.tracker` is present, Jira holds the issue key, workflow, and reads via `.dhs/scripts/jira` (Jira Cloud REST; not MCP, not raw `curl`). When `agents.tracker.artifactsOnTrackerOnly` is `true` (default), spec, prompt, and log live on the issue. When it is `false`, those three live only in `docs/features/`, `docs/prompt/`, and `docs/feature-log/` named by issue key; `jira set` on spec/prompt/log is `BLOCKED`. Do not invent Jira status names. Credentials are in a local ignored file, never in git and never in chat.
 
 If `agents.tracker` is absent, the files tracker is active. Same basename for all three files (example: `001-feature-example-name`):
 

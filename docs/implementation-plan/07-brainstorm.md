@@ -55,7 +55,7 @@ Personae see only: member file, output format, app context, material. Facilitato
 ### `/dhs-brainstorm`
 
 - Same config/VERSION guard as other work skills (phase 6).
-- Members CRUD: on create, ask once for consult threshold, then one model per host (suggest `modelSuggest.brainstorm`). `agents.brainstorm.model` is a map keyed by host `id` (phase 9). No per-persona model. After create/edit/remove, regenerate that member file; do not hand-edit generated member markdown.
+- Members CRUD: on create, ask once for consult threshold, then per host one confirm-or-change on the default from `modelSuggest.brainstorm`. `agents.brainstorm.model` is a map keyed by host `id` (phase 9). No per-persona model. After create/edit/remove, regenerate that member file; do not hand-edit generated member markdown.
 - App context: built from the repo (product line, `agents.docs`, README); gaps one question at a time; user confirms the file.
 - **Direct consult:** needs ready app context and at least one member. Threshold does not apply. Named members or every member. Then personae → facilitator → Architect with **PART A only**. Show Architect decisions; user resolves leftover conflicts. Do not hide a blocker the Architect rejected.
 - `/dhs-setup` does not edit members.

@@ -69,7 +69,7 @@ Follow PRD `/dhs-setup` (detail) **First run**:
 2. **PRD:** use existing; never overwrite. If none, gather from the repo, ask for missing product facts, write `docs/prd.md`, put the path in `agents.docs`. Config stores a one-line product plus doc paths, not the PRD body.
 3. Detect frameworks; generate packs (JS/TS, React Native, Angular, Next.js, Python, Django, FastAPI). Monorepo: pack only on trees that use it. Honour `packsIgnored`.
 4. Generate live agents and work skills from `.dhs/` as copies. Write `dhs.generatedFrom` from `.dhs/VERSION`.
-5. Roles: only the four. One question per `(host, role)`. Suggest from that host’s `modelSuggest` (phase 9).
+5. Roles: only the four. One question per host: prefill from `modelSuggest`, table of four roles, optional overrides (phase 9).
 6. `agents.contentLanguage`: ask once, suggest conversation language.
 7. `agents.baseBranch`: ask once, suggest `dev`. If the repo already names a default branch, state that inference; do not silently take `main`, `master`, or the current checkout. Do not write this value into agent markdown.
 8. **Optional project rule:** one question after models, language, and base branch. Explain what it is. Skip is the default. Do not ask for a list or a second rule.
@@ -88,7 +88,7 @@ If a role `model` is still a string or the map is missing a host `id`, finish th
 
 ### Tracker (Jira)
 
-PRD table Add / Change / Remove. Token never in chat or git. Map each of `todo`, `inProgress`, `codeReview`, `inReview`, `done` (and `blocker` if they use dependencies) from the project’s real Jira statuses, or `null`. Map spec/prompt locations and issue types. Switching does not migrate old tasks.
+PRD table Add / Change / Remove. Token never in chat or git. Add: create or reuse credentials file, user fills token locally, confirm, `jira meta` verify loop, then mapping. Map each of `todo`, `inProgress`, `codeReview`, `inReview`, `done` (and `blocker` if they use dependencies) from the project’s real Jira statuses, or `null`. Map spec/prompt locations and issue types. Switching does not migrate old tasks.
 
 If the user names another config key, do that key first, then the tracker offer only when there is still no tracker and the offer was not declined — unless they explicitly asked to add/change/remove Jira.
 

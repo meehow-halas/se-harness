@@ -26,6 +26,7 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 11 | [11-session-update-check.md](implementation-plan/11-session-update-check.md) | — |
 | Phase 12 | [12-jira-rest-scripts.md](implementation-plan/12-jira-rest-scripts.md) | [12-jira-rest-scripts.prompt.md](implementation-plan/12-jira-rest-scripts.prompt.md) |
 | Phase 13 | [13-opencode-host.md](implementation-plan/13-opencode-host.md) | — |
+| Phase 14 | [14-artifacts-on-tracker-only.md](implementation-plan/14-artifacts-on-tracker-only.md) | — |
 
 Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longest because `/dhs-setup` and the work-skill pipeline are large; they still point at the PRD rather than restating it.
 
@@ -38,7 +39,7 @@ Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longe
 - Exactly four product agents: Architect, Implementer, Consultant, Reviewer. The brainstorm facilitator is a collector runner, not a fifth role and not in `agents/`.
 - Git allowlist helpers, Jira Cloud REST (`jira`), and the session update check are POSIX `sh` files under package `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands. Agents call those scripts; they do not compose the matching `git`/`gh`/`curl` themselves. Implementer and Reviewer use a git worktree per task (`start-task`); Architect does not. Host session-start hooks run `.dhs/scripts/check-update` (GitHub tags, notify only, fail-open).
 - File-tracker status and log writes are agent work against `harness.config.json`. Jira I/O is `.dhs/scripts/jira`.
-- One tracker: files **or** Jira, never both. No mirroring.
+- One tracker connection (files **or** Jira). When Jira is connected, `agents.tracker.artifactsOnTrackerOnly` chooses issue vs repo file storage for spec/prompt/log (default issue). No mirroring.
 - Live agents are **copies** into every `agentsDir` in `references/hosts.json`, not symlinks to `.dhs/agents/`. Bodies do **not** interpolate `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Those are read from `harness.config.json` at run time. Role and brainstorm `model` values are maps keyed by host `id`; each live agent copy gets that host’s string only.
 - `dhs install` writes `.dhs/VERSION`. `/dhs-setup` writes `dhs.generatedFrom` in `harness.config.json`. Work skills stop when config is missing or those two values differ.
 - Tests: `npm test` runs `node:test` for `src/` and `scripts/`. Do not add a second runner.
@@ -116,6 +117,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 11 | Session update check (GitHub tags, host hooks) | 1, 8 | done |
 | 12 | Jira Cloud REST scripts (no MCP) | 2, 3, 4, 5 | done |
 | 13 | OpenCode host | 8, 9, 11 | done |
+| 14 | `artifactsOnTrackerOnly` | 12, 5 | done |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.dhs/VERSION`.
 
