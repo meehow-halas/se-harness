@@ -53,6 +53,14 @@ BLOCKED: role model missing for host <id> — run /dhs-setup
 
 **Per-host confirm (first run, legacy, missing host).** For each host in `.dhs/references/hosts.json` (table order), prefill all four roles for that host’s `id`, show a table (architect / implementer / consultant / reviewer → model), then **one question per host**: whether to change any of those models. Skip / no = accept the table. Yes = the user may reply once with overrides (e.g. `architect: opus`); apply only named roles; leave the rest from prefill. If parsing is unclear, one follow-up question only. Do not stamp live `model:` until every host is confirmed.
 
+**Question wording.** Frame the question as **change**, not **keep**. Do not ask “Keep these models?”, “Czy zostawić te modele?”, or similar — **yes** on a keep-framed question means accept, but this flow treats **yes** as “I want overrides”. After the table, use a **change** question plus helper text in this shape (replace `<host label>` with a readable name from the host row’s `id`, e.g. `claude-code` → Claude Code):
+
+```text
+Change any role models for <host label>? Reply skip or no to keep the table as shown. Reply yes and list overrides in one message (e.g. architect: opus).
+```
+
+**Reply mapping.** Accept the table: `skip`, `no`, `nie`, empty / Enter, or clear “keep / ok / leave as shown” intent (including Polish *zostaw*, *git*). Apply overrides: `yes`, `tak`, `change`, or a `role: model` list without yes. If you asked a keep-framed question by mistake and the user answered as if keeping (e.g. **tak** with no override list), accept the table; do not ask again for overrides.
+
 **Legacy string.** If `model` is a string, the map is incomplete. Prefill every role on every host `id` with that string. Then use **per-host confirm** on each host (mention `modelSuggest` for that host in helper text when a role’s suggest differs from the prefill). Write the map when all hosts are confirmed.
 
 **Missing host key.** Same **per-host confirm** when the table has an `id` the map does not (for example a new row after upgrade). Prefill that host’s four roles from that row’s `modelSuggest` when present; if `modelSuggest` is missing for a role, ask for that role in the follow-up for that host only.
@@ -80,7 +88,7 @@ Config stores a one-line `product` plus doc paths, **not** the PRD body.
 
 Do not write `harness.config.json` or generate live files until these are confirmed.
 
-**Roles.** Only architect, implementer, consultant, reviewer. No other roles. No brainstorm-facilitator model question. For **each** host in `.dhs/references/hosts.json` (table order), use **per-host confirm** from **Role model maps**: prefill each role from that row’s `modelSuggest.<role>` when present; one question per host with the four-role table and optional overrides. Write `agents.roles.<role>.model` as a map keyed by host `id`. Each value must be a non-empty string. Do not translate one host’s model id into another’s.
+**Roles.** Only architect, implementer, consultant, reviewer. No other roles. No brainstorm-facilitator model question. For **each** host in `.dhs/references/hosts.json` (table order), use **per-host confirm** from **Role model maps** (including **Question wording** and **Reply mapping**): prefill each role from that row’s `modelSuggest.<role>` when present; one question per host with the four-role table and optional overrides. Write `agents.roles.<role>.model` as a map keyed by host `id`. Each value must be a non-empty string. Do not translate one host’s model id into another’s.
 
 **`agents.contentLanguage`.** Language of files and tracker text. Ask once. Suggest the conversation language.
 

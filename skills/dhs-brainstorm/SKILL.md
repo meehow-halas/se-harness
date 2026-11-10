@@ -86,6 +86,14 @@ Do not add a facilitator (or any brainstorm runner) to `agents.roles`.
 
 **Per-host confirm.** For each host in `.dhs/references/hosts.json` (table order), prefill `agents.brainstorm.model[<host.id>]` from that row’s `modelSuggest.brainstorm` when present, show the default model id (persona and facilitator turns share this one string), then **one question per host**: whether to change it. Skip / no = accept. Yes = one reply with the new model id. Write the map before a round when every host is confirmed.
 
+**Question wording.** Frame as **change**, not “keep this model?”. After showing the default id, use helper text in this shape:
+
+```text
+Change the brainstorm model for <host label>? Reply skip or no to keep <default id>. Reply yes with the new model id in one message.
+```
+
+**Reply mapping.** Accept default: `skip`, `no`, `nie`, empty, or clear keep intent. New id: `yes`, `tak`, `change`, or the new id alone. If you mistakenly asked to “keep” and the user answered like accept (e.g. **tak** with no id), keep the default.
+
 **Legacy string.** If `model` is a string, prefill every host `id` with that string, then **per-host confirm** (mention `modelSuggest.brainstorm` in helper text when it differs from the prefill).
 
 **Missing host key.** Same **per-host confirm** when the table has an `id` the map does not; prefill from `modelSuggest.brainstorm` when present.
