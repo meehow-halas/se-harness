@@ -4,6 +4,7 @@
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
+const { createSessionRegistry, SessionError } = require("./sessions");
 
 const DEFAULT_PORT = 7310;
 const DEFAULT_MAX_AGENTS = 4;
@@ -218,19 +219,68 @@ function loadProjectHosts(cwd) {
   return { hosts: data.hosts };
 }
 
-function requestHandler(req, res) {
-  let pathname = "/";
+function json(res, status, body) {
+  const payload = `${JSON.stringify(body)}\n`;
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": Buffer.byteLength(payload),
+  });
+  res.end(payload);
+}
+
+function readJsonBody(req, limit = 1_000_000) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", (chunk) => {
+      raw += chunk;
+      if (raw.length > limit) {
+        req.destroy();
+        reject(new Error("body too large"));
+      }
+    });
+    req.on("end", () => {
+      if (!raw) {
+        resolve({});
+        return;
+      }
+      try {
+        resolve(JSON.parse(raw));
+      } catch {
+        reject(new Error("invalid JSON"));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+function parsePathname(req) {
+  return new URL(req.url || "/", `http://${BIND_HOST}`).pathname;
+}
+
+function sessionRoute(pathname) {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts[0] !== "api" || parts[1] !== "sessions") {
+    return null;
+  }
+  if (parts.length === 2) {
+    return { kind: "collection" };
+  }
+  const taskKey = decodeURIComponent(parts[2]);
+  const action = parts[3] || "item";
+  return { kind: "item", taskKey, action };
+}
+
+function serveStub(req, res) {
+  let pathname;
   try {
-    pathname = new URL(req.url || "/", `http://${BIND_HOST}`).pathname;
+    pathname = parsePathname(req);
   } catch {
     res.writeHead(400);
     res.end();
-    return;
+    return true;
   }
   if (req.method !== "GET" && req.method !== "HEAD") {
-    res.writeHead(405);
-    res.end();
-    return;
+    return false;
   }
   if (pathname === "/" || pathname === "/index.html") {
     const file = path.join(__dirname, "public", "index.html");
@@ -241,17 +291,143 @@ function requestHandler(req, res) {
     });
     if (req.method === "HEAD") {
       res.end();
-      return;
+      return true;
     }
     res.end(body);
+    return true;
+  }
+  return false;
+}
+
+function requestHandler(req, res) {
+  if (serveStub(req, res)) {
+    return;
+  }
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.writeHead(405);
+    res.end();
     return;
   }
   res.writeHead(404);
   res.end();
 }
 
-function startServer({ port }) {
-  const server = http.createServer(requestHandler);
+function handleSessionError(res, err) {
+  if (err instanceof SessionError) {
+    json(res, err.httpStatus, { error: err.message, code: err.code });
+    return;
+  }
+  json(res, 500, { error: err.message || String(err) });
+}
+
+async function handleApi(req, res, sessions) {
+  let pathname;
+  try {
+    pathname = parsePathname(req);
+  } catch {
+    res.writeHead(400);
+    res.end();
+    return;
+  }
+  const route = sessionRoute(pathname);
+  if (!route) {
+    json(res, 404, { error: "not found" });
+    return;
+  }
+  if (route.kind === "collection" && req.method === "GET") {
+    json(res, 200, { sessions: sessions.list(), selected: sessions.selected() });
+    return;
+  }
+  if (route.kind === "collection" && req.method === "POST") {
+    const body = await readJsonBody(req);
+    const created = await sessions.createSession({
+      taskKey: body.taskKey,
+      model: body.model,
+    });
+    json(res, 201, created);
+    return;
+  }
+  if (route.kind !== "item") {
+    json(res, 404, { error: "not found" });
+    return;
+  }
+  if (route.action === "events" && req.method === "GET") {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    const writeEvent = (event) => {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+    const snap = sessions.snapshot(route.taskKey);
+    writeEvent({ type: "snapshot", messages: snap.messages || [] });
+    const unsubscribe = sessions.subscribe(route.taskKey, writeEvent);
+    const keepAlive = setInterval(() => {
+      res.write(": ping\n\n");
+    }, 15000);
+    req.on("close", () => {
+      clearInterval(keepAlive);
+      unsubscribe();
+    });
+    return;
+  }
+  if (route.action === "item" && req.method === "GET") {
+    json(res, 200, sessions.snapshot(route.taskKey));
+    return;
+  }
+  if (route.action === "select" && req.method === "POST") {
+    json(res, 200, sessions.select(route.taskKey));
+    return;
+  }
+  if (route.action === "close" && req.method === "POST") {
+    json(res, 200, await sessions.closeSession(route.taskKey));
+    return;
+  }
+  if (route.action === "send" && req.method === "POST") {
+    const body = await readJsonBody(req);
+    const result = await sessions.send(route.taskKey, body.text, {
+      intent: body.intent,
+    });
+    json(res, 200, result);
+    return;
+  }
+  json(res, 405, { error: "method not allowed" });
+}
+
+function createRequestHandler({ sessions } = {}) {
+  return (req, res) => {
+    const run = async () => {
+      let pathname;
+      try {
+        pathname = parsePathname(req);
+      } catch {
+        res.writeHead(400);
+        res.end();
+        return;
+      }
+      if (sessions && pathname.startsWith("/api/")) {
+        try {
+          await handleApi(req, res, sessions);
+        } catch (err) {
+          if (!res.headersSent) {
+            handleSessionError(res, err);
+          }
+        }
+        return;
+      }
+      requestHandler(req, res);
+    };
+    run().catch((err) => {
+      if (!res.headersSent) {
+        handleSessionError(res, err);
+      }
+    });
+  };
+}
+
+function startServer({ port, handler }) {
+  const server = http.createServer(handler || requestHandler);
   return new Promise((resolve, reject) => {
     const onError = (err) => {
       server.off("error", onError);
@@ -263,6 +439,23 @@ function startServer({ port }) {
       resolve(server);
     });
   });
+}
+
+async function shutdownMonitor({ cwd, server, sessions, exitProcess = true }) {
+  if (sessions) {
+    await sessions.disposeAll();
+  }
+  removeOwnLock(cwd);
+  await new Promise((resolve) => {
+    if (!server) {
+      resolve();
+      return;
+    }
+    server.close(() => resolve());
+  });
+  if (exitProcess) {
+    process.exit(0);
+  }
 }
 
 function fail(message, code = 1) {
@@ -315,9 +508,16 @@ async function main(argv, ctx) {
     fail(`Host ${parsed.host} is not implemented.`);
   }
 
+  const sessions = createSessionRegistry({
+    cwd,
+    maxAgents: parsed.maxAgents,
+    env: process.env,
+  });
+  const handler = createRequestHandler({ sessions });
+
   let server;
   try {
-    server = await startServer({ port: parsed.port });
+    server = await startServer({ port: parsed.port, handler });
   } catch (err) {
     fail(`Could not bind ${BIND_HOST}:${parsed.port}: ${err.message}`);
   }
@@ -330,8 +530,12 @@ async function main(argv, ctx) {
   });
 
   const shutdown = () => {
-    removeOwnLock(cwd);
-    server.close(() => process.exit(0));
+    shutdownMonitor({ cwd, server, sessions, exitProcess: true }).catch(
+      (err) => {
+        console.error(err.message || String(err));
+        process.exit(1);
+      }
+    );
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
@@ -349,8 +553,10 @@ module.exports = {
   BIND_HOST,
   DEFAULT_MAX_AGENTS,
   DEFAULT_PORT,
+  createRequestHandler,
   main,
   parseArgs,
+  shutdownMonitor,
   startServer,
   usage,
 };

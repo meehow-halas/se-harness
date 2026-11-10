@@ -32,6 +32,7 @@ N independent Cursor Agent sessions in one Monitor process. This is the product 
 | Path | What |
 |------|------|
 | `monitor/` | session registry, SDK adapter, stream endpoint, lock, tests with a fake Agent |
+| [02-n4-sdk.md](02-n4-sdk.md) | N=4 note (CI fake; live SDK not measured in CI) |
 
 ## Behaviour
 
