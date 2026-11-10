@@ -221,6 +221,31 @@ function createSessionRegistry(options) {
     return message;
   }
 
+  function appendAssistantDelta(taskKey, text) {
+    const session = live.get(taskKey);
+    const messages = session ? session.messages : loadMessages(taskKey);
+    const last = messages[messages.length - 1];
+    if (last && last.role === "assistant") {
+      last.text = `${last.text || ""}${text}`;
+      last.at = nowIso();
+      if (session) {
+        session.messages = messages;
+      }
+      persistMessages(taskKey, messages);
+      events.emit(`session:${taskKey}`, {
+        type: "message",
+        message: last,
+        upsert: true,
+      });
+      return last;
+    }
+    return appendMessage(taskKey, {
+      role: "assistant",
+      text,
+      at: nowIso(),
+    });
+  }
+
   function acquirePlanitLock() {
     if (planitHeld) {
       throw new SessionError(
@@ -423,11 +448,7 @@ function createSessionRegistry(options) {
           }
           const assistant = extractAssistantText(event);
           if (assistant) {
-            appendMessage(key, {
-              role: "assistant",
-              text: assistant,
-              at: nowIso(),
-            });
+            appendAssistantDelta(key, assistant);
           }
         }
       }

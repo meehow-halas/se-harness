@@ -172,6 +172,15 @@
       return next;
     }
     if (event.type === "message" && event.message) {
+      const last = next.messages[next.messages.length - 1];
+      if (
+        event.upsert &&
+        last &&
+        last.role === event.message.role
+      ) {
+        next.messages[next.messages.length - 1] = event.message;
+        return next;
+      }
       next.messages.push(event.message);
       return next;
     }

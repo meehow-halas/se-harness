@@ -255,6 +255,100 @@ describe("session registry", () => {
     });
   });
 
+  test("assistant stream chunks coalesce into one persisted turn", async () => {
+    await withTempDir(async (cwd) => {
+      writeConfig(cwd);
+      const cli = createFakeAgentCli({
+        streamFor() {
+          return ["Z", "acz", "ynam"].map((text) => ({
+            type: "assistant",
+            message: { content: [{ type: "text", text }] },
+          }));
+        },
+      });
+      const sessions = registryFor(cwd, { cli });
+      await sessions.createSession({ taskKey: TASK_A, model: MODEL });
+      await sessions.send(TASK_A, "go");
+      const assistant = sessions
+        .snapshot(TASK_A)
+        .messages.filter((row) => row.role === "assistant");
+      assert.equal(assistant.length, 1);
+      assert.equal(assistant[0].text, "Zaczynam");
+      const stored = JSON.parse(
+        fs.readFileSync(
+          path.join(cwd, ".dhs", "monitor", "sessions", TASK_A, "messages.json"),
+          "utf8"
+        )
+      );
+      const storedAssistant = stored.filter((row) => row.role === "assistant");
+      assert.equal(storedAssistant.length, 1);
+      assert.equal(storedAssistant[0].text, "Zaczynam");
+    });
+  });
+
+  test("consultant chunks between assistant deltas are omitted and remaining text coalesces", async () => {
+    await withTempDir(async (cwd) => {
+      writeConfig(cwd);
+      const cli = createFakeAgentCli({
+        streamFor() {
+          return [
+            {
+              type: "assistant",
+              message: { content: [{ type: "text", text: "Z" }] },
+            },
+            {
+              type: "assistant",
+              agent: { name: "consultant" },
+              message: { content: [{ type: "text", text: "CONSULT hidden" }] },
+            },
+            {
+              type: "assistant",
+              message: { content: [{ type: "text", text: "acz" }] },
+            },
+            {
+              type: "assistant",
+              message: { content: [{ type: "text", text: "ynam" }] },
+            },
+          ];
+        },
+      });
+      const sessions = registryFor(cwd, { cli });
+      await sessions.createSession({ taskKey: TASK_A, model: MODEL });
+      await sessions.send(TASK_A, "go");
+      const texts = sessions.snapshot(TASK_A).messages.map((row) => row.text);
+      assert.equal(texts.includes("CONSULT hidden"), false);
+      const assistant = sessions
+        .snapshot(TASK_A)
+        .messages.filter((row) => row.role === "assistant");
+      assert.equal(assistant.length, 1);
+      assert.equal(assistant[0].text, "Zaczynam");
+    });
+  });
+
+  test("assistant turns separated by a user message stay distinct", async () => {
+    await withTempDir(async (cwd) => {
+      writeConfig(cwd);
+      const cli = createFakeAgentCli({
+        streamFor(text) {
+          const parts = text === "first" ? ["Alpha", "One"] : ["Beta", "Two"];
+          return parts.map((chunk) => ({
+            type: "assistant",
+            message: { content: [{ type: "text", text: chunk }] },
+          }));
+        },
+      });
+      const sessions = registryFor(cwd, { cli });
+      await sessions.createSession({ taskKey: TASK_A, model: MODEL });
+      await sessions.send(TASK_A, "first");
+      await sessions.send(TASK_A, "second");
+      const assistant = sessions
+        .snapshot(TASK_A)
+        .messages.filter((row) => row.role === "assistant")
+        .map((row) => row.text);
+      assert.deepEqual(assistant, ["AlphaOne", "BetaTwo"]);
+    });
+  });
+
   test("four live agents at default --max-agents 4 have distinct ids and independent send", async () => {
     await withTempDir(async (cwd) => {
       writeConfig(cwd);

@@ -12,6 +12,7 @@ const { withTempDir } = require("../test/helpers");
 const { BIND_HOST } = require("./index");
 const {
   MODE_INTERACTIVE,
+  applyStreamEvent,
   buildFirstPlanitPrompt,
   createChatController,
   isConsultantEvent,
@@ -265,6 +266,43 @@ describe("chat turns", () => {
     assert.deepEqual(
       shown.map((row) => row.text),
       ["go", "ok"]
+    );
+  });
+
+  test("upsert assistant deltas replace the last turn instead of appending", () => {
+    const first = applyStreamEvent(
+      { messages: [{ role: "user", text: "go" }] },
+      {
+        type: "message",
+        message: { role: "assistant", text: "Z" },
+      }
+    );
+    const second = applyStreamEvent(first, {
+      type: "message",
+      message: { role: "assistant", text: "Zaczynam" },
+      upsert: true,
+    });
+    assert.deepEqual(
+      second.messages.map((row) => row.text),
+      ["go", "Zaczynam"]
+    );
+  });
+
+  test("assistant messages without upsert stay distinct turns", () => {
+    const first = applyStreamEvent(
+      { messages: [] },
+      {
+        type: "message",
+        message: { role: "assistant", text: "Z" },
+      }
+    );
+    const second = applyStreamEvent(first, {
+      type: "message",
+      message: { role: "assistant", text: "acz" },
+    });
+    assert.deepEqual(
+      second.messages.map((row) => row.text),
+      ["Z", "acz"]
     );
   });
 });
