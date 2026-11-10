@@ -13,6 +13,12 @@ Full-viewport two-column shell with persisted width and filters, matching idea �
 - Right: remaining width; chat column + composer stub; chat+input in a narrow center column (pick px in implementation, ~680–760 like Claude Code, document the number in this file when chosen)
 - Composer at the bottom; Send; Enter to send (no-op or local echo until phase 5)
 
+## Implementation notes
+
+Chat + composer column width: **720px** (within ~680–760, similar to Claude Code). CSS variable `--chat-width`.
+
+`localStorage` keys: `dhs.monitor.leftWidth` (px), `dhs.monitor.filters` (`name`, `status`, `hideDone`). Default `hideDone` is true. Hidden status string is `agents.tracker.statuses.done` when that map is present, otherwise `agents.statuses.done`.
+
 ## Out of scope
 
 - Tracker glob / Jira

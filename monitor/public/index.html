@@ -2,9 +2,56 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Monitor</title>
+    <link rel="stylesheet" href="/app.css" />
   </head>
   <body>
-    <p>Monitor</p>
+    <div id="app">
+      <aside id="left-pane">
+        <header class="left-header">
+          <h1>Monitor</h1>
+          <button type="button" id="add-task">Add</button>
+        </header>
+        <form id="filters" class="filters">
+          <label class="filters-field">
+            <span>Name</span>
+            <input id="filter-name" type="search" autocomplete="off" />
+          </label>
+          <label class="filters-field">
+            <span>Status</span>
+            <select id="filter-status">
+              <option value="">Any</option>
+            </select>
+          </label>
+          <label class="filters-check">
+            <input id="filter-hide-done" type="checkbox" />
+            <span>Hide <span id="done-label">done</span></span>
+          </label>
+        </form>
+        <ul id="task-list" class="task-list"></ul>
+      </aside>
+      <div
+        id="divider"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize task list"
+      ></div>
+      <main id="right-pane">
+        <div id="chat-column">
+          <div id="chat-log" class="chat-log" aria-live="polite"></div>
+          <form id="composer" class="composer">
+            <textarea
+              id="composer-input"
+              rows="2"
+              placeholder="Message"
+            ></textarea>
+            <button type="submit" id="composer-send">Send</button>
+          </form>
+        </div>
+      </main>
+    </div>
+    <script src="/layout.js"></script>
+    <script src="/app.js"></script>
   </body>
 </html>
