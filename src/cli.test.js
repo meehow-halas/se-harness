@@ -284,6 +284,7 @@ describe("dhs install", () => {
         "update-from-base",
         "return-to-base",
         "check-update",
+        "jira",
       ]) {
         const mode = fs.statSync(path.join(project, ".dhs", "scripts", name)).mode;
         assert.notEqual(mode & 0o111, 0, name);

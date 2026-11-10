@@ -126,7 +126,7 @@ EOF
 exit ${Number(jiraSearchExit) || 0}
 `
     );
-    fs.chmodSync(script, 0o755);
+    fs.chmodSync(script, 0o644);
   }
   return {
     curlLog,
@@ -328,6 +328,10 @@ title: ZX9 unique shipped title
 depends:
 `,
       });
+      assert.equal(
+        fs.statSync(path.join(cwd, ".dhs", "scripts", "jira")).mode & 0o111,
+        0
+      );
       const port = await allocPort();
       const started = startMonitor(["--host", "cursor", "--port", String(port)], {
         cwd,

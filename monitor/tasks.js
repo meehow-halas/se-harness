@@ -294,16 +294,26 @@ function runJiraSearch(cwd, env) {
       status: 1,
     };
   }
-  const result = spawnSync(script, ["search"], {
+  const result = spawnSync("sh", [script, "search"], {
     cwd,
     encoding: "utf8",
     env: env || process.env,
   });
   const stdout = result.stdout || "";
   const stderr = result.stderr || "";
-  if (result.status !== 0) {
-    const message = (stdout.trim() || stderr.trim() || "jira search failed");
-    return { error: message, stdout, status: result.status };
+  if (result.error || result.status !== 0) {
+    const spawnMsg = result.error ? result.error.message : "";
+    const message = (
+      stdout.trim() ||
+      stderr.trim() ||
+      spawnMsg ||
+      "jira search failed"
+    );
+    return {
+      error: message,
+      stdout,
+      status: result.status == null ? 1 : result.status,
+    };
   }
   return { stdout, status: 0 };
 }
