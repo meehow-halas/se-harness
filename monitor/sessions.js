@@ -11,7 +11,14 @@ const {
   visibleChatMessages,
 } = require("./chat");
 const { uiConfigFromHarness } = require("./layout");
-const { listTasks } = require("./tasks");
+const { dhsWorktreeExists, listTasks } = require("./tasks");
+const {
+  ACTION_CLOSE,
+  ACTION_DOIT,
+  ACTION_REVIEW,
+  buildStagePrompt,
+  gateStageSend,
+} = require("./stage-buttons");
 
 const SESSIONS_REL = path.join(".dhs", "monitor", "sessions");
 const PLANIT_LOCK_REL = path.join(".dhs", "monitor", "planit.lock");
@@ -90,10 +97,35 @@ function isPlanitSend(text, intent) {
   return typeof text === "string" && text.includes("/dhs-planit");
 }
 
-function architectCursorModel(cwd) {
+function cursorModelForRole(cwd, role) {
   const config = readJsonIfPresent(path.join(cwd, "harness.config.json"), null);
-  const model = uiConfigFromHarness(config).defaultModel;
-  return model;
+  const roles = config && config.agents && config.agents.roles;
+  const entry = roles && roles[role];
+  const model = entry && entry.model && entry.model.cursor;
+  return typeof model === "string" && model.trim() !== "" ? model.trim() : null;
+}
+
+function architectCursorModel(cwd) {
+  return cursorModelForRole(cwd, "architect");
+}
+
+function modelForIntent(cwd, intent, fallback) {
+  if (intent === "planit") {
+    return architectCursorModel(cwd) || fallback;
+  }
+  if (intent === ACTION_DOIT) {
+    return cursorModelForRole(cwd, "implementer") || fallback;
+  }
+  if (intent === ACTION_REVIEW || intent === ACTION_CLOSE) {
+    return cursorModelForRole(cwd, "reviewer") || fallback;
+  }
+  return fallback;
+}
+
+function harnessBaseBranch(cwd) {
+  const config = readJsonIfPresent(path.join(cwd, "harness.config.json"), null);
+  const branch = config && config.agents && config.agents.baseBranch;
+  return typeof branch === "string" ? branch.trim() : "";
 }
 
 function allocateDraftKey(cwd, live) {
@@ -331,9 +363,7 @@ function createSessionRegistry(options) {
       key = allocateDraftKey(cwd, live);
     }
     key = assertTaskKey(key);
-    const resolvedModel = planit
-      ? architectCursorModel(cwd) || model
-      : model;
+    const resolvedModel = modelForIntent(cwd, intent, model);
     const existing = live.get(key);
     if (existing) {
       selected = key;
@@ -471,6 +501,43 @@ function createSessionRegistry(options) {
     }
   }
 
+  async function startStage(taskKey, { action, confirmed } = {}) {
+    const key = assertTaskKey(taskKey);
+    const gate = gateStageSend({ action, confirmed });
+    if (!gate.allowed) {
+      const confirm = gate.code === "confirm_required";
+      throw new SessionError(
+        confirm
+          ? "Close requires confirm"
+          : "Unknown stage action",
+        {
+          code: gate.code,
+          httpStatus: 400,
+        }
+      );
+    }
+    const prompt = buildStagePrompt({
+      action,
+      taskKey: key,
+      baseBranch: harnessBaseBranch(cwd),
+    });
+    if (!prompt) {
+      throw new SessionError("Could not build stage prompt", {
+        code: "invalid_stage",
+      });
+    }
+    if (!live.get(key) || !live.get(key).agent) {
+      await createSession({ taskKey: key, intent: action });
+    }
+    const worktreeExists = dhsWorktreeExists(cwd, key);
+    const result = await send(key, prompt, { intent: action });
+    return {
+      ...result,
+      taskKey: result.taskKey || key,
+      worktreeExists,
+    };
+  }
+
   async function closeSession(taskKey) {
     const key = assertTaskKey(taskKey);
     const session = live.get(key);
@@ -529,6 +596,7 @@ function createSessionRegistry(options) {
     createSession,
     select,
     send,
+    startStage,
     closeSession,
     disposeAll,
     subscribe,
@@ -545,6 +613,7 @@ module.exports = {
   SESSIONS_REL,
   SessionError,
   architectCursorModel,
+  cursorModelForRole,
   createSessionRegistry,
   filesTrackerActive,
   loadCursorSdk,

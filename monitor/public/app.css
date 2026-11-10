@@ -169,6 +169,49 @@ button {
   color: var(--text);
 }
 
+#stage-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+#stage-bar[hidden] {
+  display: none;
+}
+
+#stage-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.worktree-warn {
+  margin: 0;
+  color: #e8b86d;
+  font-size: 12px;
+}
+
+#close-confirm {
+  background: var(--bg-chat);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+#close-confirm::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+#close-confirm form {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 #chat-stage {
   position: relative;
   flex: 1 1 auto;

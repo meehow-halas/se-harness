@@ -255,6 +255,41 @@
       return view();
     }
 
+    async function startStage(action, { confirmed } = {}) {
+      const taskKey = selected;
+      if (!taskKey) {
+        return { started: false };
+      }
+      if (action === "close" && confirmed !== true) {
+        return { started: false, needsConfirm: true };
+      }
+      if (typeof client.stage !== "function") {
+        return { started: false };
+      }
+      try {
+        const result = await client.stage(taskKey, { action, confirmed });
+        watch(taskKey);
+        if (typeof client.refreshTasks === "function") {
+          await client.refreshTasks();
+        }
+        notify();
+        return {
+          started: true,
+          taskKey: result && result.taskKey ? result.taskKey : taskKey,
+          action,
+          worktreeExists: Boolean(result && result.worktreeExists),
+        };
+      } catch (err) {
+        const row = ensureRow(taskKey);
+        row.messages.push({
+          role: "status",
+          text: err && err.message ? err.message : String(err),
+        });
+        notify();
+        return { started: false, error: err };
+      }
+    }
+
     async function submit(text) {
       const trimmed = trimComposer(text);
       const taskKey = selected;
@@ -331,6 +366,7 @@
         modelId = next;
       },
       startAdd,
+      startStage,
       selectTask,
       submit,
       view,
