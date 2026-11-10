@@ -8,8 +8,9 @@ After `dhs install`, the consuming project can start Monitor locally: `node .dhs
 
 - Package directory `monitor/` (seventh payload). Entry that Node can run (`node .dhs/monitor`).
 - `dhs install` copies `monitor/` to `.dhs/monitor/` and vendors `@cursor/sdk` (and its runtime deps) from the installer package into `.dhs/monitor/node_modules`. No `npm install` in the consumer root. Do not copy `*.test.js`.
-- `package.json` of `dev-harness-layer`: `files` includes `monitor/`; add `@cursor/sdk` as a package dependency so the installer has it to copy.
-- [`src/cli.js`](../../src/cli.js) `PAYLOAD_DIRS` includes `monitor`.
+- `package.json` of `dev-harness-layer`: `files` includes `monitor/`; add `@cursor/sdk` as a package dependency so the installer has it to copy; `scripts.test` also runs `monitor/*.test.js` (`npm test` stays `node:test`).
+- [`src/cli.js`](../../src/cli.js) `PAYLOAD_DIRS` includes `monitor`. Uninstall already deletes `.dhs/`; no extra uninstall path except the optional npm script exact-match rule.
+- Repo [AGENTS.md](../../AGENTS.md): add `monitor/` as a payload directory copied to `.dhs/monitor/`. Do not add a `dhs monitor` command. Do not rewrite v1 Deferred.
 - Optional consumer `package.json` script `dhs:monitor` (see index **Accepted decisions**). Uninstall removes it only on exact match.
 - CLI flags: `--host` required; `--port` optional (default 7310); `--max-agents` parsed here and stored for phase 2 (default 4). Unknown host id in `hosts.json`: stop. Host other than `cursor`: stop with “not implemented” (no fallback).
 - Bind `127.0.0.1` only. Instance lock `.dhs/monitor/instance.lock`. Second start in the same cwd: print URL, exit 0.
@@ -33,10 +34,11 @@ After `dhs install`, the consuming project can start Monitor locally: `node .dhs
 
 | Path | What |
 |------|------|
-| `monitor/` | launcher, HTTP server, stub UI, tests |
-| `package.json` | `files` + `@cursor/sdk` dependency |
+| `monitor/` | launcher, HTTP server, stub UI, tests (`*.test.js` next to the unit) |
+| `package.json` | `files` + `@cursor/sdk` + `scripts.test` includes `monitor/*.test.js` |
 | `src/cli.js` | copy `monitor/`; vendor node_modules; optional npm script |
 | `src/cli.test.js` | copy, exclude tests, script merge/uninstall, vendor dir present |
+| `AGENTS.md` | seventh payload dir; CLI still `install` / `uninstall` only |
 
 ## Behaviour
 
@@ -54,3 +56,4 @@ After `dhs install`, the consuming project can start Monitor locally: `node .dhs
 - Guards match the contract (exit nonzero + message) for missing install, missing config, VERSION mismatch
 - Stub page is reachable on the printed URL after a successful start in a fixture project
 - CLI still accepts only `install` and `uninstall` as `dhs` subcommands
+- `AGENTS.md` lists `monitor/` as a copied payload; `npm test` runs `monitor/*.test.js`

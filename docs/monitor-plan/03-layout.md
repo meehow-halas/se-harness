@@ -21,7 +21,7 @@ Full-viewport two-column shell with persisted width and filters, matching idea �
 
 ## Inputs
 
-- Idea §6; [web-panel.txt](../ideas/web-panel.txt) for sketch only — idea file wins
+- Idea §6; [monitor.txt](../ideas/monitor.txt) for the raw layout sketch only (the idea file names this `web-panel.txt`; that path is not in the repo) — idea file wins
 
 ## Outputs
 
