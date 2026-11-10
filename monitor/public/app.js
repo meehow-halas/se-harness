@@ -8,6 +8,7 @@
   const leftPane = document.getElementById("left-pane");
   const divider = document.getElementById("divider");
   const taskList = document.getElementById("task-list");
+  const taskListError = document.getElementById("task-list-error");
   const filterName = document.getElementById("filter-name");
   const filterStatus = document.getElementById("filter-status");
   const filterHideDone = document.getElementById("filter-hide-done");
@@ -140,6 +141,14 @@
 
   function applyTasksPayload(payload) {
     allTasks = Array.isArray(payload && payload.tasks) ? payload.tasks : [];
+    const err = payload && typeof payload.error === "string" ? payload.error : "";
+    if (err) {
+      taskListError.hidden = false;
+      taskListError.textContent = err;
+    } else {
+      taskListError.hidden = true;
+      taskListError.textContent = "";
+    }
     renderTasks();
     renderStage();
   }
@@ -378,7 +387,17 @@
     fetch("/api/config").then((res) =>
       res.ok ? res.json() : { statuses: {}, doneStatus: null }
     ),
-    fetch("/api/tasks").then((res) => (res.ok ? res.json() : { tasks: [] })),
+    fetch("/api/tasks").then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      if (!res.ok) {
+        return {
+          tasks,
+          error: data.error || res.statusText || "request failed",
+        };
+      }
+      return data;
+    }),
   ])
     .then(([config, payload]) => {
       doneStatus = config.doneStatus || null;

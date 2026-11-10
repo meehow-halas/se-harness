@@ -264,6 +264,7 @@ describe("layout chrome over HTTP", () => {
         const page = await get("/", port);
         assert.equal(page.status, 200);
         assert.match(page.body, /id="left-pane"/);
+        assert.match(page.body, /id="task-list-error"/);
         assert.match(page.body, /id="right-pane"/);
         assert.match(page.body, />Add</);
         assert.match(page.body, /id="composer"/);

@@ -103,7 +103,16 @@ for (let i = 0; i < args.length; i++) {
 const u = new URL(url);
 const key = method + " " + u.pathname;
 const routes = JSON.parse(fs.readFileSync(routesFile, "utf8"));
-const hit = routes[key] || routes[key.replace(/\\/$/, "")] || { code: 404, body: { errorMessages: ["no stub for " + key] } };
+const hitRaw = routes[key] || routes[key.replace(/\\/$/, "")] || { code: 404, body: { errorMessages: ["no stub for " + key] } };
+let hit = hitRaw;
+if (Array.isArray(hitRaw)) {
+  const seqFile = ${JSON.stringify(path.join(bin, "seq.json"))};
+  const seq = fs.existsSync(seqFile) ? JSON.parse(fs.readFileSync(seqFile, "utf8")) : {};
+  const idx = seq[key] || 0;
+  hit = hitRaw[idx] || { code: 404, body: { errorMessages: ["no stub for " + key] } };
+  seq[key] = idx + 1;
+  fs.writeFileSync(seqFile, JSON.stringify(seq));
+}
 fs.appendFileSync(dataLog, JSON.stringify({ key, data, search: u.search }) + "\\n");
 const body = typeof hit.body === "string" ? hit.body : JSON.stringify(hit.body || {});
 if (out) fs.writeFileSync(out, body);
@@ -211,7 +220,7 @@ function defaultRoutes(extra = {}) {
       },
     },
     "POST /rest/api/3/issueLink": { code: 201, body: {} },
-    "POST /rest/api/3/search": {
+    "POST /rest/api/3/search/jql": {
       code: 200,
       body: {
         issues: [
@@ -226,6 +235,14 @@ function defaultRoutes(extra = {}) {
                   outwardIssue: { key: "QX7-7" },
                 },
               ],
+            },
+          },
+          {
+            key: "QX7-55",
+            fields: {
+              summary: "QX7 already in review queue",
+              status: { name: "In Review Queue" },
+              issuelinks: [],
             },
           },
         ],
@@ -244,6 +261,18 @@ function argvHasToken(logFile, token) {
     return false;
   }
   return fs.readFileSync(logFile, "utf8").includes(token);
+}
+
+function searchUrlsFromLog(logFile) {
+  if (!fs.existsSync(logFile)) {
+    return [];
+  }
+  return fs
+    .readFileSync(logFile, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .flatMap((line) => JSON.parse(line))
+    .filter((arg) => String(arg).includes("/rest/api/3/search"));
 }
 
 describe("jira", () => {
@@ -441,22 +470,36 @@ describe("jira", () => {
       assert.match(result.stdout, /status: Queued For Build/);
       assert.match(result.stdout, /title: Unique title from QX7/);
       assert.match(result.stdout, /depends: QX7-7/);
+      assert.match(result.stdout, /key: QX7-55/);
+      assert.match(result.stdout, /status: In Review Queue/);
       assert.equal(result.stdout.includes(FIX.token), false);
       const rows = fs
         .readFileSync(stub.dataFile, "utf8")
         .split("\n")
         .filter(Boolean)
         .map((line) => JSON.parse(line));
-      const search = rows.find((row) => row.key === "POST /rest/api/3/search");
+      const search = rows.find((row) => row.key === "POST /rest/api/3/search/jql");
       assert.ok(search, result.stdout);
+      assert.equal(
+        rows.some((row) => row.key === "POST /rest/api/3/search"),
+        false
+      );
       const body = JSON.parse(search.data);
       assert.match(body.jql, new RegExp(FIX.projectKey));
       assert.match(body.jql, new RegExp(FIX.featureType));
       assert.match(body.jql, new RegExp(FIX.bugType));
+      assert.equal(/\bstatus\b/i.test(body.jql), false);
       assert.equal(body.jql.includes("PROJ"), false);
       assert.equal(body.jql.includes("Bug"), false);
-      const argv = JSON.parse(fs.readFileSync(stub.logFile, "utf8").split("\n")[0]);
-      assert.ok(argv.some((a) => String(a).includes(`${FIX.url}/rest/api/3/search`)));
+      const urls = searchUrlsFromLog(stub.logFile);
+      assert.ok(urls.length >= 1);
+      assert.ok(
+        urls.every((a) => String(a).includes(`${FIX.url}/rest/api/3/search/jql`))
+      );
+      assert.equal(
+        urls.some((a) => /\/rest\/api\/3\/search$/.test(String(a))),
+        false
+      );
       assert.equal(argvHasToken(stub.logFile, FIX.token), false);
     });
   });
@@ -471,7 +514,7 @@ describe("jira", () => {
         },
       });
       const routes = defaultRoutes({
-        "POST /rest/api/3/search": {
+        "POST /rest/api/3/search/jql": {
           code: 200,
           body: {
             issues: [
@@ -497,22 +540,93 @@ describe("jira", () => {
         .split("\n")
         .filter(Boolean)
         .map((line) => JSON.parse(line));
-      const search = rows.find((row) => row.key === "POST /rest/api/3/search");
+      const search = rows.find((row) => row.key === "POST /rest/api/3/search/jql");
       const body = JSON.parse(search.data);
       assert.match(body.jql, /ZY3/);
       assert.match(body.jql, /Work Packet/);
       assert.match(body.jql, /Incident Ticket/);
+      assert.equal(/\bstatus\b/i.test(body.jql), false);
       assert.equal(body.jql.includes(FIX.projectKey), false);
       assert.equal(body.jql.includes(FIX.featureType), false);
-      const argv = JSON.parse(fs.readFileSync(stub.logFile, "utf8").split("\n")[0]);
+      const urls = searchUrlsFromLog(stub.logFile);
       assert.ok(
-        argv.some((a) =>
-          String(a).includes("https://jira.zy3.example.test/rest/api/3/search")
+        urls.every((a) =>
+          String(a).includes("https://jira.zy3.example.test/rest/api/3/search/jql")
         )
       );
       assert.equal(
-        argv.some((a) => String(a).includes(FIX.url)),
+        urls.some((a) => /\/rest\/api\/3\/search$/.test(String(a))),
         false
+      );
+      assert.equal(
+        urls.some((a) => String(a).includes(FIX.url)),
+        false
+      );
+    });
+  });
+
+  test("search follows nextPageToken and lists todo plus later-page statuses", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd);
+      const token = "page-two-zx9-token";
+      const routes = defaultRoutes({
+        "POST /rest/api/3/search/jql": [
+          {
+            code: 200,
+            body: {
+              nextPageToken: token,
+              issues: [
+                {
+                  key: "QX7-42",
+                  fields: {
+                    summary: "Unique title from QX7",
+                    status: { name: FIX.todoStatus },
+                    issuelinks: [],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            code: 200,
+            body: {
+              issues: [
+                {
+                  key: "QX7-61",
+                  fields: {
+                    summary: "QX7 unique moving title",
+                    status: { name: "In Review Queue" },
+                    issuelinks: [],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      });
+      const stub = writeCurlStub(cwd, routes);
+      const result = runJira(cwd, ["search"], stub.env);
+      assert.equal(result.status, 0, result.stderr + result.stdout);
+      assert.match(result.stdout, /key: QX7-42/);
+      assert.match(result.stdout, /status: Queued For Build/);
+      assert.match(result.stdout, /key: QX7-61/);
+      assert.match(result.stdout, /status: In Review Queue/);
+      const rows = fs
+        .readFileSync(stub.dataFile, "utf8")
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line));
+      const searches = rows.filter((row) => row.key === "POST /rest/api/3/search/jql");
+      assert.equal(searches.length, 2, result.stdout);
+      const first = JSON.parse(searches[0].data);
+      const second = JSON.parse(searches[1].data);
+      assert.equal(first.nextPageToken, undefined);
+      assert.equal(second.nextPageToken, token);
+      assert.equal(/\bstatus\b/i.test(first.jql), false);
+      const urls = searchUrlsFromLog(stub.logFile);
+      assert.equal(urls.length, 2);
+      assert.ok(
+        urls.every((a) => String(a).includes(`${FIX.url}/rest/api/3/search/jql`))
       );
     });
   });

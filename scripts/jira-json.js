@@ -260,13 +260,27 @@ if (cmd === "search-jql") {
 if (cmd === "search-body") {
   const t = trackerFrom(readJson(process.argv[3]));
   const jql = buildSearchJql(t);
-  process.stdout.write(
-    JSON.stringify({
-      jql,
-      fields: ["summary", "status", "issuelinks"],
-      maxResults: 100,
-    })
-  );
+  const token =
+    typeof process.argv[4] === "string" ? process.argv[4].trim() : "";
+  const body = {
+    jql,
+    fields: ["summary", "status", "issuelinks"],
+    maxResults: 100,
+  };
+  if (token) {
+    body.nextPageToken = token;
+  }
+  process.stdout.write(JSON.stringify(body));
+  process.exit(0);
+}
+
+if (cmd === "search-next-token") {
+  const body = readJson(process.argv[3]);
+  const token =
+    body && typeof body.nextPageToken === "string"
+      ? body.nextPageToken.trim()
+      : "";
+  process.stdout.write(token);
   process.exit(0);
 }
 

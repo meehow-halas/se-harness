@@ -11,6 +11,7 @@ const { spawn } = require("child_process");
 const { withTempDir, writeFile } = require("../test/helpers");
 const { BIND_HOST } = require("./index");
 const { listTasks } = require("./tasks");
+const { filterTasks, parseFilters } = require("./layout");
 
 const REPO_ROOT = path.join(__dirname, "..");
 
@@ -85,7 +86,7 @@ function writeReadyProject(dir, { agents } = {}) {
   copyMonitorRuntime(path.join(dir, ".dhs", "monitor"));
 }
 
-function writeSpyBin(cwd, { jiraSearchOut, recordCurl } = {}) {
+function writeSpyBin(cwd, { jiraSearchOut, jiraSearchExit = 0, recordCurl } = {}) {
   const bin = path.join(cwd, ".spy-bin");
   fs.mkdirSync(bin, { recursive: true });
   const curlLog = path.join(bin, "curl.called");
@@ -122,6 +123,7 @@ fi
 cat <<'EOF'
 ${jiraSearchOut}
 EOF
+exit ${Number(jiraSearchExit) || 0}
 `
     );
     fs.chmodSync(script, 0o755);
@@ -316,6 +318,14 @@ key: ZX9-2
 status: Waiting Lab
 title: ZX9 still open dep
 depends:
+key: ZX9-4
+status: Moving Lab
+title: ZX9 unique in-flight title
+depends:
+key: ZX9-9
+status: Shipped Lab
+title: ZX9 unique shipped title
+depends:
 `,
       });
       const port = await allocPort();
@@ -329,7 +339,12 @@ depends:
         assert.equal(res.status, 200, res.body);
         const body = JSON.parse(res.body);
         const titles = body.tasks.map((row) => row.title).sort();
-        assert.deepEqual(titles, ["ZX9 still open dep", "ZX9 unique panel title"]);
+        assert.deepEqual(titles, [
+          "ZX9 still open dep",
+          "ZX9 unique in-flight title",
+          "ZX9 unique panel title",
+          "ZX9 unique shipped title",
+        ]);
         assert.equal(
           body.tasks.some((row) => row.title === "Leftover file must not appear"),
           false
@@ -337,12 +352,40 @@ depends:
         const open = body.tasks.find((row) => row.key === "ZX9-11");
         assert.equal(open.status, "Waiting Lab");
         assert.equal(open.dependsUnmet, true);
+        assert.equal(
+          body.tasks.find((row) => row.key === "ZX9-4").status,
+          "Moving Lab"
+        );
+        assert.equal(
+          body.tasks.find((row) => row.key === "ZX9-9").status,
+          "Shipped Lab"
+        );
+        const visible = filterTasks(
+          body.tasks,
+          parseFilters(null),
+          "Shipped Lab"
+        );
+        assert.equal(
+          visible.some((row) => row.status === "Waiting Lab"),
+          true
+        );
+        assert.equal(
+          visible.some((row) => row.status === "Moving Lab"),
+          true
+        );
+        assert.equal(
+          visible.some((row) => row.status === "Shipped Lab"),
+          false
+        );
         const page = await get("/", port);
         assert.match(page.body, /id="task-list"/);
+        assert.match(page.body, /id="task-list-error"/);
         const app = await get("/app.js", port);
         assert.match(app.body, /\/api\/tasks/);
         assert.match(app.body, /task\.title/);
         assert.match(app.body, /task\.status/);
+        assert.match(app.body, /payload\.error/);
+        assert.match(app.body, /task-list-error/);
         assert.equal(fs.existsSync(spy.curlLog), false);
         assert.equal(fs.existsSync(spy.pathJiraLog), false);
         const jiraCalls = fs
@@ -352,6 +395,54 @@ depends:
           .filter(Boolean);
         assert.ok(jiraCalls.length >= 1);
         assert.ok(jiraCalls.every((line) => line.trim() === "search"));
+      } finally {
+        await stopMonitor(started.child);
+      }
+    });
+  });
+
+  test("jira search BLOCKED is returned as error instead of a silent empty list", async () => {
+    await withTempDir(async (cwd) => {
+      writeReadyProject(cwd, {
+        agents: {
+          docs: ["docs/prd.md"],
+          baseBranch: "trunk",
+          tracker: {
+            url: "https://jira.zx9.example.test",
+            user: "zx9.owner@example.test",
+            projectKey: "ZX9",
+            issueTypes: { feature: "Work Packet", bug: "Incident Ticket" },
+            statuses: { todo: "Waiting Lab", done: "Shipped Lab" },
+          },
+        },
+      });
+      writeFile(cwd, "docs/prd.md", "prd\n");
+      const spy = writeSpyBin(cwd, {
+        jiraSearchOut:
+          "BLOCKED: Jira HTTP 410 Gone — migrate to /rest/api/3/search/jql",
+        jiraSearchExit: 1,
+      });
+      const port = await allocPort();
+      const started = startMonitor(["--host", "cursor", "--port", String(port)], {
+        cwd,
+        env: spy.env,
+      });
+      try {
+        await started.waitForUrl();
+        const res = await get("/api/tasks", port);
+        assert.equal(res.status, 200, res.body);
+        const body = JSON.parse(res.body);
+        assert.deepEqual(body.tasks, []);
+        assert.match(body.error, /BLOCKED: Jira HTTP 410 Gone/);
+        assert.match(body.error, /search\/jql/);
+        const page = await get("/", port);
+        assert.match(page.body, /id="task-list-error"/);
+        const app = await get("/app.js", port);
+        assert.match(app.body, /payload\.error/);
+        assert.doesNotMatch(
+          app.body,
+          /fetch\("\/api\/tasks"\)\.then\(\(res\) => \(res\.ok \? res\.json\(\) : \{ tasks: \[\] \}\)\)/
+        );
       } finally {
         await stopMonitor(started.child);
       }
