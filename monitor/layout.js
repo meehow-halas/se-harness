@@ -140,11 +140,17 @@
       typeof statuses.done === "string" && statuses.done.trim() !== ""
         ? statuses.done
         : null;
+    const agents = config && config.agents;
+    const baseBranch =
+      agents && typeof agents.baseBranch === "string" && agents.baseBranch.trim()
+        ? agents.baseBranch.trim()
+        : "";
     return {
       statuses,
       doneStatus: done,
       defaultModel: defaultCursorModel(config),
       mode: "interactive",
+      baseBranch,
     };
   }
 

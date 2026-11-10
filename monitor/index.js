@@ -297,6 +297,9 @@ function resolveStaticFile(pathname) {
   if (pathname === "/chat.js") {
     return path.join(__dirname, "chat.js");
   }
+  if (pathname === "/stage-buttons.js") {
+    return path.join(__dirname, "stage-buttons.js");
+  }
   if (pathname.includes("..")) {
     return null;
   }
@@ -457,6 +460,16 @@ async function handleApi(req, res, { sessions, cwd } = {}) {
     const body = await readJsonBody(req);
     const result = await sessions.send(route.taskKey, body.text, {
       intent: body.intent,
+    });
+    json(res, 200, result);
+    return;
+  }
+  if (route.action === "stage" && req.method === "POST") {
+    const body = await readJsonBody(req);
+    const result = await sessions.startStage(route.taskKey, {
+      action: body.action,
+      confirmed: body.confirmed,
+      keys: body.keys,
     });
     json(res, 200, result);
     return;

@@ -3,6 +3,7 @@
 
   const layout = window.MonitorLayout;
   const chatLib = window.MonitorChat;
+  const stageLib = window.MonitorStage;
   const app = document.getElementById("app");
   const leftPane = document.getElementById("left-pane");
   const divider = document.getElementById("divider");
@@ -17,8 +18,15 @@
   const chatLog = document.getElementById("chat-log");
   const chatLoader = document.getElementById("chat-loader");
   const jumpLatest = document.getElementById("jump-latest");
+  const stageBar = document.getElementById("stage-bar");
+  const stageButtons = document.getElementById("stage-buttons");
+  const worktreeWarn = document.getElementById("worktree-warn");
+  const closeConfirm = document.getElementById("close-confirm");
+  const closeConfirmText = document.getElementById("close-confirm-text");
 
   let doneStatus = null;
+  let uiStatuses = {};
+  let baseBranch = "";
   let allTasks = [];
   let stickToBottom = true;
 
@@ -72,6 +80,12 @@
           mode: extra && extra.mode,
           intent: extra && extra.intent,
         },
+      });
+    },
+    stage(taskKey, { action, confirmed } = {}) {
+      return jsonRequest(`/api/sessions/${encodeURIComponent(taskKey)}/stage`, {
+        method: "POST",
+        body: { action, confirmed },
       });
     },
     snapshot(taskKey) {
@@ -158,6 +172,44 @@
     }
   }
 
+  function selectedTask() {
+    const key = controller.view().selected;
+    if (!key) {
+      return null;
+    }
+    return allTasks.find((task) => task.key === key) || null;
+  }
+
+  function renderStage() {
+    const task = selectedTask();
+    const buttons = stageLib.visibleStageButtons(task, {
+      statuses: uiStatuses,
+      baseBranch,
+    });
+    stageButtons.replaceChildren();
+    if (!task || buttons.length === 0) {
+      stageBar.hidden = !task || !task.worktreeExists;
+    } else {
+      stageBar.hidden = false;
+    }
+    for (const button of buttons) {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.dataset.stage = button.id;
+      el.textContent = button.label;
+      stageButtons.append(el);
+    }
+    if (task && task.worktreeExists) {
+      worktreeWarn.hidden = false;
+      worktreeWarn.textContent =
+        "A dhs worktree for this task already exists (IDE may be using it). Starting here reuses it.";
+      stageBar.hidden = false;
+    } else {
+      worktreeWarn.hidden = true;
+      worktreeWarn.textContent = "";
+    }
+  }
+
   function persistFilters() {
     layout.writeFilters(window.localStorage, currentFilters());
     renderTasks();
@@ -235,6 +287,7 @@
     }
     controller.selectTask(row.dataset.key).then(() => {
       renderTasks();
+      renderStage();
       composerInput.focus();
     });
   });
@@ -272,9 +325,37 @@
     }
   });
 
+  stageButtons.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-stage]");
+    if (!button) {
+      return;
+    }
+    const action = button.dataset.stage;
+    if (action === stageLib.ACTION_CLOSE) {
+      const task = selectedTask();
+      const label = baseBranch
+        ? `Confirm the GitHub PR for ${task && task.key} is merged to ${baseBranch}, then close this task only.`
+        : "Confirm the GitHub PR is merged, then close this task only.";
+      closeConfirmText.textContent = label;
+      if (typeof closeConfirm.showModal === "function") {
+        closeConfirm.showModal();
+      }
+      return;
+    }
+    controller.startStage(action);
+  });
+
+  closeConfirm.addEventListener("close", () => {
+    if (closeConfirm.returnValue !== "confirm") {
+      return;
+    }
+    controller.startStage(stageLib.ACTION_CLOSE, { confirmed: true });
+  });
+
   controller.subscribe((view) => {
     renderChat(view);
     renderTasks();
+    renderStage();
   });
 
   restorePrefs();
@@ -287,6 +368,8 @@
   ])
     .then(([config, payload]) => {
       doneStatus = config.doneStatus || null;
+      uiStatuses = config.statuses || {};
+      baseBranch = config.baseBranch || "";
       if (doneStatus) {
         doneLabel.textContent = doneStatus;
       }
@@ -300,6 +383,7 @@
       }
       controller.setDefaultModel(config.defaultModel);
       renderTasks();
+      renderStage();
     })
     .catch(() => {
       allTasks = [];

@@ -34,7 +34,7 @@ function doneStatusFrom(config) {
   return typeof mapped === "string" && mapped.trim() ? mapped.trim() : null;
 }
 
-function featuresDir(cwd, config) {
+function docsParentDir(cwd, config) {
   const docs = config && config.agents && config.agents.docs;
   const first = Array.isArray(docs)
     ? docs.find((row) => typeof row === "string" && row.trim())
@@ -42,12 +42,62 @@ function featuresDir(cwd, config) {
   if (typeof first === "string" && first.trim()) {
     const rel = first.trim();
     const abs = path.resolve(cwd, rel);
-    const parent = /\.[A-Za-z0-9]+$/.test(path.basename(rel))
+    return /\.[A-Za-z0-9]+$/.test(path.basename(rel))
       ? path.dirname(abs)
       : abs;
-    return path.join(parent, "features");
   }
-  return path.join(cwd, "docs", "features");
+  return path.join(cwd, "docs");
+}
+
+function featuresDir(cwd, config) {
+  return path.join(docsParentDir(cwd, config), "features");
+}
+
+function promptDir(cwd, config) {
+  return path.join(docsParentDir(cwd, config), "prompt");
+}
+
+function gitCommonDir(cwd) {
+  const marker = path.join(cwd, ".git");
+  if (!fs.existsSync(marker)) {
+    return null;
+  }
+  const st = fs.statSync(marker);
+  if (st.isDirectory()) {
+    return marker;
+  }
+  let text;
+  try {
+    text = fs.readFileSync(marker, "utf8");
+  } catch {
+    return null;
+  }
+  const match = text.match(/^gitdir:\s*(.+)$/m);
+  if (!match) {
+    return null;
+  }
+  const gitdir = path.resolve(cwd, match[1].trim());
+  const commondirFile = path.join(gitdir, "commondir");
+  if (fs.existsSync(commondirFile)) {
+    try {
+      const rel = fs.readFileSync(commondirFile, "utf8").trim();
+      return path.resolve(gitdir, rel);
+    } catch {
+      return gitdir;
+    }
+  }
+  return gitdir;
+}
+
+function dhsWorktreeExists(cwd, taskKey) {
+  if (!cwd || typeof taskKey !== "string" || taskKey.trim() === "") {
+    return false;
+  }
+  const common = gitCommonDir(cwd);
+  if (!common) {
+    return false;
+  }
+  return fs.existsSync(path.join(common, "dhs-worktrees", taskKey));
 }
 
 function parseDepends(value) {
@@ -159,6 +209,8 @@ function publicTask(task) {
     depends: task.depends,
     dependsUnmet: Boolean(task.dependsUnmet),
     runState: task.runState || "idle",
+    hasSpecPrompt: Boolean(task.hasSpecPrompt),
+    worktreeExists: Boolean(task.worktreeExists),
   };
 }
 
@@ -167,16 +219,19 @@ function listFilesTasks(cwd, config) {
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
     return [];
   }
+  const prompts = promptDir(cwd, config);
   const names = fs.readdirSync(dir).filter((name) => name.endsWith(".feature.md"));
   const tasks = [];
   for (const name of names) {
     const raw = fs.readFileSync(path.join(dir, name), "utf8");
     const fields = parseFrontmatter(raw);
+    const key = name.replace(/\.feature\.md$/, "");
     tasks.push({
-      key: name.replace(/\.feature\.md$/, ""),
+      key,
       title: unquote(fields.title),
       status: unquote(fields.status),
       depends: parseDepends(fields.depends),
+      hasSpecPrompt: fs.existsSync(path.join(prompts, `${key}.prompt.md`)),
     });
   }
   return markDependsUnmet(tasks, doneStatusFrom(config));
@@ -206,7 +261,13 @@ function parseSearchStdout(stdout) {
     const value = idx === -1 ? "" : line.slice(idx + 2);
     if (field === "key") {
       push();
-      current = { key: value, title: "", status: "", depends: [] };
+      current = {
+        key: value,
+        title: "",
+        status: "",
+        depends: [],
+        hasSpecPrompt: true,
+      };
       continue;
     }
     if (!current) {
@@ -274,6 +335,9 @@ function listTasks(cwd, { sessions, env } = {}) {
     listed = { tasks: listFilesTasks(cwd, config) };
   }
   applyRunState(listed.tasks, sessions);
+  for (const task of listed.tasks) {
+    task.worktreeExists = dhsWorktreeExists(cwd, task.key);
+  }
   return {
     tasks: listed.tasks.map(publicTask),
     ...(listed.error ? { error: listed.error } : {}),
@@ -281,6 +345,8 @@ function listTasks(cwd, { sessions, env } = {}) {
 }
 
 module.exports = {
+  dhsWorktreeExists,
   featuresDir,
   listTasks,
+  promptDir,
 };

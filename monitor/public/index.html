@@ -39,6 +39,10 @@
       ></div>
       <main id="right-pane">
         <div id="chat-column">
+          <div id="stage-bar" hidden>
+            <div id="stage-buttons"></div>
+            <p id="worktree-warn" class="worktree-warn" hidden></p>
+          </div>
           <div id="chat-stage">
             <div id="chat-log" class="chat-log" aria-live="polite"></div>
             <div id="chat-loader" class="chat-loader" hidden>Working…</div>
@@ -57,8 +61,16 @@
         </div>
       </main>
     </div>
+    <dialog id="close-confirm">
+      <p id="close-confirm-text">Confirm the GitHub PR is merged, then close this task only.</p>
+      <form method="dialog">
+        <button value="cancel" type="submit">Cancel</button>
+        <button id="close-confirm-yes" value="confirm" type="submit">Confirm</button>
+      </form>
+    </dialog>
     <script src="/layout.js"></script>
     <script src="/chat.js"></script>
+    <script src="/stage-buttons.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>
