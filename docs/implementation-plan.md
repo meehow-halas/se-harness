@@ -78,7 +78,7 @@ Not questions and not Consultant `must-fix`. One line:
 BLOCKED: <what stopped> — <what the user or another skill must do>
 ```
 
-Examples in the PRD (Stops): install missing, setup not run, VERSION mismatch, approval missing, open blocker task, merge not confirmed, dirty task worktree on `return-to-base`, `/dhs-shipit` given a list, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
+Examples in the PRD (Stops): install missing, setup not run, VERSION mismatch, approval missing, open blocker task, dirty task worktree on `return-to-base`, `/dhs-shipit` given a list, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
 
 Do not use a `BLOCKED: rule=<id>` shape. Published product uses the PRD line above.
 

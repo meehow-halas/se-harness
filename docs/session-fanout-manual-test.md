@@ -59,7 +59,6 @@ Use a project with `sessionSpawn: manual` (Cursor or OpenCode). `/dhs-planit TST
 
 - `/dhs-doit TST-1 TST-1`: duplicate key, parent reports BLOCKED, starts nothing.
 - A key without a spec: that key `BLOCKED`, sibling keys still start.
-- `/dhs-checkit close TST-1 TST-2`: `mode: serial`, one session at a time.
 
 ## Record for each step
 
