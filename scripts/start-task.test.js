@@ -19,6 +19,7 @@ const {
   runScript,
   startTask,
   startWorktree,
+  writeGhStub,
   withTempDir,
   writeFile,
   writeGitLogger,
@@ -137,6 +138,40 @@ describe("start-task", () => {
         true,
         "new task branch must include commits that are on origin/dev"
       );
+    });
+  });
+
+  test("starts <task>-2 when the old task branch has a merged PR, so no commits join the old PR", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      const wt = path.join(cwd, ".git", "dhs-worktrees", "001-feature");
+      writeFile(wt, "old.txt", "old work\n");
+      git(wt, ["add", "old.txt"]);
+      git(wt, ["commit", "-m", "old work"]);
+      const oldSha = revParse(wt, "HEAD");
+      assertOk(runScript("return-to-base", [], { cwd: wt }));
+      const bin = path.join(cwd, ".bin");
+      writeGhStub(bin, { prStates: "MERGED" });
+      const env = { PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+      const result = runScript("start-task", ["001-feature"], { cwd, env });
+      const { fields } = assertOk(result, { branch: "001-feature-2", created: "yes" });
+      assert.equal(fs.existsSync(path.join(fields.worktree, "old.txt")), false, "new branch starts from base, not the old task branch");
+      assert.equal(currentBranch(fields.worktree), "001-feature-2");
+      assert.equal(revParse(cwd, "001-feature"), oldSha, "the old task branch is not moved");
+    });
+  });
+
+  test("keeps reusing the task branch when its PR is still open", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      const wt = path.join(cwd, ".git", "dhs-worktrees", "001-feature");
+      assertOk(runScript("return-to-base", [], { cwd: wt }));
+      const bin = path.join(cwd, ".bin");
+      writeGhStub(bin, { prStates: "OPEN CLOSED" });
+      const env = { PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+      assertOk(runScript("start-task", ["001-feature"], { cwd, env }), { branch: "001-feature", created: "no" });
     });
   });
 

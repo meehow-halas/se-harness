@@ -43,14 +43,23 @@ fi
 
 mkdir -p "$(dirname "$wt")"
 
-if local_branch_exists "$task"; then
+# A branch with a closed or merged PR is history. New work goes to <task>-N
+# so it does not add commits to that old PR (see branch_is_historical).
+branch=$task
+if local_branch_exists "$task" || remote_branch_exists "$task"; then
+  if branch_is_historical "$task"; then
+    branch=$(next_task_branch "$task")
+  fi
+fi
+
+if [ "$branch" = "$task" ] && local_branch_exists "$task"; then
   if ! out=$(git worktree add "$wt" "$task" 2>&1); then
     blocked "could not add worktree for $task ($out)" "remove a stale worktree or retry start-task"
   fi
   finish ok "branch: $task" "base: $base" "created: no" "worktree: $wt"
 fi
 
-if remote_branch_exists "$task"; then
+if [ "$branch" = "$task" ] && remote_branch_exists "$task"; then
   if ! out=$(git worktree add -b "$task" "$wt" "origin/$task" 2>&1); then
     blocked "could not add worktree from origin/$task ($out)" "fetch origin/$task, then retry start-task"
   fi
@@ -73,8 +82,8 @@ if [ "$base_ref" = "$base" ] && ! local_branch_exists "$base"; then
   blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /dhs-setup"
 fi
 
-if ! out=$(git worktree add -b "$task" "$wt" "$base_ref" 2>&1); then
-  blocked "could not create $task from $base_ref ($out)" "remove a stale path under .git/dhs-worktrees, then retry start-task"
+if ! out=$(git worktree add -b "$branch" "$wt" "$base_ref" 2>&1); then
+  blocked "could not create $branch from $base_ref ($out)" "remove a stale path under .git/dhs-worktrees, then retry start-task"
 fi
 
-finish ok "branch: $task" "base: $base" "created: yes" "worktree: $wt"
+finish ok "branch: $branch" "base: $base" "created: yes" "worktree: $wt"

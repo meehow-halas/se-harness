@@ -39,6 +39,21 @@ describe("open-pr", () => {
     });
   });
 
+  test("creates a PR for a branch whose earlier PR is closed (only open PRs are looked up)", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      assertOk(startTask(cwd, "001-feature"));
+      const { env, logFile } = withGh(cwd, { prStates: "CLOSED" });
+      const result = runScript("open-pr", ["001-feature"], { cwd, env });
+      assertOk(result, { branch: "001-feature", head: "001-feature" });
+      const log = argvLogArgv(logFile);
+      assert.ok(
+        log.some((args) => args[0] === "pr" && args[1] === "create" && args.includes("001-feature")),
+        "gh pr create is called for the branch"
+      );
+    });
+  });
+
   test("UNCHANGED when a PR already exists", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
@@ -53,7 +68,18 @@ describe("open-pr", () => {
         url: "https://example.com/pr/9",
       });
       const log = argvLogArgv(logFile);
-      assert.ok(log.some((args) => args[0] === "pr" && args[1] === "view" && args[2] === "001-feature"));
+      assert.ok(
+        log.some(
+          (args) =>
+            args[0] === "pr" &&
+            args[1] === "list" &&
+            args.includes("--head") &&
+            args[args.indexOf("--head") + 1] === "001-feature" &&
+            args.includes("--state") &&
+            args[args.indexOf("--state") + 1] === "open"
+        ),
+        "an existing PR is looked up among open PRs for the branch"
+      );
       assert.equal(
         log.some((args) => args[0] === "pr" && args[1] === "create"),
         false

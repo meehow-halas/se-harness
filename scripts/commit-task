@@ -49,7 +49,8 @@ require_task "$task"
 read_base_branch
 base=$DHS_BASE_BRANCH
 require_not_base "$task" "$base"
-require_on_task "$task"
+branch=$(task_branch "$task")
+require_on_task "$branch"
 
 if [ -z "$paths" ]; then
   blocked "no paths listed" "pass the files to add and commit"
@@ -85,7 +86,7 @@ if [ "$added" = "no" ]; then
 fi
 
 if git diff --cached --quiet && [ "$in_merge" = "no" ]; then
-  unchanged "branch: $task" "commit: none"
+  unchanged "branch: $branch" "commit: none"
 fi
 
 trailer=$(read_commit_trailer)
@@ -112,4 +113,4 @@ $trailer"
 fi
 
 sha=$(git rev-parse --short HEAD)
-ok "branch: $task" "commit: $sha"
+ok "branch: $branch" "commit: $sha"

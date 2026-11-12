@@ -160,7 +160,7 @@ One task = three files, same basename (`001-feature-example-name`):
 | `docs/prompt/<basename>.prompt.md` | Implementation prompt |
 | `docs/feature-log/<basename>.log.md` | Append-only log |
 
-Task key = basename. Branch name = basename. Status strings = `agents.statuses`.
+Task key = basename. Branch name = basename, or `<basename>-N` when the old branch has a closed or merged PR. Status strings = `agents.statuses`.
 
 ### Jira tracker
 
@@ -294,7 +294,7 @@ Brainstorm members are not agents and are not `@`-addressable.
 - Input: a sentence, or existing files / Jira.
 - Output: spec + prompt + first log row **on the active tracker only**. Status stays `todo`.
 - Does not create or switch branches. Does not call git scripts. Does not use worktrees.
-- Interactive: confirm title, then spec+prompt, before write. Critical/autonomous: write once Questions is satisfied.
+- Interactive: confirm title, then spec+prompt, before write. Critical/autonomous: write once Questions is satisfied. Approval for an overwrite of an existing spec counts when the user says it in this session or the launch passes `User approval: <the user's own words>` verbatim; the same rule as the Reviewer acceptance.
 
 ### Implementer
 

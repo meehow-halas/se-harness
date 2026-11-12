@@ -49,16 +49,19 @@ read_base_branch
 base=$DHS_BASE_BRANCH
 require_not_base "$task" "$base"
 
-if ! local_branch_exists "$task"; then
-  blocked "task branch $task does not exist" "run start-task $task, then retry open-pr"
+branch=$(task_branch "$task")
+if ! local_branch_exists "$branch"; then
+  blocked "task branch $branch does not exist" "run start-task $task, then retry open-pr"
 fi
 
-existing=$(gh pr view "$task" --json url --jq .url 2>/dev/null || true)
+# Only an open PR counts: a closed or merged PR for the same branch name
+# must not block a new one.
+existing=$(gh pr list --head "$branch" --state open --json url --jq '.[0].url // empty' 2>/dev/null || true)
 if [ -n "$existing" ]; then
-  unchanged "branch: $task" "base: $base" "head: $task" "url: $existing"
+  unchanged "branch: $branch" "base: $base" "head: $branch" "url: $existing"
 fi
 
-set -- gh pr create --base "$base" --head "$task"
+set -- gh pr create --base "$base" --head "$branch"
 if [ -n "$title" ]; then
   set -- "$@" --title "$title"
 fi
@@ -73,4 +76,4 @@ if ! url=$("$@" 2>&1); then
   blocked "pull request failed ($url)" "fix the gh error, then retry open-pr"
 fi
 
-ok "branch: $task" "base: $base" "head: $task" "url: $url"
+ok "branch: $branch" "base: $base" "head: $branch" "url: $url"

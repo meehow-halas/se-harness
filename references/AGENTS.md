@@ -59,7 +59,7 @@ If `agents.tracker` is absent, the files tracker is active. Same basename for al
 | `docs/prompt/<basename>.prompt.md` | Implementation prompt |
 | `docs/feature-log/<basename>.log.md` | Append-only log |
 
-Task key = basename. Branch name = basename. Status strings = `agents.statuses` (read from config; do not translate them from the conversation language). Artifact shapes: `.dhs/references/` (`spec.feature.md`, `prompt.prompt.md`, `log.log.md`).
+Task key = basename. Branch name = basename, or `<basename>-N` when the old branch has a closed or merged PR. Status strings = `agents.statuses` (read from config; do not translate them from the conversation language). Artifact shapes: `.dhs/references/` (`spec.feature.md`, `prompt.prompt.md`, `log.log.md`).
 
 `CHANGELOG.md` and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
 

@@ -118,6 +118,49 @@ current_branch() {
   git rev-parse --abbrev-ref HEAD
 }
 
+# Print the branch that holds task $1: the branch checked out in its dhs
+# worktree when there is one (it may be <task>-N), else the task name.
+task_branch() {
+  _t=$1
+  _wt=$(dhs_worktree_path "$_t")
+  if [ -d "$_wt" ]; then
+    _b=$(git -C "$_wt" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+    if [ -n "$_b" ] && [ "$_b" != "HEAD" ]; then
+      printf '%s\n' "$_b"
+      return 0
+    fi
+  fi
+  printf '%s\n' "$_t"
+}
+
+# Exit 0 when branch $1 has a pull request that is closed or merged and no
+# open one: its history belongs to an old PR, so new work must not add to it.
+# Without gh (or without an answer) the branch is not treated as historical.
+branch_is_historical() {
+  command -v gh >/dev/null 2>&1 || return 1
+  _states=$(gh pr list --head "$1" --state all --json state --jq '[.[].state] | join(" ")' 2>/dev/null) || return 1
+  case " $_states " in
+    *" OPEN "*) return 1 ;;
+  esac
+  case " $_states " in
+    *" MERGED "*|*" CLOSED "*) return 0 ;;
+  esac
+  return 1
+}
+
+# Print the first free name <task>-N (N >= 2) with no local or remote branch.
+next_task_branch() {
+  _n=2
+  while :; do
+    _cand="$1-$_n"
+    if ! local_branch_exists "$_cand" && ! remote_branch_exists "$_cand"; then
+      printf '%s\n' "$_cand"
+      return 0
+    fi
+    _n=$((_n + 1))
+  done
+}
+
 config_path() {
   printf '%s/harness.config.json\n' "$(repo_root)"
 }
