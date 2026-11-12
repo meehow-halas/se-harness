@@ -6,7 +6,7 @@ Move Azure DevOps from “idea in chat” to **documented product scope**: PRD a
 
 ## In scope
 
-- PRD edits: remove ADO from Deferred (or narrow Deferred to “trackers beyond Jira **and ADO**” → only “other trackers”); add `ado` script table rows parallel to `jira`; `/dhs-setup` tracker section for ADO; one-tracker rule includes `kind`.
+- PRD edits: remove ADO from Deferred (or narrow Deferred to “trackers beyond Jira **and ADO**” → only “other trackers”); add `ado` script table rows parallel to `jira`; `/<prefix>setit-se` tracker section for ADO; one-tracker rule includes `kind`.
 - `agents.tracker.kind`: **`"jira"`** | **`"ado"`** (existing projects without `kind` treated as Jira when `url`+`user` present).
 - `references/harness.tracker.ado.json` skeleton per [spec.md](spec.md).
 - `references/harness.config.md` — document `kind`, `adoPat`, mutual exclusion with Jira fields.

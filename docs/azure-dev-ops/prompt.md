@@ -27,13 +27,13 @@ If all items and shared done rules hold, set phase <N> Status to done in docs/az
 When a phase or the spec presents **multiple viable options** (API version, auth channel, field storage, HTML strategy, etc.):
 
 1. **Default to the option marked Recommended** in [spec.md](spec.md) or in that phase file.
-2. If the spec table has a “Recommended” column, **do not** pick from “Rejected for dhs” unless the user **explicitly** overrides in the commissioning message.
+2. If the spec table has a “Recommended” column, **do not** pick from “Rejected for seh” unless the user **explicitly** overrides in the commissioning message.
 3. If you must deviate, **state the deviation in the report** and why; do not silently substitute (e.g. `az boards` instead of REST).
 4. When reporting design choices to the user, list options **with the recommended option first** and label it **(Recommended)**.
 
 ## Shared constraints
 
-- No new `dhs` CLI subcommands; no global install; no machine-wide paths.
+- No new `seh` CLI subcommands; no global install; no machine-wide paths.
 - Token never in argv, stdout, chat, or git.
 - `npm test` for script tests; no second runner.
 - Do not implement PRD Deferred items outside this plan’s phases.

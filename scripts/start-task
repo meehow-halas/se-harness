@@ -4,10 +4,11 @@
 # Reads project-root harness.config.json. Copies this task's file-tracker files
 # into the worktree, then removes uncommitted copies of those paths from launch.
 # No commit, no push, no uncommit.
-# Invoked as .dhs/scripts/start-task after dhs install.
+# Invoked as .seh/scripts/start-task after seh install.
 
 . "$(dirname "$0")/lib.sh"
 
+git_gate "worktree: $(project_root)"
 require_git
 require_task "${1-}"
 task=$1
@@ -16,11 +17,11 @@ if [ $# -ne 1 ]; then
 fi
 
 read_base_branch
-base=$DHS_BASE_BRANCH
+base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
 
 launch=$(repo_root)
-wt=$(dhs_worktree_path "$task")
+wt=$(seh_worktree_path "$task")
 
 finish() {
   _status=$1
@@ -43,26 +44,47 @@ fi
 
 mkdir -p "$(dirname "$wt")"
 
-if local_branch_exists "$task"; then
+# A branch with a closed or merged PR is history. New work goes to <task>-N
+# so it does not add commits to that old PR (see branch_is_historical).
+branch=$task
+if local_branch_exists "$task" || remote_branch_exists "$task"; then
+  if branch_is_historical "$task"; then
+    branch=$(next_task_branch "$task")
+  fi
+fi
+
+if [ "$branch" = "$task" ] && local_branch_exists "$task"; then
   if ! out=$(git worktree add "$wt" "$task" 2>&1); then
     blocked "could not add worktree for $task ($out)" "remove a stale worktree or retry start-task"
   fi
   finish ok "branch: $task" "base: $base" "created: no" "worktree: $wt"
 fi
 
-if remote_branch_exists "$task"; then
+if [ "$branch" = "$task" ] && remote_branch_exists "$task"; then
   if ! out=$(git worktree add -b "$task" "$wt" "origin/$task" 2>&1); then
     blocked "could not add worktree from origin/$task ($out)" "fetch origin/$task, then retry start-task"
   fi
   finish ok "branch: $task" "base: $base" "created: no" "worktree: $wt"
 fi
 
-if ! local_branch_exists "$base"; then
-  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /dhs-setup"
+# Cut from the remote base when there is one: a local base can be behind
+# origin (someone merged a PR), and a task branch cut from it misses those commits.
+base_ref=$base
+if git remote | grep -qx origin; then
+  if ! out=$(git fetch --quiet origin "$base" 2>&1); then
+    blocked "could not fetch origin/$base ($out)" "check the remote and network, then retry start-task"
+  fi
+  if remote_branch_exists "$base"; then
+    base_ref="origin/$base"
+  fi
 fi
 
-if ! out=$(git worktree add -b "$task" "$wt" "$base" 2>&1); then
-  blocked "could not create $task from $base ($out)" "remove a stale path under .git/dhs-worktrees, then retry start-task"
+if [ "$base_ref" = "$base" ] && ! local_branch_exists "$base"; then
+  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /{{prefix}}setit-se"
 fi
 
-finish ok "branch: $task" "base: $base" "created: yes" "worktree: $wt"
+if ! out=$(git worktree add -b "$branch" "$wt" "$base_ref" 2>&1); then
+  blocked "could not create $branch from $base_ref ($out)" "remove a stale path under .git/seh-worktrees, then retry start-task"
+fi
+
+finish ok "branch: $branch" "base: $base" "created: yes" "worktree: $wt"

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Runtime instructions call `.dhs/scripts/ado` when `agents.tracker.kind === "ado"`.
+Runtime instructions call `.seh/scripts/ado` when `agents.tracker.kind === "ado"`.
 
 ## In scope
 
@@ -11,7 +11,7 @@ Runtime instructions call `.dhs/scripts/ado` when `agents.tracker.kind === "ado"
 | `agents/architect.md` | ADO command block mirror Jira |
 | `agents/implementer.md` | `get`, `transition`, `comment` / `set log` |
 | `agents/reviewer.md` | `get`, transitions, `comment` |
-| `skills/dhs-planit`, `dhs-doit`, `dhs-checkit`, `dhs-shipit` | Active tracker = ADO when `kind` is `ado` |
+| `skills/planit`, `doit`, `checkit`, `shipit` | Active tracker = ADO when `kind` is `ado` |
 | `references/AGENTS.md` | Script table + tracker section |
 | `docs/prd.md` | Agent tables if phase 1 left gaps |
 
@@ -19,7 +19,7 @@ Task key in prose: **numeric work item id**.
 
 ## Out of scope
 
-- Regenerating all host copies in other repos (user runs `/dhs-setup` / install).
+- Regenerating all host copies in other repos (user runs `/<prefix>setit-se` / install).
 - Consultant calling ado.
 
 ## Options

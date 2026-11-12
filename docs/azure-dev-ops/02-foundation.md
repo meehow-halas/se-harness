@@ -17,7 +17,7 @@ POSIX `scripts/ado` with **`meta`** only, plus shared helpers: load config, PAT 
 
 - `load_ado`: requires `agents.tracker.kind === "ado"` (or configured ADO shape), `adoPat` in credentials, `curl`, `node`, git (if same as Jira).
 - **(Recommended)** `api-version=7.1` constant in `ado-json.js`.
-- `meta`: same UX shape as `jira meta` (`OK`, `project:`, numbered status/type/field lines) for `/dhs-setup` parsing.
+- `meta`: same UX shape as `jira meta` (`OK`, `project:`, numbered status/type/field lines) for `/<prefix>setit-se` parsing.
 
 ## Options
 
@@ -30,7 +30,7 @@ POSIX `scripts/ado` with **`meta`** only, plus shared helpers: load config, PAT 
 ## Out of scope
 
 - `get`, `create`, `set`, `comment`, `transition`, `link` (phases 3–4).
-- `/dhs-setup` skill changes (phase 5).
+- `/<prefix>setit-se` skill changes (phase 5).
 
 ## Done when
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 # jira <verb> ...
-# Jira Cloud REST v3 allowlist. Agents and /dhs-setup call this script.
+# Jira Cloud REST v3 allowlist. Agents and /{{prefix}}setit-se call this script.
 # They do not compose curl. Token stays in harness.credentials.local.json.
 
 . "$(dirname "$0")/lib-jira.sh"
@@ -40,16 +40,16 @@ case $verb in
       usage
     fi
     load_jira
-    _project=$(jira_json project-key "$DHS_JIRA_CFG")
+    _project=$(jira_json project-key "$SEH_JIRA_CFG")
     _st=$(mktemp)
-    trap 'rm -f "$DHS_JIRA_CURL_CFG" "$DHS_JIRA_BODY" "$_st" "${_fl-}"' EXIT
+    trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_st" "${_fl-}"' EXIT
     jira_http GET "/rest/api/3/project/${_project}/statuses"
-    cp "$DHS_JIRA_BODY" "$_st"
+    cp "$SEH_JIRA_BODY" "$_st"
     _fl=$(mktemp)
     jira_http GET "/rest/api/3/field"
-    cp "$DHS_JIRA_BODY" "$_fl"
+    cp "$SEH_JIRA_BODY" "$_fl"
     _out=$(jira_json format-meta "$_st" "$_fl")
-    _pk=$(jira_json project-key "$DHS_JIRA_CFG")
+    _pk=$(jira_json project-key "$SEH_JIRA_CFG")
     printf 'OK\n'
     printf 'projectKey: %s\n' "$_pk"
     printf '%s\n' "$_out"
@@ -63,15 +63,15 @@ case $verb in
     require_task "$1"
     load_jira
     _key=$1
-    _fields=$(jira_json fetch-fields "$DHS_JIRA_CFG")
+    _fields=$(jira_json fetch-fields "$SEH_JIRA_CFG")
     _issue=$(mktemp)
     _comments=$(mktemp)
-    trap 'rm -f "$DHS_JIRA_CURL_CFG" "$DHS_JIRA_BODY" "$_issue" "$_comments"' EXIT
+    trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_issue" "$_comments"' EXIT
     jira_http GET "/rest/api/3/issue/${_key}?fields=${_fields}"
-    cp "$DHS_JIRA_BODY" "$_issue"
+    cp "$SEH_JIRA_BODY" "$_issue"
     jira_http GET "/rest/api/3/issue/${_key}/comment"
-    cp "$DHS_JIRA_BODY" "$_comments"
-    _out=$(jira_json format-get "$DHS_JIRA_CFG" "$_issue" "$_comments")
+    cp "$SEH_JIRA_BODY" "$_comments"
+    _out=$(jira_json format-get "$SEH_JIRA_CFG" "$_issue" "$_comments")
     printf 'OK\n'
     printf '%s\n' "$_out"
     exit 0
@@ -111,14 +111,14 @@ case $verb in
       blocked "missing --title" "usage: jira create --type feature|bug --title <text>"
     fi
     load_jira
-    if ! jira_json issue-type "$DHS_JIRA_CFG" "$_type" >/dev/null; then
-      blocked "issue type $_type is not mapped" "set agents.tracker.issueTypes in /dhs-setup"
+    if ! jira_json issue-type "$SEH_JIRA_CFG" "$_type" >/dev/null; then
+      blocked "issue type $_type is not mapped" "set agents.tracker.issueTypes in /{{prefix}}setit-se"
     fi
     _payload=$(mktemp)
-    trap 'rm -f "$DHS_JIRA_CURL_CFG" "$DHS_JIRA_BODY" "$_payload"' EXIT
-    jira_json create-body "$DHS_JIRA_CFG" "$_type" "$_title" > "$_payload"
+    trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_payload"' EXIT
+    jira_json create-body "$SEH_JIRA_CFG" "$_type" "$_title" > "$_payload"
     jira_http POST "/rest/api/3/issue" "$_payload"
-    _key=$(jira_json extract-key "$DHS_JIRA_BODY")
+    _key=$(jira_json extract-key "$SEH_JIRA_BODY")
     ok "key: ${_key}"
     ;;
 
@@ -138,29 +138,29 @@ case $verb in
     esac
     parse_file_opt "$@"
     load_jira
-    if [ "$(jira_json artifacts-on-tracker-only "$DHS_JIRA_CFG")" = "false" ]; then
+    if [ "$(jira_json artifacts-on-tracker-only "$SEH_JIRA_CFG")" = "false" ]; then
       blocked "artifact content is stored in repository files" "edit docs/features docs/prompt docs/feature-log"
     fi
-    _loc=$(jira_json mapped-field "$DHS_JIRA_CFG" "$_kind")
+    _loc=$(jira_json mapped-field "$SEH_JIRA_CFG" "$_kind")
     if [ -z "$_loc" ]; then
-      blocked "$_kind is not mapped" "set agents.tracker.fields in /dhs-setup"
+      blocked "$_kind is not mapped" "set agents.tracker.fields in /{{prefix}}setit-se"
     fi
     _src=$(read_body_file "$BODY_FILE")
     _payload=$(mktemp)
     _issue=$(mktemp)
-    trap 'rm -f "$DHS_JIRA_CURL_CFG" "$DHS_JIRA_BODY" "$_payload" "$_issue"' EXIT
+    trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_payload" "$_issue"' EXIT
     if [ "$_loc" = "comment" ]; then
-      jira_json set-body "$DHS_JIRA_CFG" "$_kind" "$_src" > "$_payload"
+      jira_json set-body "$SEH_JIRA_CFG" "$_kind" "$_src" > "$_payload"
       jira_http POST "/rest/api/3/issue/${_key}/comment" "$_payload"
       ok "key: ${_key}" "field: ${_kind}" "location: comment"
     else
       if [ "$_kind" = "log" ] && [ "$_loc" != "description" ]; then
-        _fields=$(jira_json fetch-fields "$DHS_JIRA_CFG")
+        _fields=$(jira_json fetch-fields "$SEH_JIRA_CFG")
         jira_http GET "/rest/api/3/issue/${_key}?fields=${_fields}"
-        cp "$DHS_JIRA_BODY" "$_issue"
-        jira_json set-body "$DHS_JIRA_CFG" "$_kind" "$_src" "$_issue" > "$_payload"
+        cp "$SEH_JIRA_BODY" "$_issue"
+        jira_json set-body "$SEH_JIRA_CFG" "$_kind" "$_src" "$_issue" > "$_payload"
       else
-        jira_json set-body "$DHS_JIRA_CFG" "$_kind" "$_src" > "$_payload"
+        jira_json set-body "$SEH_JIRA_CFG" "$_kind" "$_src" > "$_payload"
       fi
       jira_http PUT "/rest/api/3/issue/${_key}" "$_payload"
       ok "key: ${_key}" "field: ${_kind}" "location: ${_loc}"
@@ -178,7 +178,7 @@ case $verb in
     load_jira
     _src=$(read_body_file "$BODY_FILE")
     _payload=$(mktemp)
-    trap 'rm -f "$DHS_JIRA_CURL_CFG" "$DHS_JIRA_BODY" "$_payload"' EXIT
+    trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_payload"' EXIT
     jira_json comment-body "$_src" > "$_payload"
     jira_http POST "/rest/api/3/issue/${_key}/comment" "$_payload"
     ok "key: ${_key}"
@@ -197,12 +197,11 @@ case $verb in
         blocked "invalid status key $_step" "usage: jira transition <issue-key> todo|inProgress|codeReview|inReview|done"
         ;;
     esac
-    require_git
     require_node
     require_tracker_config
-    DHS_JIRA_CFG=$(config_path)
-    if ! _want=$(jira_json status-map "$DHS_JIRA_CFG" "$_step"); then
-      blocked "invalid status key $_step" "fix agents.tracker.statuses in /dhs-setup"
+    SEH_JIRA_CFG=$(config_path)
+    if ! _want=$(jira_json status-map "$SEH_JIRA_CFG" "$_step"); then
+      blocked "invalid status key $_step" "fix agents.tracker.statuses in /{{prefix}}setit-se"
     fi
     if [ "$_want" = "NULL" ]; then
       unchanged "key: ${_key}" "step: ${_step}" "status: skipped"
@@ -210,17 +209,17 @@ case $verb in
     load_jira
     _issue=$(mktemp)
     _tr=$(mktemp)
-    trap 'rm -f "$DHS_JIRA_CURL_CFG" "$DHS_JIRA_BODY" "$_issue" "$_tr" "${_payload-}"' EXIT
+    trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_issue" "$_tr" "${_payload-}"' EXIT
     jira_http GET "/rest/api/3/issue/${_key}?fields=status"
-    cp "$DHS_JIRA_BODY" "$_issue"
+    cp "$SEH_JIRA_BODY" "$_issue"
     _cur=$(jira_json current-status "$_issue")
     if [ "$_cur" = "$_want" ]; then
       unchanged "key: ${_key}" "status: ${_want}"
     fi
     jira_http GET "/rest/api/3/issue/${_key}/transitions"
-    cp "$DHS_JIRA_BODY" "$_tr"
+    cp "$SEH_JIRA_BODY" "$_tr"
     if ! _tid=$(jira_json pick-transition "$_tr" "$_want"); then
-      blocked "mapped status ${_want} is not on this issue type's workflow" "fix the mapping in /dhs-setup"
+      blocked "mapped status ${_want} is not on this issue type's workflow" "fix the mapping in /{{prefix}}setit-se"
     fi
     _payload=$(mktemp)
     jira_json transition-body "$_tid" > "$_payload"
@@ -245,7 +244,7 @@ case $verb in
     esac
     load_jira
     _payload=$(mktemp)
-    trap 'rm -f "$DHS_JIRA_CURL_CFG" "$DHS_JIRA_BODY" "$_payload"' EXIT
+    trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_payload"' EXIT
     jira_json link-body "$_key" "$_rel" "$_other" > "$_payload"
     jira_http POST "/rest/api/3/issueLink" "$_payload"
     ok "key: ${_key}" "link: ${_rel}" "other: ${_other}"

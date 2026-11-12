@@ -6,6 +6,7 @@
 
 . "$(dirname "$0")/lib.sh"
 
+git_gate
 require_git
 
 task=
@@ -47,9 +48,10 @@ done
 
 require_task "$task"
 read_base_branch
-base=$DHS_BASE_BRANCH
+base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
-require_on_task "$task"
+branch=$(task_branch "$task")
+require_on_task "$branch"
 
 if [ -z "$paths" ]; then
   blocked "no paths listed" "pass the files to add and commit"
@@ -85,10 +87,15 @@ if [ "$added" = "no" ]; then
 fi
 
 if git diff --cached --quiet && [ "$in_merge" = "no" ]; then
-  unchanged "branch: $task" "commit: none"
+  unchanged "branch: $branch" "commit: none"
 fi
 
+trailer=$(read_commit_trailer)
+
 if [ "$in_merge" = "yes" ] && [ -z "$message" ]; then
+  if [ -n "$trailer" ]; then
+    printf '\n%s\n' "$trailer" >> "$(git rev-parse --git-dir)/MERGE_MSG"
+  fi
   if ! out=$(git commit --no-edit 2>&1); then
     blocked "git commit failed ($out)" "resolve the merge, then retry commit-task"
   fi
@@ -96,10 +103,15 @@ else
   if [ -z "$message" ]; then
     message=$task
   fi
+  if [ -n "$trailer" ]; then
+    message="$message
+
+$trailer"
+  fi
   if ! out=$(git commit -m "$message" 2>&1); then
     blocked "git commit failed ($out)" "set git user.name and user.email if needed, then retry commit-task"
   fi
 fi
 
 sha=$(git rev-parse --short HEAD)
-ok "branch: $task" "commit: $sha"
+ok "branch: $branch" "commit: $sha"

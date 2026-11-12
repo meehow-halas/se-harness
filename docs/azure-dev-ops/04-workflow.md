@@ -23,7 +23,7 @@ Status steps and dependencies on ADO, with Jira-like `UNCHANGED` semantics.
 
 ## Out of scope
 
-- `/dhs-setup` mapping UI (phase 5).
+- `/<prefix>setit-se` mapping UI (phase 5).
 
 ## Done when
 

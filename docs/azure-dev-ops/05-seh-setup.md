@@ -1,4 +1,4 @@
-# Phase 5 — `/dhs-setup` for ADO
+# Phase 5 — `/<prefix>setit-se` for ADO
 
 ## Goal
 
@@ -6,7 +6,7 @@ Connect, change, or remove ADO tracker; map types, fields, statuses; verify with
 
 ## In scope
 
-- `skills/dhs-setup/SKILL.md` — tracker offer: **files | Jira | ADO** (one at a time); ADO questions (`organizationUrl`, `project`, PAT file `adoPat`); `ado meta` verify loop; mapping questions parallel to Jira.
+- `skills/setit-se/SKILL.md` — tracker offer: **files | Jira | ADO** (one at a time); ADO questions (`organizationUrl`, `project`, PAT file `adoPat`); `ado meta` verify loop; mapping questions parallel to Jira.
 - Config writes: `agents.tracker` with `kind: "ado"`, clear Jira-only keys on ADO connect and vice versa on remove.
 - `adoOffer` or generalize `jiraOffer` → `trackerOffer` **only if** PRD phase 1 chose that shape; **(Recommended)** extend setup copy to handle `kind` without breaking declined Jira offer semantics.
 

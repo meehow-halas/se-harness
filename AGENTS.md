@@ -2,15 +2,15 @@
 
 ## Product
 
-`dhs` is an SE harness for coding assistants: skills, agents, rule packs, and a small CLI (`dhs`). The npm package is `dev-harness-layer`. The binary is `dhs`.
+`seh` is an SE harness for coding assistants: skills, agents, rule packs, and a small CLI (`seh`). The npm package is `dev-harness-layer`. The binary is `seh`.
 
 Behaviour is defined in `docs/prd.md`. That file wins over old agent files and chat history. `docs/implementation-plan.md` is the build order, not a second spec.
 
-CLI in v1: `dhs install` and `dhs uninstall` only. Never `npm install -g`. Never write to `~/.claude/` or another machine-wide path. Setup is `/dhs-setup`. Git allowlist helpers and Jira Cloud REST (`jira`) are POSIX scripts under `scripts/` (installed as `.dhs/scripts/`), not CLI subcommands.
+CLI in v1: `seh install [--prefix P]` and `seh uninstall` only. Skill names in `skills/` have no prefix; install adds it (default `_`) and renders `{{prefix}}` in copied text. Never `npm install -g`. Never write to `~/.claude/` or another machine-wide path. Setup is `/<prefix>setit-se`. Git allowlist helpers and Jira Cloud REST (`jira`) are POSIX scripts under `scripts/` (installed as `.seh/scripts/`), not CLI subcommands.
 
 ## Package directories
 
-Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, and `src/` (CLI). `dhs install` copies the first six into a consuming repo as `.dhs/<same-name>/` and writes `.dhs/VERSION`. Write files in those directories; do not invent a parallel tree and rename on copy.
+Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, and `src/` (CLI). `seh install` copies the first six into a consuming repo as `.seh/<same-name>/` and writes `.seh/VERSION`. Write files in those directories; do not invent a parallel tree and rename on copy.
 
 ## Deferred (not a backlog)
 
@@ -27,7 +27,7 @@ Write tests that would fail if the promised behaviour broke, not tests that rest
 - Name the invariant, then break it in your head. If a plausible bug (hardcoded default, extra side effect, wrong target) would still pass, the test is incomplete.
 - Exercise the real command. Stub only an external boundary. A scan of the implementation is not a behaviour test.
 
-Run with `npm test`. Keep `*.test.js` next to the unit. `dhs install` must not copy those files into `.dhs/`.
+Run with `npm test`. Keep `*.test.js` next to the unit. `seh install` must not copy those files into `.seh/`.
 
 ## Commands
 

@@ -5,7 +5,7 @@ import path from "node:path";
 function projectRoot(start) {
   let dir = start;
   while (dir && dir !== path.dirname(dir)) {
-    if (existsSync(path.join(dir, ".dhs", "scripts", "check-update"))) {
+    if (existsSync(path.join(dir, ".seh", "scripts", "check-update"))) {
       return dir;
     }
     dir = path.dirname(dir);
@@ -15,12 +15,12 @@ function projectRoot(start) {
 
 function updateNotice(cwd) {
   try {
-    const script = path.join(cwd, ".dhs", "scripts", "check-update");
+    const script = path.join(cwd, ".seh", "scripts", "check-update");
     const result = spawnSync("sh", [script, "--host", "opencode"], {
       cwd,
       encoding: "utf8",
       timeout: 15000,
-      env: { ...process.env, DHS_CHECK_ROOT: cwd },
+      env: { ...process.env, SEH_CHECK_ROOT: cwd },
     });
     return String(result.stdout || "").trim();
   } catch {
@@ -48,12 +48,12 @@ async function injectNotice(ctx, sessionID, text) {
   }
   await put.call(ctx.session.instructions.entry, {
     sessionID,
-    key: "dhs-update",
+    key: "seh-update",
     value: text,
   });
 }
 
-export async function DhsCheckUpdate(ctx) {
+export async function SehCheckUpdate(ctx) {
   return {
     event: async ({ event } = {}) => {
       try {
@@ -75,4 +75,4 @@ export async function DhsCheckUpdate(ctx) {
   };
 }
 
-export default DhsCheckUpdate;
+export default SehCheckUpdate;

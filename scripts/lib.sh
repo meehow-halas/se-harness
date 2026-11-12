@@ -1,5 +1,5 @@
-# Shared helpers for dhs git/gh allowlist scripts. Sourced, not invoked.
-# Reads harness.config.json at the consuming project's git root, not inside the dhs package.
+# Shared helpers for seh git/gh allowlist scripts. Sourced, not invoked.
+# Reads harness.config.json at the consuming project's git root, not inside the seh package.
 
 set -eu
 
@@ -37,13 +37,23 @@ repo_root() {
   git rev-parse --show-toplevel
 }
 
+# Project root: the git toplevel when there is a repo, else the current
+# directory. Lets the scripts read harness.config.json when git is disabled.
+project_root() {
+  if _pr=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$_pr" ]; then
+    printf '%s\n' "$_pr"
+    return 0
+  fi
+  pwd
+}
+
 abs_git_common_dir() {
   _g=$(git rev-parse --git-common-dir)
   CDPATH= cd -- "$_g" && pwd
 }
 
-dhs_worktree_path() {
-  printf '%s/dhs-worktrees/%s\n' "$(abs_git_common_dir)" "$1"
+seh_worktree_path() {
+  printf '%s/seh-worktrees/%s\n' "$(abs_git_common_dir)" "$1"
 }
 
 # Print the worktree directory that has $1 checked out, or empty.
@@ -57,9 +67,9 @@ worktree_path_for_branch() {
   '
 }
 
-is_dhs_worktree() {
+is_seh_worktree() {
   _root=$(repo_root)
-  _prefix="$(abs_git_common_dir)/dhs-worktrees/"
+  _prefix="$(abs_git_common_dir)/seh-worktrees/"
   case $_root in
     "$_prefix"*)
       return 0
@@ -91,6 +101,12 @@ sync_launch_files() {
     "docs/prompt/${_task}.prompt.md" \
     "docs/feature-log/${_task}.log.md"; do
     if [ -f "$_launch/$_rel" ]; then
+      if [ -f "$_wt/$_rel" ] && [ -n "$(git -C "$_wt" status --porcelain -- "$_rel")" ]; then
+        # The worktree already holds uncommitted work on this file (the
+        # Implementer or Reviewer wrote it there). A launch copy is stale
+        # relative to that work: leave both files alone, do not overwrite.
+        continue
+      fi
       mkdir -p "$_wt/$(dirname "$_rel")"
       cp "$_launch/$_rel" "$_wt/$_rel"
       _st=$(git -C "$_launch" status --porcelain -- "$_rel")
@@ -104,7 +120,7 @@ sync_launch_files() {
       fi
     fi
   done
-  link_if_missing "$_launch/.dhs" "$_wt/.dhs"
+  link_if_missing "$_launch/.seh" "$_wt/.seh"
   link_if_missing "$_launch/harness.config.json" "$_wt/harness.config.json"
 }
 
@@ -112,50 +128,158 @@ current_branch() {
   git rev-parse --abbrev-ref HEAD
 }
 
-config_path() {
-  printf '%s/harness.config.json\n' "$(repo_root)"
+# Print the branch that holds task $1: the branch checked out in its seh
+# worktree when there is one (it may be <task>-N), else the task name.
+task_branch() {
+  _t=$1
+  _wt=$(seh_worktree_path "$_t")
+  if [ -d "$_wt" ]; then
+    _b=$(git -C "$_wt" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+    if [ -n "$_b" ] && [ "$_b" != "HEAD" ]; then
+      printf '%s\n' "$_b"
+      return 0
+    fi
+  fi
+  printf '%s\n' "$_t"
 }
 
-# Print agents.baseBranch. Empty result means missing or invalid.
+# Exit 0 when branch $1 has a pull request that is closed or merged and no
+# open one: its history belongs to an old PR, so new work must not add to it.
+# Without gh (or without an answer) the branch is not treated as historical.
+branch_is_historical() {
+  command -v gh >/dev/null 2>&1 || return 1
+  _states=$(gh pr list --head "$1" --state all --json state --jq '[.[].state] | join(" ")' 2>/dev/null) || return 1
+  case " $_states " in
+    *" OPEN "*) return 1 ;;
+  esac
+  case " $_states " in
+    *" MERGED "*|*" CLOSED "*) return 0 ;;
+  esac
+  return 1
+}
+
+# Print the first free name <task>-N (N >= 2) with no local or remote branch.
+next_task_branch() {
+  _n=2
+  while :; do
+    _cand="$1-$_n"
+    if ! local_branch_exists "$_cand" && ! remote_branch_exists "$_cand"; then
+      printf '%s\n' "$_cand"
+      return 0
+    fi
+    _n=$((_n + 1))
+  done
+}
+
+config_path() {
+  printf '%s/harness.config.json\n' "$(project_root)"
+}
+
+# Print agents.commitTrailer (one trailer line, e.g. "Co-Authored-By: Name <mail>")
+# when it is set in harness.config.json; print nothing when it is absent or empty.
+read_commit_trailer() {
+  _cfg=$(config_path)
+  if [ ! -f "$_cfg" ]; then
+    return 0
+  fi
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+var fs = require("fs");
+var c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+var t = c && c.agents && c.agents.commitTrailer;
+if (typeof t === "string" && t.trim()) process.stdout.write(t.trim());
+' "$_cfg" || true
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import json, sys
+c = json.load(open(sys.argv[1], encoding="utf-8"))
+t = (c.get("agents") or {}).get("commitTrailer")
+if isinstance(t, str) and t.strip():
+    sys.stdout.write(t.strip())
+' "$_cfg" || true
+  fi
+}
+
+# Print agents.baseBranch. Exit 0 with the (trimmed) value; empty output with
+# exit 0 means the key is present but empty or null (git disabled). Exit 3
+# means the key is absent or not a string; exit 2 means unreadable JSON.
 _extract_base_branch() {
   _cfg=$1
   if command -v node >/dev/null 2>&1; then
     node -e '
 var fs = require("fs");
-var c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-var b = c && c.agents && c.agents.baseBranch;
-if (typeof b !== "string" || !String(b).trim()) process.exit(1);
-    process.stdout.write(String(b).trim());
+var c;
+try { c = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); } catch (e) { process.exit(2); }
+var a = c && c.agents;
+if (!a || typeof a !== "object" || !("baseBranch" in a)) process.exit(3);
+var b = a.baseBranch;
+if (b === null) process.exit(0);
+if (typeof b !== "string") process.exit(3);
+process.stdout.write(b.trim());
 ' "$_cfg"
     return $?
   fi
   if command -v python3 >/dev/null 2>&1; then
     python3 -c '
 import json, sys
-c = json.load(open(sys.argv[1], encoding="utf-8"))
-b = (c.get("agents") or {}).get("baseBranch")
-if not isinstance(b, str) or not b.strip():
-    sys.exit(1)
+try:
+    c = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(2)
+a = c.get("agents") if isinstance(c, dict) else None
+if not isinstance(a, dict) or "baseBranch" not in a:
+    sys.exit(3)
+b = a["baseBranch"]
+if b is None:
+    sys.exit(0)
+if not isinstance(b, str):
+    sys.exit(3)
 sys.stdout.write(b.strip())
 ' "$_cfg"
     return $?
   fi
-  tr -d '\n' < "$_cfg" | sed -n 's/.*"baseBranch"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+  _flat=$(tr -d '\n' < "$_cfg")
+  case $_flat in
+    *'"baseBranch"'*) ;;
+    *) return 3 ;;
+  esac
+  printf '%s' "$_flat" | sed -n 's/.*"baseBranch"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
 }
 
-# Sets DHS_BASE_BRANCH. Must not be called from command substitution
+# Git is disabled when harness.config.json exists and agents.baseBranch is
+# present but empty or null. Call before require_git. Prints UNCHANGED with
+# "git: disabled" plus any extra lines passed in, then exits 0. Returns
+# normally when git is enabled or the config cannot decide (the usual
+# BLOCKED: checks then run).
+git_gate() {
+  _cfg=$(config_path)
+  if [ ! -f "$_cfg" ]; then
+    return 0
+  fi
+  _gb=$(_extract_base_branch "$_cfg") || return 0
+  if [ -z "$_gb" ]; then
+    unchanged "git: disabled" "$@"
+  fi
+  return 0
+}
+
+# Sets SEH_BASE_BRANCH. Must not be called from command substitution
 # (BLOCKED: has to print on the script's stdout).
 read_base_branch() {
   _cfg=$(config_path)
   if [ ! -f "$_cfg" ]; then
-    blocked "harness.config.json is missing" "run /dhs-setup in this project"
+    blocked "harness.config.json is missing" "run /{{prefix}}setit-se in this project"
   fi
-  DHS_BASE_BRANCH=
-  if ! DHS_BASE_BRANCH=$(_extract_base_branch "$_cfg"); then
-    blocked "agents.baseBranch is missing from harness.config.json" "run /dhs-setup and set the base git branch"
+  SEH_BASE_BRANCH=
+  _rc=0
+  SEH_BASE_BRANCH=$(_extract_base_branch "$_cfg") || _rc=$?
+  if [ "$_rc" -ne 0 ]; then
+    blocked "agents.baseBranch is missing from harness.config.json" "run /{{prefix}}setit-se and set the base git branch"
   fi
-  if [ -z "$DHS_BASE_BRANCH" ]; then
-    blocked "agents.baseBranch is missing from harness.config.json" "run /dhs-setup and set the base git branch"
+  if [ -z "$SEH_BASE_BRANCH" ]; then
+    unchanged "git: disabled"
   fi
 }
 
@@ -197,16 +321,16 @@ require_on_task() {
   fi
 }
 
-# Sets DHS_REMOTE. Must not be called from command substitution.
+# Sets SEH_REMOTE. Must not be called from command substitution.
 push_remote() {
   if git remote | grep -qx origin; then
-    DHS_REMOTE=origin
+    SEH_REMOTE=origin
     return 0
   fi
   _n=$(git remote | wc -l)
   _n=$(printf '%s' "$_n" | tr -d ' ')
   if [ "$_n" = "1" ]; then
-    DHS_REMOTE=$(git remote)
+    SEH_REMOTE=$(git remote)
     return 0
   fi
   blocked "no git remote named origin" "add a remote and retry"

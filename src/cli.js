@@ -13,14 +13,17 @@ const PAYLOAD_DIRS = [
   "references",
   "scripts",
 ];
-const SETUP_SKILL = "dhs-setup";
+const SETUP_SKILL = "setit-se";
+const DEFAULT_PREFIX = "_";
+const PREFIX_FILE = "PREFIX";
+const PREFIX_TOKEN = "{{prefix}}";
 const HOSTS_FILE = "hosts.json";
-const CHECK_UPDATE_SCRIPT = ".dhs/scripts/check-update";
+const CHECK_UPDATE_SCRIPT = ".seh/scripts/check-update";
 const OPENCODE_PLUGIN_SRC = path.join("references", "opencode-check-update.js");
 const GITIGNORE_ENTRIES = [
   {
-    line: ".dhs/",
-    alreadyPresent: new Set([".dhs", ".dhs/", "/.dhs", "/.dhs/"]),
+    line: ".seh/",
+    alreadyPresent: new Set([".seh", ".seh/", "/.seh", "/.seh/"]),
   },
   {
     line: "harness.credentials.local.json",
@@ -32,7 +35,35 @@ const GITIGNORE_ENTRIES = [
 ];
 
 function usage() {
-  return "Usage: dhs <install|uninstall>";
+  return [
+    "Usage: seh <install|uninstall> [--prefix P]",
+    "  --prefix P   (install) prefix for installed skill names, default _ (/_setit-se). \"\" for none",
+  ].join("\n");
+}
+
+function parseArgs(argv) {
+  const out = { command: argv[0], prefix: undefined };
+  for (let i = 1; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--prefix" || arg.startsWith("--prefix=")) {
+      let value;
+      if (arg === "--prefix") {
+        value = argv[++i];
+        if (value === undefined) {
+          return { error: 'seh: --prefix needs a value (use --prefix "" for no prefix)' };
+        }
+      } else {
+        value = arg.slice("--prefix=".length);
+      }
+      if (!/^[A-Za-z0-9_-]*$/.test(value)) {
+        return { error: "seh: --prefix may contain only letters, digits, _ and -" };
+      }
+      out.prefix = value;
+    } else {
+      return { error: null };
+    }
+  }
+  return out;
 }
 
 function resolveCtx(ctx) {
@@ -55,23 +86,23 @@ function posixJoin(rel) {
 function loadHosts(packageRoot) {
   const hostsPath = path.join(packageRoot, "references", HOSTS_FILE);
   if (!fs.existsSync(hostsPath)) {
-    console.error("dhs: missing package file at references/hosts.json");
+    console.error("seh: missing package file at references/hosts.json");
     process.exit(1);
   }
   let data;
   try {
     data = JSON.parse(fs.readFileSync(hostsPath, "utf8"));
   } catch {
-    console.error("dhs: invalid JSON at references/hosts.json");
+    console.error("seh: invalid JSON at references/hosts.json");
     process.exit(1);
   }
   if (!Array.isArray(data.hosts) || data.hosts.length === 0) {
-    console.error("dhs: references/hosts.json has no hosts");
+    console.error("seh: references/hosts.json has no hosts");
     process.exit(1);
   }
   for (const host of data.hosts) {
     if (!host || typeof host.skillsDir !== "string" || host.skillsDir === "") {
-      console.error("dhs: references/hosts.json host is missing skillsDir");
+      console.error("seh: references/hosts.json host is missing skillsDir");
       process.exit(1);
     }
     if (host.hooksFile) {
@@ -82,7 +113,7 @@ function loadHosts(packageRoot) {
         host.hooksShape === ""
       ) {
         console.error(
-          "dhs: references/hosts.json host hooksFile needs hooksShape"
+          "seh: references/hosts.json host hooksFile needs hooksShape"
         );
         process.exit(1);
       }
@@ -91,7 +122,7 @@ function loadHosts(packageRoot) {
         (typeof host.hooksEvent !== "string" || host.hooksEvent === "")
       ) {
         console.error(
-          "dhs: references/hosts.json host hooksFile needs hooksEvent and hooksShape"
+          "seh: references/hosts.json host hooksFile needs hooksEvent and hooksShape"
         );
         process.exit(1);
       }
@@ -100,15 +131,33 @@ function loadHosts(packageRoot) {
   return data.hosts;
 }
 
-function setupSkillDir(cwd, host) {
-  return path.join(cwd, posixJoin(host.skillsDir), SETUP_SKILL);
+function setupSkillDir(cwd, host, prefix) {
+  return path.join(cwd, posixJoin(host.skillsDir), `${prefix}${SETUP_SKILL}`);
 }
 
 function isPackageTestFile(filePath) {
   return /\.test\.[cm]?js$/.test(filePath);
 }
 
-function copyTree(src, dest) {
+function renderTokens(tree, prefix) {
+  for (const entry of fs.readdirSync(tree, { withFileTypes: true })) {
+    const full = path.join(tree, entry.name);
+    if (entry.isDirectory()) {
+      renderTokens(full, prefix);
+    } else if (entry.isFile()) {
+      const buf = fs.readFileSync(full);
+      if (buf.includes(0)) {
+        continue;
+      }
+      const text = buf.toString("utf8");
+      if (text.includes(PREFIX_TOKEN)) {
+        fs.writeFileSync(full, text.split(PREFIX_TOKEN).join(prefix));
+      }
+    }
+  }
+}
+
+function copyTree(src, dest, prefix) {
   fs.rmSync(dest, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.cpSync(src, dest, {
@@ -116,6 +165,30 @@ function copyTree(src, dest) {
     force: true,
     filter: (from) => !isPackageTestFile(from),
   });
+  if (prefix !== undefined) {
+    renderTokens(dest, prefix);
+  }
+}
+
+// Frontmatter `name` becomes the slash command, so it must be prefix + name.
+function renameSkill(skillDir, installedName) {
+  const file = path.join(skillDir, "SKILL.md");
+  if (!fs.existsSync(file)) {
+    return;
+  }
+  const text = fs.readFileSync(file, "utf8");
+  fs.writeFileSync(
+    file,
+    text.replace(/^(---\r?\n[\s\S]*?^name:)[^\n]*$/m, `$1 ${installedName}`)
+  );
+}
+
+function readPrefix(sehDir) {
+  try {
+    return fs.readFileSync(path.join(sehDir, PREFIX_FILE), "utf8").split(/\r?\n/)[0];
+  } catch {
+    return DEFAULT_PREFIX;
+  }
 }
 
 function gitignorePattern(line) {
@@ -306,7 +379,7 @@ function ensureOpencodePlugin(cwd, host, packageRoot) {
   const src = opencodePluginSource(packageRoot);
   if (!fs.existsSync(src)) {
     console.error(
-      "dhs install: missing package file at references/opencode-check-update.js"
+      "seh install: missing package file at references/opencode-check-update.js"
     );
     process.exit(1);
   }
@@ -328,7 +401,7 @@ function ensureHostHook(cwd, host, packageRoot) {
   try {
     data = readJsonFile(filePath) || {};
   } catch {
-    console.error(`dhs install: invalid JSON at ${host.hooksFile}`);
+    console.error(`seh install: invalid JSON at ${host.hooksFile}`);
     process.exit(1);
   }
   const command = checkUpdateCommand(host);
@@ -338,7 +411,7 @@ function ensureHostHook(cwd, host, packageRoot) {
     ensureClaudeHook(data, host.hooksEvent, command);
   } else {
     console.error(
-      `dhs: references/hosts.json unknown hooksShape ${host.hooksShape}`
+      `seh: references/hosts.json unknown hooksShape ${host.hooksShape}`
     );
     process.exit(1);
   }
@@ -395,40 +468,57 @@ function pruneEmptyAncestors(startDir, cwd) {
   }
 }
 
-function install(ctx) {
+function install(ctx, prefixArg) {
   const { cwd, packageRoot } = resolveCtx(ctx);
+  const prefix = prefixArg === undefined ? DEFAULT_PREFIX : prefixArg;
   const hosts = loadHosts(packageRoot);
-  const dhsDir = path.join(cwd, ".dhs");
-  fs.mkdirSync(dhsDir, { recursive: true });
+  const sehDir = path.join(cwd, ".seh");
+  const previousPrefix = fs.existsSync(path.join(sehDir, PREFIX_FILE))
+    ? readPrefix(sehDir)
+    : undefined;
+  fs.mkdirSync(sehDir, { recursive: true });
+  if (previousPrefix !== undefined && previousPrefix !== prefix) {
+    for (const host of hosts) {
+      const old = setupSkillDir(cwd, host, previousPrefix);
+      fs.rmSync(old, { recursive: true, force: true });
+      pruneEmptyAncestors(path.dirname(old), cwd);
+    }
+  }
 
   for (const name of PAYLOAD_DIRS) {
     const src = path.join(packageRoot, name);
     if (!fs.existsSync(src)) {
       continue;
     }
-    copyTree(src, path.join(dhsDir, name));
+    copyTree(src, path.join(sehDir, name), prefix);
   }
+  fs.writeFileSync(path.join(sehDir, PREFIX_FILE), `${prefix}\n`);
 
   const version = packageVersion(packageRoot);
-  fs.writeFileSync(path.join(dhsDir, "VERSION"), `${version}\n`);
+  fs.writeFileSync(path.join(sehDir, "VERSION"), `${version}\n`);
 
   const skillSrc = path.join(packageRoot, "skills", SETUP_SKILL);
   if (!fs.existsSync(skillSrc)) {
     console.error(
-      `dhs install: missing package skill at skills/${SETUP_SKILL}`
+      `seh install: missing package skill at skills/${SETUP_SKILL}`
     );
     process.exit(1);
   }
   for (const host of hosts) {
-    copyTree(skillSrc, setupSkillDir(cwd, host));
+    const dest = setupSkillDir(cwd, host, prefix);
+    copyTree(skillSrc, dest, prefix);
+    renameSkill(dest, `${prefix}${SETUP_SKILL}`);
     ensureHostHook(cwd, host, packageRoot);
   }
 
   ensureGitignore(cwd);
 
+  console.log(`seh install: OK ${version} in ${cwd}`);
+  console.log(`Next: run /${prefix}${SETUP_SKILL} in the project.`);
+
   if (fs.existsSync(path.join(cwd, "harness.config.json"))) {
     console.log(
-      "harness.config.json is present. Run /dhs-setup to apply the new templates."
+      `harness.config.json is present. Run /${prefix}${SETUP_SKILL} to apply the new templates.`
     );
   }
 }
@@ -436,9 +526,10 @@ function install(ctx) {
 function uninstall(ctx) {
   const { cwd, packageRoot } = resolveCtx(ctx);
   const hosts = loadHosts(packageRoot);
-  fs.rmSync(path.join(cwd, ".dhs"), { recursive: true, force: true });
+  const prefix = readPrefix(path.join(cwd, ".seh"));
+  fs.rmSync(path.join(cwd, ".seh"), { recursive: true, force: true });
   for (const host of hosts) {
-    const skillDir = setupSkillDir(cwd, host);
+    const skillDir = setupSkillDir(cwd, host, prefix);
     fs.rmSync(skillDir, { recursive: true, force: true });
     pruneEmptyAncestors(path.dirname(skillDir), cwd);
     removeHostHook(cwd, host);
@@ -453,13 +544,21 @@ function main(argv, ctx) {
     process.exit(command === undefined ? 1 : 0);
   }
 
-  if (argv.length !== 1) {
+  const parsed = parseArgs(argv);
+  if (parsed.error !== undefined) {
+    if (parsed.error) {
+      console.error(parsed.error);
+    }
     console.error(usage());
+    process.exit(1);
+  }
+  if (command === "uninstall" && parsed.prefix !== undefined) {
+    console.error("seh uninstall: --prefix is not accepted (the prefix is read from .seh/PREFIX)");
     process.exit(1);
   }
 
   if (command === "install") {
-    install(ctx);
+    install(ctx, parsed.prefix);
     return;
   }
 

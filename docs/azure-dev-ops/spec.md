@@ -1,6 +1,6 @@
 # Azure DevOps tracker — spec
 
-Behaviour for an optional **Azure DevOps Boards** tracker in `dhs`. This document is the **ADO slice spec**. When it conflicts with [prd.md](../prd.md) on product-wide rules (one tracker, no CLI subcommands, install layout), **the PRD wins** until the PRD is updated to admit ADO.
+Behaviour for an optional **Azure DevOps Boards** tracker in `seh`. This document is the **ADO slice spec**. When it conflicts with [prd.md](../prd.md) on product-wide rules (one tracker, no CLI subcommands, install layout), **the PRD wins** until the PRD is updated to admit ADO.
 
 ## Problem
 
@@ -10,10 +10,10 @@ Teams on Azure DevOps need the same harness flow as Jira: spec, prompt, log, com
 
 When this spec or a phase file lists options, **implement the recommended row** unless the user explicitly chooses another in the commissioning message.
 
-| Decision | Recommended | Rejected for dhs |
+| Decision | Recommended | Rejected for seh |
 |----------|-------------|------------------|
 | API surface | **Azure DevOps WIT REST** (`api-version=7.1` on Services; pin in code) | `az boards` / `azure-devops` CLI extension |
-| Script stack | **POSIX `sh` + `curl` + Node helper** (`scripts/ado`, `lib-ado.sh`, `ado-json.js`) | All-HTTP in agents; MCP; `dhs ado` CLI |
+| Script stack | **POSIX `sh` + `curl` + Node helper** (`scripts/ado`, `lib-ado.sh`, `ado-json.js`) | All-HTTP in agents; MCP; `seh ado` CLI |
 | Auth | **PAT in `harness.credentials.local.json`** (`adoPat`); Basic with empty user + PAT as password | PAT in env (`AZURE_DEVOPS_EXT_PAT`); PAT in argv; interactive `az login` only |
 | Passing creds to `curl` | **Transient `curl --config` file** (`mktemp`, mode `600`, `trap` remove) | `-u` / `-H Authorization` on argv; long-lived netrc in repo |
 | Config | **`harness.config.json` → `agents.tracker`** + local credentials file only | Extra org/project files; machine-wide az defaults |
@@ -26,12 +26,12 @@ When this spec or a phase file lists options, **implement the recommended row** 
 
 ## Product invariants (unchanged from PRD)
 
-- CLI v1+: still only `dhs install` / `dhs uninstall`. **No** `dhs ado`.
-- Scripts live under package `scripts/`, installed as `.dhs/scripts/ado`.
+- CLI v1+: still only `seh install` / `seh uninstall`. **No** `seh ado`.
+- Scripts live under package `scripts/`, installed as `.seh/scripts/ado`.
 - **One tracker:** files **or** exactly one external tracker (`kind` `jira` or `ado`). No mirroring spec/prompt/log.
 - Contract: `OK` / `UNCHANGED` / `BLOCKED:` (same family as `jira` and git scripts).
 - Token **never** in argv, stdout, chat, or git.
-- Agents call `.dhs/scripts/ado`; they do not compose `curl` or REST.
+- Agents call `.seh/scripts/ado`; they do not compose `curl` or REST.
 - `agents.tracker.artifactsOnTrackerOnly`: same semantics as Jira (issue vs repo files named by task id).
 - POSIX `sh` hosts only (v1 rule); ADO does not relax that.
 
@@ -58,7 +58,7 @@ Mirror `scripts/jira` verbs and argv style:
 
 | Verb | Role |
 |------|------|
-| `meta` | `/dhs-setup` Add/Change — list states (per configured types), types, fields for mapping |
+| `meta` | `/<prefix>setit-se` Add/Change — list states (per configured types), types, fields for mapping |
 | `get <id>` | Architect, Implementer, Reviewer |
 | `create --type feature\|bug --title <text>` | Architect |
 | `set <id> spec\|prompt\|log [--file <path>]` | Architect; Implementer/Reviewer (log) |
@@ -78,7 +78,7 @@ Base: `{organizationUrl}/{project}/_apis/wit/…` (encode project in path as tod
 - Set / transition / link: `PATCH workitems/{id}` with JSON Patch
 - Comment: `POST workitems/{id}/comments?api-version=7.1`
 
-## `/dhs-setup` (ADO)
+## `/<prefix>setit-se` (ADO)
 
 Same offer/add/change/remove pattern as Jira:
 

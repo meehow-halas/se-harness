@@ -15,7 +15,7 @@ When a phase’s “Done when” and [shared done rules](#shared-done-rules) hol
 | 2 | [02-foundation.md](02-foundation.md) | [02-foundation.prompt.md](02-foundation.prompt.md) |
 | 3 | [03-crud.md](03-crud.md) | [03-crud.prompt.md](03-crud.prompt.md) |
 | 4 | [04-workflow.md](04-workflow.md) | [04-workflow.prompt.md](04-workflow.prompt.md) |
-| 5 | [05-dhs-setup.md](05-dhs-setup.md) | [05-dhs-setup.prompt.md](05-dhs-setup.prompt.md) |
+| 5 | [05-seh-setup.md](05-seh-setup.md) | [05-seh-setup.prompt.md](05-seh-setup.prompt.md) |
 | 6 | [06-runtime.md](06-runtime.md) | [06-runtime.prompt.md](06-runtime.prompt.md) |
 | 7 | [07-html-bodies.md](07-html-bodies.md) | [07-html-bodies.prompt.md](07-html-bodies.prompt.md) |
 
@@ -36,7 +36,7 @@ A phase is `done` when its checklist is true **and**:
 | 2 | `lib-ado.sh`, `ado-json.js`, `ado meta`, auth | 1 | done |
 | 3 | `get`, `create`, `set`, `comment` | 2 | todo |
 | 4 | `transition`, `link`, `UNCHANGED` / `BLOCKED` | 3 | todo |
-| 5 | `/dhs-setup` ADO add/change/remove | 2, 4 | todo |
+| 5 | `/<prefix>setit-se` ADO add/change/remove | 2, 4 | todo |
 | 6 | Agents, work skills, consumer `AGENTS.md` | 4, 5 | todo |
 | 7 | HTML ↔ plain text for mapped fields | 3 | todo |
 
@@ -44,4 +44,4 @@ Phase 7 may run after phase 3; it must complete before calling the initiative do
 
 ## Initiative complete when
 
-Phases 1–7 are `done`, PRD lists ADO in the script table, and a consuming project can connect ADO via `/dhs-setup` and run Architect → Implementer → Reviewer using `.dhs/scripts/ado` only.
+Phases 1–7 are `done`, PRD lists ADO in the script table, and a consuming project can connect ADO via `/<prefix>setit-se` and run Architect → Implementer → Reviewer using `.seh/scripts/ado` only.

@@ -4,6 +4,7 @@
 
 . "$(dirname "$0")/lib.sh"
 
+git_gate
 require_git
 require_task "${1-}"
 task=$1
@@ -12,24 +13,25 @@ if [ $# -ne 1 ]; then
 fi
 
 read_base_branch
-base=$DHS_BASE_BRANCH
+base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
 
-if ! local_branch_exists "$task"; then
-  blocked "task branch $task does not exist" "run start-task $task, then retry push-task"
+branch=$(task_branch "$task")
+if ! local_branch_exists "$branch"; then
+  blocked "task branch $branch does not exist" "run start-task $task, then retry push-task"
 fi
 
 push_remote
-remote=$DHS_REMOTE
+remote=$SEH_REMOTE
 
-if ! out=$(git push --porcelain "$remote" "$task" 2>&1); then
-  blocked "push of $task to $remote failed ($out)" "fix the remote rejection without force, then retry push-task"
+if ! out=$(git push --porcelain "$remote" "$branch" 2>&1); then
+  blocked "push of $branch to $remote failed ($out)" "fix the remote rejection without force, then retry push-task"
 fi
 
 case $out in
   *" [up to date] "*|*"up to date"*)
-    unchanged "branch: $task" "remote: $remote"
+    unchanged "branch: $branch" "remote: $remote"
     ;;
 esac
 
-ok "branch: $task" "remote: $remote"
+ok "branch: $branch" "remote: $remote"

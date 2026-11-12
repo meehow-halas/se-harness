@@ -13,14 +13,14 @@ const { PAYLOAD_DIRS } = require("../src/cli");
 const GIT_ENV = {
   GIT_CONFIG_GLOBAL: "/dev/null",
   GIT_CONFIG_NOSYSTEM: "1",
-  GIT_AUTHOR_NAME: "dhs-test",
-  GIT_AUTHOR_EMAIL: "dhs-test@example.com",
-  GIT_COMMITTER_NAME: "dhs-test",
-  GIT_COMMITTER_EMAIL: "dhs-test@example.com",
+  GIT_AUTHOR_NAME: "seh-test",
+  GIT_AUTHOR_EMAIL: "seh-test@example.com",
+  GIT_COMMITTER_NAME: "seh-test",
+  GIT_COMMITTER_EMAIL: "seh-test@example.com",
 };
 
 function withTempDir(fn) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dhs-test-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "seh-test-"));
   try {
     return fn(dir);
   } finally {
@@ -32,24 +32,24 @@ function withTempDir(fn) {
 function runCli(args, { cwd, packageRoot } = {}) {
   const script = `
     const { main } = require(${JSON.stringify(CLI_PATH)});
-    const args = JSON.parse(process.env.DHS_TEST_ARGS);
+    const args = JSON.parse(process.env.SEH_TEST_ARGS);
     const ctx = {};
-    if (process.env.DHS_TEST_CWD) ctx.cwd = process.env.DHS_TEST_CWD;
-    if (process.env.DHS_TEST_PACKAGE_ROOT) {
-      ctx.packageRoot = process.env.DHS_TEST_PACKAGE_ROOT;
+    if (process.env.SEH_TEST_CWD) ctx.cwd = process.env.SEH_TEST_CWD;
+    if (process.env.SEH_TEST_PACKAGE_ROOT) {
+      ctx.packageRoot = process.env.SEH_TEST_PACKAGE_ROOT;
     }
     main(args, ctx);
   `;
   const env = {
     ...process.env,
     ...GIT_ENV,
-    DHS_TEST_ARGS: JSON.stringify(args),
+    SEH_TEST_ARGS: JSON.stringify(args),
   };
   if (cwd) {
-    env.DHS_TEST_CWD = cwd;
+    env.SEH_TEST_CWD = cwd;
   }
   if (packageRoot) {
-    env.DHS_TEST_PACKAGE_ROOT = packageRoot;
+    env.SEH_TEST_PACKAGE_ROOT = packageRoot;
   }
   const result = spawnSync(process.execPath, ["-e", script], {
     cwd: cwd || process.cwd(),
@@ -96,8 +96,8 @@ function writeHarnessConfig(cwd, baseBranch) {
 
 function initGitRepo(cwd, { baseBranch = "dev", config = true } = {}) {
   git(cwd, ["init", "-b", baseBranch]);
-  git(cwd, ["config", "user.name", "dhs-test"]);
-  git(cwd, ["config", "user.email", "dhs-test@example.com"]);
+  git(cwd, ["config", "user.name", "seh-test"]);
+  git(cwd, ["config", "user.email", "seh-test@example.com"]);
   fs.writeFileSync(path.join(cwd, "README.md"), "fixture\n");
   git(cwd, ["add", "README.md"]);
   git(cwd, ["commit", "-m", "init"]);
@@ -122,7 +122,7 @@ function runScript(name, args, { cwd, env } = {}) {
 }
 
 function pathHidingCommand(cwd, command) {
-  const shimDir = path.join(cwd, `.dhs-hide-${command}`);
+  const shimDir = path.join(cwd, `.seh-hide-${command}`);
   fs.mkdirSync(shimDir, { recursive: true });
   const essentials = [
     "git",
@@ -160,7 +160,7 @@ function argvLogCommand(logFile) {
   return `node -e 'require("fs").appendFileSync(process.argv[1], JSON.stringify(process.argv.slice(2)) + "\\n")' -- ${JSON.stringify(logFile)} "$@"`;
 }
 
-function writeGhStub(binDir, { existingUrl, createFails = false } = {}) {
+function writeGhStub(binDir, { existingUrl, createFails = false, prStates = "" } = {}) {
   fs.mkdirSync(binDir, { recursive: true });
   const logFile = path.join(binDir, "gh-argv.log");
   const gh = path.join(binDir, "gh");
@@ -181,6 +181,13 @@ if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
     exit 0
   fi
   exit 1
+fi
+if [ "$1" = "pr" ] && [ "$2" = "list" ]; then
+  case "$*" in
+    *"--state all"*) printf '%s\\n' ${JSON.stringify(prStates)} ;;
+    *) printf '%s\\n' ${JSON.stringify(existingUrl || "")} ;;
+  esac
+  exit 0
 fi
 if [ "$1" = "pr" ] && [ "$2" = "create" ]; then
   ${createBranch}
@@ -213,8 +220,8 @@ exec ${JSON.stringify(realGit)} "$@"
 }
 
 function failingEditor(cwd) {
-  const editor = path.join(cwd, ".dhs-editor-fail");
-  const stamp = path.join(cwd, ".dhs-editor-called");
+  const editor = path.join(cwd, ".seh-editor-fail");
+  const stamp = path.join(cwd, ".seh-editor-called");
   fs.writeFileSync(
     editor,
     `#!/bin/sh
@@ -255,7 +262,7 @@ function makePackageRoot(dir, { payload, setupSkill = true, version = "1.2.3" } 
     fs.writeFileSync(path.join(folder, "marker.txt"), `${name}\n`);
   }
   if (setupSkill) {
-    const skill = path.join(dir, "skills", "dhs-setup");
+    const skill = path.join(dir, "skills", "setit-se");
     fs.mkdirSync(skill, { recursive: true });
     fs.writeFileSync(path.join(skill, "SKILL.md"), "# setup\n");
   }
@@ -377,8 +384,8 @@ function cloneFrom(bare, dest) {
   if (cloned.status !== 0) {
     throw new Error(`git clone failed: ${cloned.stderr || cloned.stdout}`);
   }
-  git(dest, ["config", "user.name", "dhs-test"]);
-  git(dest, ["config", "user.email", "dhs-test@example.com"]);
+  git(dest, ["config", "user.name", "seh-test"]);
+  git(dest, ["config", "user.email", "seh-test@example.com"]);
   return dest;
 }
 

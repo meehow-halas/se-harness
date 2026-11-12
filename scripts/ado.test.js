@@ -240,7 +240,7 @@ describe("ado", () => {
     });
   });
 
-  test("reads credentials from the main worktree when run from a dhs worktree", () => {
+  test("reads credentials from the main worktree when run from a seh worktree", () => {
     withTempDir((cwd) => {
       writeProject(cwd);
       const wt = startWorktree(cwd, "90042");
