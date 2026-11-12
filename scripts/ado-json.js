@@ -47,6 +47,11 @@ if (!cmd) {
   fail("usage: ado-json.js <command>");
 }
 
+if (cmd === "api-version") {
+  process.stdout.write(`${API_VERSION}\n`);
+  process.exit(0);
+}
+
 if (cmd === "curl-config") {
   const cfgPath = process.argv[3];
   const credsPath = process.argv[4];

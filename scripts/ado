@@ -24,12 +24,13 @@ case $verb in
     load_ado
     _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
     _wit="/${_seg}/_apis/wit"
+    _api=$(ado_json api-version)
     _types=$(mktemp)
     _fl=$(mktemp)
     trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_types" "$_fl"' EXIT
-    ado_http GET "${_wit}/workitemtypes?api-version=7.1&%24expand=states"
+    ado_http GET "${_wit}/workitemtypes?api-version=${_api}&%24expand=states"
     cp "$SEH_ADO_BODY" "$_types"
-    ado_http GET "/_apis/wit/fields?api-version=7.1"
+    ado_http GET "/_apis/wit/fields?api-version=${_api}"
     cp "$SEH_ADO_BODY" "$_fl"
     _out=$(ado_json format-meta "$_types" "$_fl")
     _proj=$(ado_json project "$SEH_ADO_CFG")
