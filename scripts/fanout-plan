@@ -1,5 +1,5 @@
 #!/bin/sh
-# fanout-plan --skill <planit|doit|checkit|shipit> --keys <k,...> [--variant review|update|close]
+# fanout-plan --skill <planit|doit|checkit|shipit> --keys <k,...> [--variant review|update]
 #   [--depends <key:dep,...>] [--done <k,...>] [--running <k,...>] [--max <n>]
 # Stateless planner for multi-key fan-out. Prints which keys may start a session now.
 # Does not start sessions, read the tracker, or touch git. The parent calls it again
@@ -77,8 +77,8 @@ case ",$keys," in
 esac
 
 case $variant in
-  review|update|close) ;;
-  *) blocked "unknown variant $variant" "use review, update or close" ;;
+  review|update) ;;
+  *) blocked "unknown variant $variant" "use review or update" ;;
 esac
 
 case $max in
@@ -89,10 +89,6 @@ if [ "$max" -lt 1 ]; then
 fi
 
 mode=parallel
-if [ "$skill" = checkit ] && [ "$variant" = close ]; then
-  mode=serial
-  max=1
-fi
 
 seen=
 for k in $(split "$keys"); do

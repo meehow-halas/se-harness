@@ -14,12 +14,12 @@ Planner: `.dhs/scripts/fanout-plan`. Host adapter: `sessionSpawn` in `.dhs/refer
 Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in this invocation. A dependency on a key outside the invocation must already be `done` (pass it in `--done`), or that key stays blocked.
 
 ```text
-.dhs/scripts/fanout-plan --skill <name> --keys <K1,K2,...> [--variant review|update|close] [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
+.dhs/scripts/fanout-plan --skill <name> --keys <K1,K2,...> [--variant review|update] [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
 ```
 
 Output: `OK`, then `mode`, `max`, `ready` (comma list, may be empty), and optional `waiting`, `blocked`, `queued`, `stuck` lines. `BLOCKED: ...` means fix the arguments and retry.
 
-- `mode: serial` only for `checkit close` (`return-to-base` touches base). Otherwise `parallel`.
+- `mode` is always `parallel`.
 - Default `--max 4`. Above that, ask the user first.
 
 ## 3. Start sessions (desktop app host)
@@ -50,7 +50,6 @@ For `manual` (other hosts): print one block per ready key with the exact command
 | `/dhs-planit` | launch checkout, `use_worktree: false` | Architect is spec-only, no git. Parallel specs must write disjoint files. |
 | `/dhs-doit` | worktree from `.dhs/scripts/start-task <KEY>` run by the parent; child starts in the launch checkout | Parent runs `start-task` before spawning. Prompt carries `Worktree: <abs>`. The child cds there. |
 | `/dhs-checkit` review or update | as `/dhs-doit` | Safe in parallel. |
-| `/dhs-checkit` close | as `/dhs-doit`, one at a time | `mode: serial` from planner. |
 | `/dhs-shipit` | Architect in launch checkout; Implementer and Reviewer in the worktree | One key per session by definition. |
 
 Do not use app-created worktrees (`use_worktree: true`) for dhs tasks: they would sit outside `dhs-worktrees/<task>`.

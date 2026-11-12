@@ -17,7 +17,7 @@ Published product sources live in this repo at the package root. Do not invent a
 | `skills/` | Skill templates, including `/dhs-setup`. |
 | `brainstorm/` | Round templates: member, persona output format, facilitator (collect only), report, app-context skeleton. Not product agents and not in `agents/`. |
 | `references/` | Extra file templates (spec / prompt / log shapes, config skeleton, `BLOCKED` format, the consumer `AGENTS.md` template, `hosts.json`, and the like). |
-| `scripts/` | POSIX `sh` helpers (git/`gh` allowlist and session update check). Copied into `.dhs/scripts/`. Not the `dhs` CLI. |
+| `scripts/` | POSIX `sh` helpers (git/`gh` allowlist, session update check, fan-out planner `fanout-plan`). Copied into `.dhs/scripts/`. Not the `dhs` CLI. |
 | `src/` | CLI (`install` / `uninstall` only). Not copied into `.dhs/`. |
 
 `docs/` is this product’s own documentation. It is not copied into a consuming project’s `.dhs/`.
@@ -127,7 +127,7 @@ Agents run the **project’s own** test/lint/typecheck scripts (from `package.js
 
 ## Non-goals (v1)
 
-- Any `dhs` CLI beyond `install` and `uninstall`. No `dhs agent`, `dhs git`, `dhs check`, or `dhs` status/Jira command. Git allowlist helpers and the session update check are files under `.dhs/scripts/`, not CLI subcommands.
+- Any `dhs` CLI beyond `install` and `uninstall`. No `dhs agent`, `dhs git`, `dhs check`, or `dhs` status/Jira command. Git allowlist helpers, the session update check and the fan-out planner are files under `.dhs/scripts/`, not CLI subcommands.
 - Auto-install or auto `/dhs-setup` when a newer GitHub tag exists. The session hook only notifies.
 - Status or log helpers for the **files** tracker as `.dhs/scripts/` in v1. Agents write file-tracker status and log themselves. Jira I/O is `.dhs/scripts/jira` (not a `dhs` CLI subcommand).
 - A second skill for first-time setup or later config changes. `/dhs-setup` does both.
@@ -552,7 +552,7 @@ The user may name one basename/issue key or several. For each task the parent: r
 
 ### Session fan-out (multi-key runs)
 
-When the host’s `sessionSpawn` in `references/hosts.json` is `start_session` (Claude Code desktop app), a multi-key run of `/dhs-planit`, `/dhs-doit`, `/dhs-checkit` or `/dhs-shipit` may start one **dedicated session per key** instead of running them in the parent. Procedure: `references/session-fanout.md`. Planner: `.dhs/scripts/fanout-plan` (stateless: ready / waiting / blocked / queued; `serial` only for `checkit close`; default `--max 4`). Each child runs the skill for one key (`/dhs-doit MT-01`), keeps its own `Q<n>` / `BLOCKED:` dialogue with the user, and does not spawn children. Hosts with `manual` print one command per key. Single key: unchanged.
+When the host’s `sessionSpawn` in `references/hosts.json` is `start_session` (Claude Code desktop app), a multi-key run of `/dhs-planit`, `/dhs-doit`, `/dhs-checkit` or `/dhs-shipit` may start one **dedicated session per key** instead of running them in the parent. Procedure: `references/session-fanout.md`. Planner: `.dhs/scripts/fanout-plan` (stateless: ready / waiting / blocked / queued; default `--max 4`). Each child runs the skill for one key (`/dhs-doit MT-01`), keeps its own `Q<n>` / `BLOCKED:` dialogue with the user, and does not spawn children. Hosts with `manual` print one command per key. Single key: unchanged.
 
 ---
 

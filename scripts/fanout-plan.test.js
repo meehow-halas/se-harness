@@ -63,14 +63,11 @@ describe("fanout-plan", () => {
     assert.deepEqual(out.ready, ["UP-5", "UQ-6"]);
   });
 
-  test("checkit close is serial regardless of --max", () => {
-    const out = fields(
-      plan(["--skill", "checkit", "--variant", "close", "--keys", "CL-8,CM-9", "--max", "5"])
-    );
-    assert.equal(out.mode, "serial");
-    assert.equal(out.max, "1");
-    assert.deepEqual(out.ready, ["CL-8"]);
-    assert.deepEqual(out.lines, ["queued: CM-9 (max 1 reached)"]);
+  test("checkit close is no longer a variant", () => {
+    const out = blockedResult([
+      "--skill", "checkit", "--variant", "close", "--keys", "CL-8,CM-9", "--max", "5",
+    ]);
+    assert.match(out, /unknown variant close/);
   });
 
   test("dependent key waits for its in-invocation dependency, sibling still starts", () => {

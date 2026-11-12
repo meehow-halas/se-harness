@@ -55,7 +55,7 @@ BLOCKED: live agents are missing — run /dhs-setup
 
 ## Mode
 
-From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous` for the whole run, including the close round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Implementer, and Reviewer.
+From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous` for the whole run, including every Reviewer round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Implementer, and Reviewer.
 
 | Mode | Ask the user |
 |------|----------------|
