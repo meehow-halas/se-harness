@@ -14,7 +14,7 @@ Published product sources live in this repo at the package root. Do not invent a
 |-----------|------|
 | `agents/` | The four product agents: Architect, Implementer, Consultant, Reviewer. |
 | `packs/` | Framework rule packs (JS/TS, React Native, Angular, Next.js, Python, Django, FastAPI). |
-| `skills/` | Skill templates, including `/seh-setup`. |
+| `skills/` | Skill templates, including `/<prefix>setit-se`. |
 | `brainstorm/` | Round templates: member, persona output format, facilitator (collect only), report, app-context skeleton. Not product agents and not in `agents/`. |
 | `references/` | Extra file templates (spec / prompt / log shapes, config skeleton, `BLOCKED` format, the consumer `AGENTS.md` template, `hosts.json`, and the like). |
 | `scripts/` | POSIX `sh` helpers (git/`gh` allowlist, session update check, fan-out planner `fanout-plan`). Copied into `.seh/scripts/`. Not the `seh` CLI. |
@@ -22,7 +22,7 @@ Published product sources live in this repo at the package root. Do not invent a
 
 `docs/` is this product’s own documentation. It is not copied into a consuming project’s `.seh/`.
 
-`seh install` copies `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` into the target project’s `.seh/` under the **same names**, writes `.seh/VERSION` (the package version), and writes the live `/seh-setup` skill from `skills/` into **every** `skillsDir` listed in `references/hosts.json`. Those directory names in this package **are** the payload: do not keep a second internal tree and remap on copy. When this repo is implemented, write product files in these directories so a consuming repo receives `.seh/agents/`, `.seh/packs/`, `.seh/skills/`, `.seh/brainstorm/`, `.seh/references/`, and `.seh/scripts/`.
+`seh install` copies `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` into the target project’s `.seh/` under the **same names**, writes `.seh/VERSION` (the package version), and writes the live `/<prefix>setit-se` skill from `skills/` into **every** `skillsDir` listed in `references/hosts.json`. Those directory names in this package **are** the payload: do not keep a second internal tree and remap on copy. When this repo is implemented, write product files in these directories so a consuming repo receives `.seh/agents/`, `.seh/packs/`, `.seh/skills/`, `.seh/brainstorm/`, `.seh/references/`, and `.seh/scripts/`.
 
 ## Binding user flow
 
@@ -44,19 +44,21 @@ npx -p github:nbmh/dev-harness-layer#<ref> seh install
 npx -p https://github.com/nbmh/dev-harness-layer seh install
 ```
 
+**Skill-name prefix.** `seh install --prefix P` (default `_`; allowed characters letters, digits, `_`, `-`; `--prefix ""` for none) sets a prefix for every skill name. Source names in `skills/` have no prefix (`setit-se`, `planit`, `doit`, `checkit`, `shipit`, `grillit`); the live directory and the frontmatter `name:` (the slash command) are `<prefix><name>`, so the default commands are `/_setit-se`, `/_planit`, `/_doit`, `/_checkit`, `/_shipit`, `/_grillit`. Install writes the prefix to `.seh/PREFIX` and replaces the token `{{prefix}}` with it in every text file it copies into `.seh/`. `seh uninstall` reads `.seh/PREFIX` and takes no `--prefix`. Installing again with another prefix removes the old install-owned setup skill. `/<prefix>setit-se` generates the work skills as `<prefix><name>`, records `seh.generatedPrefix`, and removes live skills made with an earlier prefix or the pre-prefix `seh-*` names.
+
 `nbmh/dev-harness-layer` is the GitHub repository that publishes the `dev-harness-layer` package (`seh` CLI). A git HTTPS URL is the same as `github:nbmh/dev-harness-layer`. npm and GitHub are first-class and equivalent.
 
-**Required result:** `.seh/` and the project skill `/seh-setup` in every supported host `skillsDir` (today `.claude/skills/seh-setup`, `.cursor/skills/seh-setup`, and `.opencode/skills/seh-setup`). Setup is **not** done. `/seh-shipit`, `/seh-planit`, `/seh-doit`, `/seh-checkit`, and `/seh-brainstorm` do not exist yet and must not be offered. `/seh-setup` is the skill that finishes first-time setup and later changes the same config.
+**Required result:** `.seh/` and the project skill `/<prefix>setit-se` in every supported host `skillsDir` (today `.claude/skills/<prefix>setit-se`, `.cursor/skills/<prefix>setit-se`, and `.opencode/skills/<prefix>setit-se`). Setup is **not** done. `/<prefix>shipit`, `/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, and `/<prefix>grillit` do not exist yet and must not be offered. `/<prefix>setit-se` is the skill that finishes first-time setup and later changes the same config.
 
 ### 2. Finish setup
 
-The user runs `/seh-setup` in the assistant. That is the only way to finish first-time setup. The CLI does not configure the project.
+The user runs `/<prefix>setit-se` in the assistant. That is the only way to finish first-time setup. The CLI does not configure the project.
 
 The skill reads the repo and `.seh/`. It looks for a project PRD. It gathers what the repo already shows and states those inferences so the user can object. If there is no PRD, it asks one question at a time for the missing product facts, then writes `docs/prd.md`. It does not overwrite an existing PRD. After that it asks one question at a time only for what the repo (and that PRD) do not decide: role models per host (`agents.roles.<role>.model` keyed by `hosts.json` `id`), content language, the base git branch (`agents.baseBranch`; suggested default `dev`), an optional project rule (explained in that question so the user knows what it is for), then Jira yes/no. It always handles project-root `AGENTS.md` and `CLAUDE.md` in every combination (neither, only one, or both): merge what exists, then merge with the seh agents-file template, show the proposed `AGENTS.md`, and write only after the user accepts. It does not commit.
 
-**Required result:** a project PRD (`docs/prd.md` when it had to be created, otherwise the one already in the repo), `harness.config.json`, agents, remaining skills, rule packs, and a project-root `AGENTS.md` (accepted on first run) — including when the project originally had only `CLAUDE.md`. `CLAUDE.md` exists after this step when the project originally had a `.claude/` directory **and/or** a `CLAUDE.md` (symlink to `AGENTS.md` when the host can create one; otherwise an independent file with the same accepted body). Until this step has produced `harness.config.json`, work skills must stop and tell the user to run `/seh-setup`. If `harness.config.json` exists but `.seh/VERSION` does not match `seh.generatedFrom`, work skills must stop the same way and tell the user to run `/seh-setup` so generated files match the installed templates. If step 1 was skipped, `/seh-setup` stops and tells the user to run `seh install` here, then `/seh-setup` again.
+**Required result:** a project PRD (`docs/prd.md` when it had to be created, otherwise the one already in the repo), `harness.config.json`, agents, remaining skills, rule packs, and a project-root `AGENTS.md` (accepted on first run) — including when the project originally had only `CLAUDE.md`. `CLAUDE.md` exists after this step when the project originally had a `.claude/` directory **and/or** a `CLAUDE.md` (symlink to `AGENTS.md` when the host can create one; otherwise an independent file with the same accepted body). Until this step has produced `harness.config.json`, work skills must stop and tell the user to run `/<prefix>setit-se`. If `harness.config.json` exists but `.seh/VERSION` does not match `seh.generatedFrom`, work skills must stop the same way and tell the user to run `/<prefix>setit-se` so generated files match the installed templates. If step 1 was skipped, `/<prefix>setit-se` stops and tells the user to run `seh install` here, then `/<prefix>setit-se` again.
 
-A later `/seh-setup` does not repeat first-run setup. If a role `model` is still a string or the map is missing a host `id`, it finishes that map first. If `.seh/VERSION` does not match `seh.generatedFrom` in `harness.config.json`, it regenerates live agents, work skills, and rule packs from the current `.seh/` first (not the project PRD, not `AGENTS.md`), tells the user the package templates changed, then changes parameters (models, statuses, ignored packs, tracker, base branch, …) one at a time.
+A later `/<prefix>setit-se` does not repeat first-run setup. If a role `model` is still a string or the map is missing a host `id`, it finishes that map first. If `.seh/VERSION` does not match `seh.generatedFrom` in `harness.config.json`, it regenerates live agents, work skills, and rule packs from the current `.seh/` first (not the project PRD, not `AGENTS.md`), tells the user the package templates changed, then changes parameters (models, statuses, ignored packs, tracker, base branch, …) one at a time.
 
 ### 3. Work
 
@@ -64,12 +66,12 @@ Only after step 2:
 
 | Intent | Command |
 |--------|---------|
-| Full path | `/seh-shipit` plus what to build |
-| Spec only | `/seh-planit` |
-| Implementation only | `/seh-doit` (one task or a list) |
-| One review or update from base | `/seh-checkit` (one task or a list; one variant) |
-| Change parameters or Jira | `/seh-setup` |
-| Personae | `/seh-brainstorm` |
+| Full path | `/<prefix>shipit` plus what to build |
+| Spec only | `/<prefix>planit` |
+| Implementation only | `/<prefix>doit` (one task or a list) |
+| One review or update from base | `/<prefix>checkit` (one task or a list; one variant) |
+| Change parameters or Jira | `/<prefix>setit-se` |
+| Personae | `/<prefix>grillit` |
 
 After an accepted review the Reviewer commits, opens the PR and sets `done`. That is the end of the feature. The user merges the GitHub PR; the merge does not change the task status.
 
@@ -82,7 +84,7 @@ npx -p dev-harness-layer seh uninstall
 npx -p github:nbmh/dev-harness-layer seh uninstall
 ```
 
-Removes `.seh/` and the install-owned `/seh-setup` skill. Leaves `harness.config.json` and files `/seh-setup` generated.
+Removes `.seh/` and the install-owned `/<prefix>setit-se` skill. Leaves `harness.config.json` and files `/<prefix>setit-se` generated.
 
 ## How it runs
 
@@ -99,22 +101,22 @@ Into **this project only**:
 | Path | Role |
 |------|------|
 | `.seh/` | Working copy of `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, and `scripts/` from the package, plus `.seh/VERSION` (package version). |
-| Project skill `/seh-setup` | First-time configuration and later parameter changes (binding flow steps 2 and 3). Written into **every** `skillsDir` in `references/hosts.json`. |
+| Project skill `/<prefix>setit-se` | First-time configuration and later parameter changes (binding flow steps 2 and 3). Written into **every** `skillsDir` in `references/hosts.json`. |
 | Host session-start hook | One install-owned command that runs `.seh/scripts/check-update`. Merged into each host’s `hooksFile` from `references/hosts.json` (today `.claude/settings.json` `SessionStart`, `.cursor/hooks.json` `sessionStart`, and the OpenCode plugin `.opencode/plugins/seh-check-update.js`). Does not overwrite other hooks or other keys in that file. |
 
-That is the full install-owned set. After install, `/seh-setup` is invocable. Live agents, the other skills, rule packs, and `harness.config.json` do **not** exist yet. Install does not generate those live files. If this project already has `harness.config.json` (a later install, for example after a package update), install may print that the user should run `/seh-setup` to apply the new templates. It still does not generate them itself.
+That is the full install-owned set. After install, `/<prefix>setit-se` is invocable. Live agents, the other skills, rule packs, and `harness.config.json` do **not** exist yet. Install does not generate those live files. If this project already has `harness.config.json` (a later install, for example after a package update), install may print that the user should run `/<prefix>setit-se` to apply the new templates. It still does not generate them itself.
 
 Install also ensures the project-root `.gitignore` contains `.seh/` and `harness.credentials.local.json` (creates the file if missing). This is not uninstall-owned: `seh uninstall` does not edit `.gitignore`.
 
-`seh uninstall` removes that same set (`.seh/`, the install-owned `/seh-setup` skill in every `skillsDir`, and the install-owned hook command from each `hooksFile`). It does not delete `harness.config.json`, files `/seh-setup` already generated, or a host hooks file that still has other keys. If the file has only empty hook lists left (and Cursor’s required `version` key), uninstall deletes that file.
+`seh uninstall` removes that same set (`.seh/`, the install-owned `/<prefix>setit-se` skill in every `skillsDir`, and the install-owned hook command from each `hooksFile`). It does not delete `harness.config.json`, files `/<prefix>setit-se` already generated, or a host hooks file that still has other keys. If the file has only empty hook lists left (and Cursor’s required `version` key), uninstall deletes that file.
 
-On host session start, `.seh/scripts/check-update` compares `.seh/VERSION` to the highest semver git tag on `https://github.com/nbmh/dev-harness-layer.git`. That GitHub tag is the available version, whether bootstrap used npm or GitHub. It only injects context when the tag is strictly newer. It never runs `seh install`. Network, timeout, missing `.seh/VERSION`, or a local version that is already higher: silence (fail-open). Cache under `.seh/` (TTL 24h). A later `/seh-setup` after a manual install is still required when templates changed.
+On host session start, `.seh/scripts/check-update` compares `.seh/VERSION` to the highest semver git tag on `https://github.com/nbmh/dev-harness-layer.git`. That GitHub tag is the available version, whether bootstrap used npm or GitHub. It only injects context when the tag is strictly newer. It never runs `seh install`. Network, timeout, missing `.seh/VERSION`, or a local version that is already higher: silence (fail-open). Cache under `.seh/` (TTL 24h). A later `/<prefix>setit-se` after a manual install is still required when templates changed.
 
-### What `/seh-setup` does
+### What `/<prefix>setit-se` does
 
-**First run** (no `harness.config.json`): binding flow step 2. Ensures the project has a PRD (creates `docs/prd.md` when none exists). Asks for `agents.baseBranch` (suggested default `dev`). Writes config (including `seh.generatedFrom` = `.seh/VERSION`) and generates agents, the remaining skills, and rule packs from `.seh/` into **every** host tree in `.seh/references/hosts.json`. Live agent files are **copies** into each `agentsDir`, not symlinks to `.seh/agents/`, so the host `model:` frontmatter can be project-specific without editing the install-owned templates. Agent markdown does not interpolate `agents.baseBranch`, statuses, tracker maps, `fetchFields`, content language, or the product line — those are read from `harness.config.json` at run time, and git allowlist operations go through `.seh/scripts/`. Builds project-root `AGENTS.md` from any existing `AGENTS.md` / `CLAUDE.md` plus the seh template (always writes `AGENTS.md`, even if only `CLAUDE.md` was there), writes it only after the user accepts the proposed body, then writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (see `/seh-setup` detail).
+**First run** (no `harness.config.json`): binding flow step 2. Ensures the project has a PRD (creates `docs/prd.md` when none exists). Asks for `agents.baseBranch` (suggested default `dev`). Writes config (including `seh.generatedFrom` = `.seh/VERSION`) and generates agents, the remaining skills, and rule packs from `.seh/` into **every** host tree in `.seh/references/hosts.json`. Live agent files are **copies** into each `agentsDir`, not symlinks to `.seh/agents/`, so the host `model:` frontmatter can be project-specific without editing the install-owned templates. Agent markdown does not interpolate `agents.baseBranch`, statuses, tracker maps, `fetchFields`, content language, or the product line — those are read from `harness.config.json` at run time, and git allowlist operations go through `.seh/scripts/`. Builds project-root `AGENTS.md` from any existing `AGENTS.md` / `CLAUDE.md` plus the seh template (always writes `AGENTS.md`, even if only `CLAUDE.md` was there), writes it only after the user accepts the proposed body, then writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (see `/<prefix>setit-se` detail).
 
-**Later run** (config already there): if `.seh/VERSION` ≠ `seh.generatedFrom`, regenerate live agents, work skills, and rule packs from the current `.seh/` first, set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed templates changed (including that `/seh-feature` was renamed to `/seh-shipit` and leftover live `seh-feature` was removed; do not rewrite `AGENTS.md`). Then change one parameter at a time (including Jira). Do not overwrite keys the user did not confirm. After a confirmed change: rewrite that live agent’s frontmatter in **that host’s** `agentsDir` when one role `model` cell changes; regenerate rule packs when `packsIgnored` (or detected frameworks) change. Do **not** regenerate agents because `agents.baseBranch`, statuses, tracker maps, `fetchFields`, content language, or the product line changed — those are runtime config.
+**Later run** (config already there): if `.seh/VERSION` ≠ `seh.generatedFrom`, regenerate live agents, work skills, and rule packs from the current `.seh/` first, set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed templates changed (including that `/seh-feature` was renamed to `/<prefix>shipit` and leftover live `seh-feature` was removed; do not rewrite `AGENTS.md`). Then change one parameter at a time (including Jira). Do not overwrite keys the user did not confirm. After a confirmed change: rewrite that live agent’s frontmatter in **that host’s** `agentsDir` when one role `model` cell changes; regenerate rule packs when `packsIgnored` (or detected frameworks) change. Do **not** regenerate agents because `agents.baseBranch`, statuses, tracker maps, `fetchFields`, content language, or the product line changed — those are runtime config.
 
 Agents run the **project’s own** test/lint/typecheck scripts (from `package.json` or the equivalent).
 
@@ -128,11 +130,11 @@ Agents run the **project’s own** test/lint/typecheck scripts (from `package.js
 ## Non-goals (v1)
 
 - Any `seh` CLI beyond `install` and `uninstall`. No `seh agent`, `seh git`, `seh check`, or `seh` status/Jira command. Git allowlist helpers, the session update check and the fan-out planner are files under `.seh/scripts/`, not CLI subcommands.
-- Auto-install or auto `/seh-setup` when a newer GitHub tag exists. The session hook only notifies.
+- Auto-install or auto `/<prefix>setit-se` when a newer GitHub tag exists. The session hook only notifies.
 - Status or log helpers for the **files** tracker as `.seh/scripts/` in v1. Agents write file-tracker status and log themselves. Jira I/O is `.seh/scripts/jira` (not a `seh` CLI subcommand).
-- A second skill for first-time setup or later config changes. `/seh-setup` does both.
+- A second skill for first-time setup or later config changes. `/<prefix>setit-se` does both.
 - Global install (`npm install -g`, machine-wide skills, `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`).
-- Finishing setup by any path other than `/seh-setup` after `seh install`.
+- Finishing setup by any path other than `/<prefix>setit-se` after `seh install`.
 - Extra product agents. The set is Architect, Implementer, Consultant, Reviewer. The brainstorm facilitator is a collector runner, not a fifth role.
 - Merging pull requests.
 - Trackers other than files and Jira.
@@ -144,7 +146,7 @@ Agents run the **project’s own** test/lint/typecheck scripts (from `package.js
 
 **One active tracker connection:** files-only when `agents.tracker` is absent, or a connected external tracker (Jira in v1). Agents do not mirror the same content onto two stores. When `agents.tracker.artifactsOnTrackerOnly` is `false`, spec, prompt, and log live in repo files named by issue key; Jira holds the issue, workflow, and metadata reads — not ticket bodies for those three artifacts.
 
-The first `/seh-setup` asks once whether to connect Jira. Decline is remembered (`jiraOffer: declined`) so it does not ask again. **Later `/seh-setup` owns the tracker:** connect, change, or remove, including after a decline.
+The first `/<prefix>setit-se` asks once whether to connect Jira. Decline is remembered (`jiraOffer: declined`) so it does not ask again. **Later `/<prefix>setit-se` owns the tracker:** connect, change, or remove, including after a decline.
 
 Switching does **not** migrate. Connect Jira → new work is tickets only; leftover `docs/features` (etc.) are ignored. Remove Jira → new work is files only; existing tickets are not copied into files.
 
@@ -172,7 +174,7 @@ When `artifactsOnTrackerOnly` is `false`, spec, prompt, and log live in `docs/fe
 
 Agents call that script; they do not compose `curl` or REST themselves.
 
-The five seh steps are the same as on files. **Which Jira status each step uses is not guessed.** `/seh-setup` writes `agents.tracker.statuses` from that project’s workflow (names taken from Jira, shown as a numbered list). Agents transition only to those exact strings.
+The five seh steps are the same as on files. **Which Jira status each step uses is not guessed.** `/<prefix>setit-se` writes `agents.tracker.statuses` from that project’s workflow (names taken from Jira, shown as a numbered list). Agents transition only to those exact strings.
 
 | Key | When the agent moves the issue | Config |
 |-----|-------------------------------|--------|
@@ -183,7 +185,7 @@ The five seh steps are the same as on files. **Which Jira status each step uses 
 | `done` | Clean review accepted: commit, push and PR opened (feature finished) | Jira status or `null` |
 | `blocker` (optional extra) | Status a **depends** issue must already have before this one may start | Jira status; required if `depends` is used |
 
-`null` = this step does not call a Jira transition. There is no file fallback and no invented name. If the mapped status does not exist on that issue type’s workflow, stop and tell the user to fix the mapping in `/seh-setup`.
+`null` = this step does not call a Jira transition. There is no file fallback and no invented name. If the mapped status does not exist on that issue type’s workflow, stop and tell the user to fix the mapping in `/<prefix>setit-se`.
 
 While Jira is connected and `artifactsOnTrackerOnly` is `true`, `agents.statuses` is not written into artifacts. When `artifactsOnTrackerOnly` is `false`, `agents.statuses` applies to spec frontmatter in repo files. After Remove, file-tracker strings from `agents.statuses` apply again.
 
@@ -260,7 +262,7 @@ Agents update status **only** on the active tracker. Files: write the strings fr
 
 ## Modes
 
-From **intent**, not a required slash flag. A launch may name the mode so every agent in `/seh-shipit` shares it. Default: `interactive`.
+From **intent**, not a required slash flag. A launch may name the mode so every agent in `/<prefix>shipit` shares it. Default: `interactive`.
 
 | Mode | Ask the user |
 |------|----------------|
@@ -390,7 +392,7 @@ Checks the finished implementation against the spec. Not formatting, not Consult
 
 After acceptance, in order: final review in the log → status `done` → `CHANGELOG.md` entry → `.seh/scripts/commit-task` (includes `docs/prompt/<task>.prompt.md` when it exists in the worktree) → `.seh/scripts/push-task` → `.seh/scripts/open-pr` (base is `agents.baseBranch` from config) → `.seh/scripts/return-to-base`. Do not merge. PR body notes unfinished blockers.
 
-**Update from base:** only when the user asks (e.g. `/seh-checkit … update`). Run `.seh/scripts/update-from-base`. Resolve if possible, stop on conflicts.
+**Update from base:** only when the user asks (e.g. `/<prefix>checkit … update`). Run `.seh/scripts/update-from-base`. Resolve if possible, stop on conflicts.
 
 **Feature end:** the PR opened after acceptance is the finished state. The Reviewer does not wait for the merge, does not ask for a confirmation, and runs no later round for it.
 
@@ -404,7 +406,7 @@ The scripts are the **how**. Agent markdown is the **when**. A script name is st
 
 **Contract.** Success prints `OK` or `UNCHANGED` and `key: value` lines. Refusal ends with a `BLOCKED:` line (see Stops). The agent copies that line into its report, stops that path, and does not work around it with raw git, `gh`, or `curl`.
 
-The base git branch is `agents.baseBranch` (set on first `/seh-setup`, changeable later). Scripts cut task branches from it, open PRs against it, and merge it into a task branch on **update**. Changing that key in config does not require regenerating agents.
+The base git branch is `agents.baseBranch` (set on first `/<prefix>setit-se`, changeable later). Scripts cut task branches from it, open PRs against it, and merge it into a task branch on **update**. Changing that key in config does not require regenerating agents.
 
 Implementer and Reviewer always use a **git worktree** for the task. The path is `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/seh-worktrees/<task>`). `start-task` does not switch the caller’s checkout. Architect and Consultant do not create worktrees and do not call these scripts.
 
@@ -424,12 +426,12 @@ These scripts do not cover LLM procedure (phases, Consultant, review checklist, 
 
 | Script | Who | Reads | Does |
 |--------|-----|-------|------|
-| `jira meta` | `/seh-setup` Add/Change | `agents.tracker` url, user, projectKey + credentials | List that project’s statuses, issue types, and custom fields (numbered `key: value` lines) for mapping. |
+| `jira meta` | `/<prefix>setit-se` Add/Change | `agents.tracker` url, user, projectKey + credentials | List that project’s statuses, issue types, and custom fields (numbered `key: value` lines) for mapping. |
 | `jira get <key>` | Architect, Implementer, Reviewer | tracker maps, `fetchFields`, `artifactsOnTrackerOnly` | GET the issue. Print scalars then `BEGIN spec` / `prompt` / `log`. When `artifactsOnTrackerOnly` is `true` (default), bodies from mapped issue fields. When `false`, bodies from `docs/features/`, `docs/prompt/`, `docs/feature-log/` for that key (empty if missing; no issue-field fallback). |
 | `jira create --type feature` or `bug --title <text>` | Architect | `issueTypes`, projectKey | POST issue. Print `key:`. |
 | `jira set <key> spec\|prompt\|log [--file <path>]` | Architect (spec/prompt/log); Implementer/Reviewer (log) | `fields`, `artifactsOnTrackerOnly` | When `artifactsOnTrackerOnly` is `false`, `BLOCKED:` — edit repo files. Else PUT the mapped field or description; POST comment when the map is `comment`. Body from `--file` or stdin. Log mapped to a field is appended. |
 | `jira comment <key> [--file <path>]` | Architect, Implementer, Reviewer | — | POST a comment. Body from `--file` or stdin. |
-| `jira transition <key> <todo\|inProgress\|codeReview\|inReview\|done>` | the role that owns that step | `statuses` | `null` → `UNCHANGED` and no HTTP. Else transition only to that exact workflow name. Missing on this issue type → `BLOCKED:` fix mapping in `/seh-setup`. Already there → `UNCHANGED`. |
+| `jira transition <key> <todo\|inProgress\|codeReview\|inReview\|done>` | the role that owns that step | `statuses` | `null` → `UNCHANGED` and no HTTP. Else transition only to that exact workflow name. Missing on this issue type → `BLOCKED:` fix mapping in `/<prefix>setit-se`. Already there → `UNCHANGED`. |
 | `jira link <key> depends\|relates <other>` | Architect | — | Create the issue link. If Jira refuses, `BLOCKED:` with that fact (the agent comments it; does not write feature files and does not stop the task). |
 
 ---
@@ -438,41 +440,41 @@ These scripts do not cover LLM procedure (phases, Consultant, review checklist, 
 
 `harness.config.json` is the source of truth for project parameters. Generated agent markdown must not contain a literal `agents.baseBranch`, status string, Jira map, `fetchFields` list, content language, or product line. Those files say to **read** `harness.config.json` (and, for git and Jira, to **call** `.seh/scripts/`).
 
-`/seh-setup` still generates live files from `.seh/`:
+`/<prefix>setit-se` still generates live files from `.seh/`:
 
 | Live file | What setup writes |
 |-----------|-------------------|
 | Host agent files | Copy of `.seh/agents/` plus `model:` from `agents.roles.<role>.model[<host.id>]` into **each** `agentsDir` in `.seh/references/hosts.json`. Not a symlink. Do not copy another host’s model. Cursor `consultant` copies also get `readonly: true`. OpenCode copies get `mode: subagent`; OpenCode `consultant` copies also get `permissions` deny `edit`. |
-| Work skills (`/seh-planit`, `/seh-doit`, `/seh-checkit`, `/seh-shipit`, `/seh-brainstorm`) | From `.seh/skills/` into every `skillsDir`. Do not overwrite install-owned `/seh-setup`. Cursor copies also get `disable-model-invocation: true`. On generate, delete leftover `seh-feature` from each `skillsDir` if it exists. |
+| Work skills (`/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>shipit`, `/<prefix>grillit`) | From `.seh/skills/` into every `skillsDir`. Do not overwrite install-owned `/<prefix>setit-se`. Cursor copies also get `disable-model-invocation: true`. On generate, delete leftover `seh-feature` from each `skillsDir` if it exists. |
 | Rule packs | From `.seh/packs/`, filtered by detection and `packsIgnored`, into every `rulesDir` using that host’s `rulesExt` (`.md` + `paths:` vs `.mdc` + `description` / `globs` / `alwaysApply: false`). For OpenCode, also merge the glob `.opencode/rules/*.md` into `.opencode/opencode.json` `instructions` (create the file if missing; do not edit project-root `opencode.json`). |
 | `seh.generatedFrom` in `harness.config.json` | Equal to `.seh/VERSION` after a generation that used that tree. |
 
-`.seh/scripts/` are install-owned. A later `seh install` replaces them immediately. Live agents, work skills, and rules stay until `/seh-setup` regenerates them.
+`.seh/scripts/` are install-owned. A later `seh install` replaces them immediately. Live agents, work skills, and rules stay until `/<prefix>setit-se` regenerates them.
 
 ---
 
 ## Skills
 
-`/seh-setup` lands **in this project** via `seh install`, in every `skillsDir` from `references/hosts.json`. The other skills are generated **into the same project** (every `skillsDir`) by the first `/seh-setup` from `.seh/`. None of them are installed on the machine.
+`/<prefix>setit-se` lands **in this project** via `seh install`, in every `skillsDir` from `references/hosts.json`. The other skills are generated **into the same project** (every `skillsDir`) by the first `/<prefix>setit-se` from `.seh/`. None of them are installed on the machine.
 
-Single-stage skills do not chain. Only `/seh-shipit` runs the full path.
+Single-stage skills do not chain. Only `/<prefix>shipit` runs the full path.
 
-Work skills (`/seh-planit`, `/seh-doit`, `/seh-checkit`, `/seh-shipit`, `/seh-brainstorm`) stop before doing work when `harness.config.json` is missing **or** `.seh/VERSION` does not match `seh.generatedFrom`. The message is to run `/seh-setup` (and `seh install` first if `.seh/` or `.seh/VERSION` is missing).
+Work skills (`/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>shipit`, `/<prefix>grillit`) stop before doing work when `harness.config.json` is missing **or** `.seh/VERSION` does not match `seh.generatedFrom`. The message is to run `/<prefix>setit-se` (and `seh install` first if `.seh/` or `.seh/VERSION` is missing).
 
 | Skill | Does |
 |-------|------|
-| `/seh-setup` | Project-local, written by `seh install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Asks for `agents.baseBranch` (suggested default `dev`). Writes config (including `seh.generatedFrom` = `.seh/VERSION`), generates agents/skills/rules from `.seh/` without baking runtime config into agent bodies. Merges existing `AGENTS.md` and/or `CLAUDE.md` with the seh template, shows the proposed body, writes `AGENTS.md` only after acceptance (even if the project had only `CLAUDE.md`). Writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (symlink, or independent file if the link cannot be created). Offers Jira once. Does not commit. **Later run** (config already there): if `.seh/VERSION` ≠ `seh.generatedFrom`, regenerate live agents, work skills, and rules first. Then change one parameter at a time, including the base branch and add/change/remove Jira. Does not rewrite the project PRD or remake `AGENTS.md`. Rewrites that live agent’s `model:` in **that host’s** `agentsDir` when one role `model` cell changes; regenerates rules when packs change. Ensures `CLAUDE.md` if `.claude/` is present and the file is still missing (symlink first, independent file if the link fails). |
-| `/seh-planit` | Architect once. Offer next step; do not start it. |
-| `/seh-doit` | Implementer, including the Consultant loop. Feature or bug: same agent. One task or a list. Parent runs `start-task` and applies the Implementer procedure inline per task with `Worktree:`. Several tasks in one session run sequentially; parallel only via session fan-out (`references/session-fanout.md`). |
-| `/seh-checkit` | One Reviewer round per named task. Variants: review, update (one variant for the whole invocation). Same worktree / parallel rules as `/seh-doit`. |
-| `/seh-shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. **One task only.** Starts at the first missing stage. Stops if already `done`. Implementer and Reviewer still use a worktree. |
-| `/seh-brainstorm` | Project-local. Members CRUD, app context, run a consult: personae → facilitator (collect only) → Architect (PART A). |
+| `/<prefix>setit-se` | Project-local, written by `seh install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Asks for `agents.baseBranch` (suggested default `dev`). Writes config (including `seh.generatedFrom` = `.seh/VERSION`), generates agents/skills/rules from `.seh/` without baking runtime config into agent bodies. Merges existing `AGENTS.md` and/or `CLAUDE.md` with the seh template, shows the proposed body, writes `AGENTS.md` only after acceptance (even if the project had only `CLAUDE.md`). Writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (symlink, or independent file if the link cannot be created). Offers Jira once. Does not commit. **Later run** (config already there): if `.seh/VERSION` ≠ `seh.generatedFrom`, regenerate live agents, work skills, and rules first. Then change one parameter at a time, including the base branch and add/change/remove Jira. Does not rewrite the project PRD or remake `AGENTS.md`. Rewrites that live agent’s `model:` in **that host’s** `agentsDir` when one role `model` cell changes; regenerates rules when packs change. Ensures `CLAUDE.md` if `.claude/` is present and the file is still missing (symlink first, independent file if the link fails). |
+| `/<prefix>planit` | Architect once. Offer next step; do not start it. |
+| `/<prefix>doit` | Implementer, including the Consultant loop. Feature or bug: same agent. One task or a list. Parent runs `start-task` and applies the Implementer procedure inline per task with `Worktree:`. Several tasks in one session run sequentially; parallel only via session fan-out (`references/session-fanout.md`). |
+| `/<prefix>checkit` | One Reviewer round per named task. Variants: review, update (one variant for the whole invocation). Same worktree / parallel rules as `/<prefix>doit`. |
+| `/<prefix>shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. **One task only.** Starts at the first missing stage. Stops if already `done`. Implementer and Reviewer still use a worktree. |
+| `/<prefix>grillit` | Project-local. Members CRUD, app context, run a consult: personae → facilitator (collect only) → Architect (PART A). |
 
 There is no user-facing Consultant skill.
 
-### `/seh-setup` (detail)
+### `/<prefix>setit-se` (detail)
 
-**Entry.** If `seh install` has not been run in this project (`.seh/` is missing, or `/seh-setup` is absent from **every** `skillsDir` in `.seh/references/hosts.json`), stop and tell the user to run `seh install` here from npm (`npx -p dev-harness-layer seh install`) or from GitHub (`npx -p github:nbmh/dev-harness-layer seh install`), then `/seh-setup` again. Present in **any** listed `skillsDir` is enough.
+**Entry.** If `seh install` has not been run in this project (`.seh/` is missing, or `/<prefix>setit-se` is absent from **every** `skillsDir` in `.seh/references/hosts.json`), stop and tell the user to run `seh install` here from npm (`npx -p dev-harness-layer seh install`) or from GitHub (`npx -p github:nbmh/dev-harness-layer seh install`), then `/<prefix>setit-se` again. Present in **any** listed `skillsDir` is enough.
 
 If `harness.config.json` is missing: first-run path below. If it is present: later-run path below. Do not overwrite keys the user did not confirm. Do not regenerate generated files as a silent first-run repeat. A later-run template mismatch (`.seh/VERSION` ≠ `seh.generatedFrom`) is not a first-run repeat: regenerate live agents, work skills, and rules, then continue the later-run path.
 
@@ -481,7 +483,7 @@ If `harness.config.json` is missing: first-run path below. If it is present: lat
 - Read the repo first; state inferred choices so the user can object.
 - **Project PRD.** Look for an existing product requirements document (typical `docs/prd.md`, or a path the repo already treats as the PRD). If one exists, use it and do not rewrite it. If none exists, gather product facts from the repo (README, architecture, existing docs, what the code does). Ask one question at a time only for facts the repo does not contain. Then write `docs/prd.md` from those inferences and answers. Put that path in `agents.docs`. Do not put the PRD body into `harness.config.json`. One-line product + paths to docs are enough in config.
 - Detect frameworks; generate rule packs from `.seh/` (JS/TS, React Native, Angular, Next.js, Python, Django, FastAPI). Monorepo: pack only on trees that use it. Ignore list: `packsIgnored`.
-- Generate live agents and work skills from `.seh/` as copies into every host tree (see Runtime config and generated files). Write `seh.generatedFrom` from `.seh/VERSION`. If `.seh/VERSION` is missing, stop and tell the user to run `seh install` here, then `/seh-setup` again.
+- Generate live agents and work skills from `.seh/` as copies into every host tree (see Runtime config and generated files). Write `seh.generatedFrom` from `.seh/VERSION`. If `.seh/VERSION` is missing, stop and tell the user to run `seh install` here, then `/<prefix>setit-se` again.
 - Roles: architect, implementer, consultant, reviewer. For each host in `.seh/references/hosts.json`, one question per host: prefill all four roles from that row’s `modelSuggest`, show the table, ask whether to change any (optional overrides in one reply). The question must be framed as **change**, not “keep these models” — **no** / skip = accept the table, **yes** = overrides. `agents.roles.<role>.model` is a map keyed by that host’s `id`. Do not translate a Claude alias into a Cursor id. No other roles. No brainstorm-facilitator model question.
 - `agents.contentLanguage`: language of files and tracker text; ask once, suggest the conversation language.
 - `agents.baseBranch`: the git branch `.seh/scripts/` cut task branches from, open PRs against, merge into a task branch on **update**, and return to after the PR is opened. Ask once. Suggested default is `dev` (for example `dev` vs `main`). If the repo already names a default branch, state that inference so the user can object; do not silently take `main`, `master`, or the current checkout. Without this key, the scripts have no base and must not guess one. Do not write this value into generated agent markdown.
@@ -518,7 +520,7 @@ If `harness.config.json` is missing: first-run path below. If it is present: lat
 
 **Later run** (config already there):
 
-If `.seh/VERSION` is missing, stop and tell the user to run `seh install` here, then `/seh-setup` again. If a role `model` is still a string, or the map is missing a `hosts.json` `id`, finish that map first (prefill, then per host show the four-role table and one confirm-or-change question framed as **change** — not “keep these models”; **no** / skip = accept, **yes** = overrides; do not stamp one host’s model onto another). Then if `.seh/VERSION` does not equal `seh.generatedFrom`, regenerate live agents, work skills, and rule packs from `.seh/` into every host tree (same copy rules as first run: agent files are copies with `model:` from `agents.roles.<role>.model[<host.id>]`; bodies still do not interpolate runtime keys; leftover `seh-feature` is deleted from each `skillsDir`), set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed package templates changed, including that `/seh-feature` was renamed to `/seh-shipit`. Do not rewrite `AGENTS.md`; mention it may still contain the old name. Then one change at a time. Show current and new value, wait for confirmation, then write. The base branch (`agents.baseBranch`) is one of those parameters; writing it updates `harness.config.json` only. A role `model` change is one cell `(role, host)`: rewrite that live agent’s frontmatter in **that** `agentsDir` only. A `packsIgnored` (or framework) change regenerates rule packs. Do not touch `agents.brainstorm` (that is `/seh-brainstorm`). Do not create or rewrite the project PRD. Do not remake or re-merge `AGENTS.md`. Do not commit. If `.claude/` is present and `CLAUDE.md` is still missing, create the symlink the same way as on first run; if the link fails, write `CLAUDE.md` as an independent file with the current `AGENTS.md` body. If `CLAUDE.md` already exists as a regular file on a later run, do not overwrite it and do not re-run the first-run merge.
+If `.seh/VERSION` is missing, stop and tell the user to run `seh install` here, then `/<prefix>setit-se` again. If a role `model` is still a string, or the map is missing a `hosts.json` `id`, finish that map first (prefill, then per host show the four-role table and one confirm-or-change question framed as **change** — not “keep these models”; **no** / skip = accept, **yes** = overrides; do not stamp one host’s model onto another). Then if `.seh/VERSION` does not equal `seh.generatedFrom`, regenerate live agents, work skills, and rule packs from `.seh/` into every host tree (same copy rules as first run: agent files are copies with `model:` from `agents.roles.<role>.model[<host.id>]`; bodies still do not interpolate runtime keys; leftover `seh-feature` is deleted from each `skillsDir`), set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed package templates changed, including that `/seh-feature` was renamed to `/<prefix>shipit`. Do not rewrite `AGENTS.md`; mention it may still contain the old name. Then one change at a time. Show current and new value, wait for confirmation, then write. The base branch (`agents.baseBranch`) is one of those parameters; writing it updates `harness.config.json` only. A role `model` change is one cell `(role, host)`: rewrite that live agent’s frontmatter in **that** `agentsDir` only. A `packsIgnored` (or framework) change regenerates rule packs. Do not touch `agents.brainstorm` (that is `/<prefix>grillit`). Do not create or rewrite the project PRD. Do not remake or re-merge `AGENTS.md`. Do not commit. If `.claude/` is present and `CLAUDE.md` is still missing, create the symlink the same way as on first run; if the link fails, write `CLAUDE.md` as an independent file with the current `AGENTS.md` body. If `CLAUDE.md` already exists as a regular file on a later run, do not overwrite it and do not re-run the first-run merge.
 
 **Status migration** (later run, once): if `agents.statuses` has the key `code review` and no `implemented` key, the status flow changed (`code review` is now `implemented`, set by the Implementer). Rename that key and value to `implemented` in config and tell the user. Do not edit spec files. List every spec whose `status:` is `code review` and tell the user to set it to `implemented`, or to `in review` when a review is running. `in review` stays valid.
 
@@ -534,9 +536,9 @@ Do not invent a `seh` CLI for Jira. The skill calls `.seh/scripts/jira meta` and
 
 If the user names another config key (model, base branch, …), do that key first, then the tracker offer only when there is still no tracker and the offer was not declined — unless they explicitly asked to add/change/remove Jira, in which case do the tracker path even after a decline.
 
-### `/seh-shipit` pipeline
+### `/<prefix>shipit` pipeline
 
-One task. A list of keys is a stop: spec with `/seh-planit`, then `/seh-doit` with the list.
+One task. A list of keys is a stop: spec with `/<prefix>planit`, then `/<prefix>doit` with the list.
 
 1. No spec or prompt → Architect (launch checkout; no git, no worktree).
 2. Spec+prompt, no implementation → Implementer in the task worktree, Consultant inside each phase.
@@ -546,13 +548,13 @@ One task. A list of keys is a stop: spec with `/seh-planit`, then `/seh-doit` wi
 
 Do not pause between stages when there is no question and no stop. Report once at the end or at the first stop.
 
-### `/seh-doit` and `/seh-checkit` (one or many)
+### `/<prefix>doit` and `/<prefix>checkit` (one or many)
 
-The user may name one basename/issue key or several. For each task the parent: resolves the spec, enforces `depends` (unmet `depends` stops **that** task; siblings continue), runs `start-task` from the launch checkout, and launches the role with `Worktree: <abs>` from the script output. N>1: in parallel when the runtime allows; otherwise sequential, still one worktree per task. A `Q<n>` or interactive acceptance on one task does not stop siblings; the parent asks the user and resumes that child. `/seh-checkit` applies one variant (`review` / `update` / `close`) to the whole invocation. Interactive acceptance is per task. Overlapping product files across parallel tasks are not a stop.
+The user may name one basename/issue key or several. For each task the parent: resolves the spec, enforces `depends` (unmet `depends` stops **that** task; siblings continue), runs `start-task` from the launch checkout, and launches the role with `Worktree: <abs>` from the script output. N>1: in parallel when the runtime allows; otherwise sequential, still one worktree per task. A `Q<n>` or interactive acceptance on one task does not stop siblings; the parent asks the user and resumes that child. `/<prefix>checkit` applies one variant (`review` / `update` / `close`) to the whole invocation. Interactive acceptance is per task. Overlapping product files across parallel tasks are not a stop.
 
 ### Session fan-out (multi-key runs)
 
-When the host’s `sessionSpawn` in `references/hosts.json` is `start_session` (Claude Code desktop app), a multi-key run of `/seh-planit`, `/seh-doit`, `/seh-checkit` or `/seh-shipit` may start one **dedicated session per key** instead of running them in the parent. Procedure: `references/session-fanout.md`. Planner: `.seh/scripts/fanout-plan` (stateless: ready / waiting / blocked / queued; default `--max 4`). Each child runs the skill for one key (`/seh-doit MT-01`), keeps its own `Q<n>` / `BLOCKED:` dialogue with the user, and does not spawn children. Hosts with `manual` print one command per key. Single key: unchanged.
+When the host’s `sessionSpawn` in `references/hosts.json` is `start_session` (Claude Code desktop app), a multi-key run of `/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit` or `/<prefix>shipit` may start one **dedicated session per key** instead of running them in the parent. Procedure: `references/session-fanout.md`. Planner: `.seh/scripts/fanout-plan` (stateless: ready / waiting / blocked / queued; default `--max 4`). Each child runs the skill for one key (`/<prefix>doit MT-01`), keeps its own `Q<n>` / `BLOCKED:` dialogue with the user, and does not spawn children. Hosts with `manual` print one command per key. Single key: unchanged.
 
 ---
 
@@ -560,7 +562,7 @@ When the host’s `sessionSpawn` in `references/hosts.json` is `start_session` (
 
 Optional extra viewpoints while specifying. Members are markdown personae, not `@`-targets and not seh roles.
 
-The four product agents stay Architect, Implementer, Consultant, Reviewer. Brainstorm still has a **facilitator**, but it is not a fifth product role (no model in `agents.roles`, no `/seh-setup` question for it). It is an isolated runner: collect opinions, do not judge them, hand the pack to the Architect.
+The four product agents stay Architect, Implementer, Consultant, Reviewer. Brainstorm still has a **facilitator**, but it is not a fifth product role (no model in `agents.roles`, no `/<prefix>setit-se` question for it). It is an isolated runner: collect opinions, do not judge them, hand the pack to the Architect.
 
 That split is the point:
 
@@ -577,26 +579,26 @@ Personae must not see the Architect’s notes, recommendations, `Q<n>` leanings,
 
 | Piece | What it is |
 |-------|------------|
-| `/seh-brainstorm` | Skill. CRUD members, app context, start a consult. Orchestrates the round; does not role-play. |
+| `/<prefix>grillit` | Skill. CRUD members, app context, start a consult. Orchestrates the round; does not role-play. |
 | Member files | `<brainstormDir>/members/<id>.md` for **every** `brainstormDir` in `.seh/references/hosts.json`, from config (`id`, `description`, `identity`, `cares`, `dislikes`). |
 | App context | `<brainstormDir>/app-context.md` in every `brainstormDir`. Built by the skill from the repo (product line, `agents.docs`, README). Gaps: one question at a time, then user confirms the file. |
 | Persona turn | Isolated one-shot: one member, structured opinion (`[BLOCKER]` / `[IMPORTANT]` / `[NICE]`). Read-only. No git, no spec edits. Personae do not see each other. |
 | Facilitator | Isolated one-shot that **only collects**. Fills PART A (shared points, conflicts, blockers, lone voices, review quality). Does not decide who is right, does not drop a lone blocker, does not average. Used when two or more members were asked; one member → that reply is PART A. |
 | Architect | Receives PART A. Decides on every blocker, conflict and gap. Does not run persona or facilitator turns. A persona opinion is not user approval. |
 
-`/seh-setup` does not edit members. Implementer, Consultant and Reviewer never run a round.
+`/<prefix>setit-se` does not edit members. Implementer, Consultant and Reviewer never run a round.
 
 ### Two entries
 
-**Direct consult** (`/seh-brainstorm` + a question or a spec). Needs a ready app context and at least one member. Threshold does not apply. If the user names members, ask those; otherwise ask every member. The skill runs personae → facilitator → then launches the Architect with **PART A only** (plus the material). The skill shows the Architect’s decisions; the user resolves leftover conflicts. Do not hide a blocker the Architect rejected.
+**Direct consult** (`/<prefix>grillit` + a question or a spec). Needs a ready app context and at least one member. Threshold does not apply. If the user names members, ask those; otherwise ask every member. The skill runs personae → facilitator → then launches the Architect with **PART A only** (plus the material). The skill shows the Architect’s decisions; the user resolves leftover conflicts. Do not hide a blocker the Architect rejected.
 
-**During specification** (`/seh-planit` or Architect inside `/seh-shipit`). If the Architect needs a round, it **stops and asks the skill** (or the launching skill runs the round first). It does not interview personae in-process. Consult on its own when there are at least two members **and** the work passes `agents.brainstorm.consult`:
+**During specification** (`/<prefix>planit` or Architect inside `/<prefix>shipit`). If the Architect needs a round, it **stops and asks the skill** (or the launching skill runs the round first). It does not interview personae in-process. Consult on its own when there are at least two members **and** the work passes `agents.brainstorm.consult`:
 
 - `any` — every user-visible change
 - `significant` (default if unset) — hard to reverse, or changes how the product is used
 - `broad` — new module, onboarding, pricing, navigation rebuild
 
-`/seh-shipit` does not start a round by itself.
+`/<prefix>shipit` does not start a round by itself.
 
 ### Round
 
@@ -617,7 +619,7 @@ On create, ask once for the consult threshold, then for each host in `.seh/refer
 
 ## Coding standards
 
-`/seh-setup` generates rule files from packs in `.seh/` into every host `rulesDir`. Agents follow rules that load on Read/Write/Edit (or the host’s equivalent glob-scoped rules).
+`/<prefix>setit-se` generates rule files from packs in `.seh/` into every host `rulesDir`. Agents follow rules that load on Read/Write/Edit (or the host’s equivalent glob-scoped rules).
 
 Quality during implementation is **Consultant + the project’s own test command**. Reviewer does not replace Consultant.
 
@@ -627,7 +629,7 @@ Quality during implementation is **Consultant + the project’s own test command
 
 | Command | Purpose |
 |---------|---------|
-| `seh install` | This project: `.seh/` (including `scripts/` and `.seh/VERSION`) plus the `/seh-setup` skill in every `skillsDir` from `references/hosts.json`. From npm (`npx -p dev-harness-layer seh install`) or GitHub (`npx -p github:nbmh/dev-harness-layer seh install`). Does not generate live agents, work skills, or rule packs. |
+| `seh install` | This project: `.seh/` (including `scripts/` and `.seh/VERSION`) plus the `/<prefix>setit-se` skill in every `skillsDir` from `references/hosts.json`. From npm (`npx -p dev-harness-layer seh install`) or GitHub (`npx -p github:nbmh/dev-harness-layer seh install`). Does not generate live agents, work skills, or rule packs. |
 | `seh uninstall` | Reverse of install in this project. Same source as install. |
 
 Everything else is a skill, a `.seh/scripts/` helper, or a normal project command (including the project’s own test/lint). Git/`gh` on the allowlist is invoked by those scripts, not by a `seh` subcommand.
@@ -640,7 +642,7 @@ Not questions and not Consultant `must-fix`. Report in one line:
 
 `BLOCKED: <what stopped> — <what the user or another skill must do>`
 
-Examples: `seh install` missing, `/seh-setup` not run yet, `.seh/VERSION` does not match `seh.generatedFrom`, user approval missing, open blocker task, dirty **task worktree** when `return-to-base` must remove it, `/seh-shipit` given a list of tasks, PR failed, project tests failing on untouched code, a `.seh/scripts/` helper refused. A dirty **primary** checkout does not block `start-task`; after the file-tracker copy, `start-task` removes only this task’s uncommitted tracker copies from the launch tree (it does not uncommit files the user already committed).
+Examples: `seh install` missing, `/<prefix>setit-se` not run yet, `.seh/VERSION` does not match `seh.generatedFrom`, user approval missing, open blocker task, dirty **task worktree** when `return-to-base` must remove it, `/<prefix>shipit` given a list of tasks, PR failed, project tests failing on untouched code, a `.seh/scripts/` helper refused. A dirty **primary** checkout does not block `start-task`; after the file-tracker copy, `start-task` removes only this task’s uncommitted tracker copies from the launch tree (it does not uncommit files the user already committed).
 
 ---
 
@@ -648,24 +650,24 @@ Examples: `seh install` missing, `/seh-setup` not run yet, `.seh/VERSION` does n
 
 1. **The product and CLI binary are `seh`.** The npm package and GitHub repo are `dev-harness-layer`.
 2. **No extra wrappers.** There is no agent-wrapper CLI. Isolation for Implementer and Reviewer is git worktrees via `.seh/scripts/start-task`, not a `seh` subcommand. Ship only what this PRD names.
-3. **The binding user flow is the only adoption path:** `seh install` (npm or GitHub) → `/seh-setup` → work skills. Reverse of install is `seh uninstall` with the same source. No extra CLI for setup or config, no global install, no skip of `/seh-setup`.
-4. **CLI is only install/uninstall, always in the current project.** Install writes `.seh/` (including `scripts/` and `.seh/VERSION`), `/seh-setup` into every supported host `skillsDir`, and the session-start hook command into every host `hooksFile`. It does not generate live agents, work skills, or rule packs. Generation of those is `/seh-setup`. Verify is the project’s script. Git/`gh` on the allowlist and the session update check are invoked by `.seh/scripts/`.
+3. **The binding user flow is the only adoption path:** `seh install` (npm or GitHub) → `/<prefix>setit-se` → work skills. Reverse of install is `seh uninstall` with the same source. No extra CLI for setup or config, no global install, no skip of `/<prefix>setit-se`.
+4. **CLI is only install/uninstall, always in the current project.** Install writes `.seh/` (including `scripts/` and `.seh/VERSION`), `/<prefix>setit-se` into every supported host `skillsDir`, and the session-start hook command into every host `hooksFile`. It does not generate live agents, work skills, or rule packs. Generation of those is `/<prefix>setit-se`. Verify is the project’s script. Git/`gh` on the allowlist and the session update check are invoked by `.seh/scripts/`.
 5. **Consultant is in the default pipeline** — haiku, per phase, structured verdict, 2-pass cap, debt protocol. That is the finite loop (see the table under Consultant).
 6. **Reviewer stays spec-only** — split of duties: Consultant = how the code is written; Reviewer = whether it matches the spec.
 7. **Mode names** — `interactive` / `critical` / `autonomous` (same meaning as default / semi-standalone / standalone).
 8. **Five statuses** — drop `backlog` / `reviewReady` / `reviewDone` as duplicate labels.
 9. **Git allowlist via `.seh/scripts/`, not a `seh` wrapper CLI** — Implementer calls `start-task` only. Reviewer calls `commit-task` / `push-task` / `open-pr` / `update-from-base` / `return-to-base`. Scripts read `agents.baseBranch` from `harness.config.json`. Agents do not compose those git/`gh` commands. Merge of the PR is always human. `start-task` always uses a worktree and does not switch the caller.
 10. **Only four product agents** — Architect, Implementer, Consultant, Reviewer. Brainstorm facilitator is an isolated collector, not a fifth role in `agents.roles`.
-11. **`/seh-setup` is the only skill install writes** (into every `skillsDir`). It is first-time setup when `harness.config.json` is missing, and later parameter changes when the file already exists. Other skills are generated by `/seh-setup` into every `skillsDir`. Work skills must not run before `harness.config.json` exists, and must not run when `.seh/VERSION` does not match `seh.generatedFrom`.
-12. **First `/seh-setup` leaves the project with a PRD.** It uses an existing one and does not rewrite it. If none exists, it gathers from the repo, asks for gaps, and writes `docs/prd.md`. Config stores a one-line product plus doc paths, not the PRD body. Later `/seh-setup` does not rewrite that file.
-13. **Result is always `AGENTS.md`.** First `/seh-setup` always handles neither, only `AGENTS.md`, only `CLAUDE.md`, or both. It merges whatever exists with the seh template (`.seh/references/AGENTS.md`), shows the proposed body, and does not write until the user accepts. The written file is always `AGENTS.md`, even if the project had only `CLAUDE.md`. `CLAUDE.md` exists afterwards when `.claude/` was present and/or `CLAUDE.md` already existed (symlink preferred; independent file with the same body if the link fails). Later `/seh-setup` does not remake `AGENTS.md`.
-14. **One tracker.** Files or Jira, never both. `/seh-setup` can add, change, or remove Jira; a switch does not migrate old tasks. Jira Cloud REST v3 goes through `.seh/scripts/jira` (not MCP, not a `seh` Jira CLI). Agents do not compose `curl`. File-tracker status and log remain agent writes.
+11. **`/<prefix>setit-se` is the only skill install writes** (into every `skillsDir`). It is first-time setup when `harness.config.json` is missing, and later parameter changes when the file already exists. Other skills are generated by `/<prefix>setit-se` into every `skillsDir`. Work skills must not run before `harness.config.json` exists, and must not run when `.seh/VERSION` does not match `seh.generatedFrom`.
+12. **First `/<prefix>setit-se` leaves the project with a PRD.** It uses an existing one and does not rewrite it. If none exists, it gathers from the repo, asks for gaps, and writes `docs/prd.md`. Config stores a one-line product plus doc paths, not the PRD body. Later `/<prefix>setit-se` does not rewrite that file.
+13. **Result is always `AGENTS.md`.** First `/<prefix>setit-se` always handles neither, only `AGENTS.md`, only `CLAUDE.md`, or both. It merges whatever exists with the seh template (`.seh/references/AGENTS.md`), shows the proposed body, and does not write until the user accepts. The written file is always `AGENTS.md`, even if the project had only `CLAUDE.md`. `CLAUDE.md` exists afterwards when `.claude/` was present and/or `CLAUDE.md` already existed (symlink preferred; independent file with the same body if the link fails). Later `/<prefix>setit-se` does not remake `AGENTS.md`.
+14. **One tracker.** Files or Jira, never both. `/<prefix>setit-se` can add, change, or remove Jira; a switch does not migrate old tasks. Jira Cloud REST v3 goes through `.seh/scripts/jira` (not MCP, not a `seh` Jira CLI). Agents do not compose `curl`. File-tracker status and log remain agent writes.
 15. **Package source layout** — product files live in `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, and `src/` (CLI). Install copies the first six into `.seh/` under the same names. Do not remap. Facilitator templates stay in `brainstorm/`, not `agents/`. Git helpers stay in `scripts/`, not in the `seh` binary.
-16. **Base branch is configured, never guessed.** First `/seh-setup` asks for `agents.baseBranch` (suggested default `dev`). Later `/seh-setup` can change it. `.seh/scripts/` use only that value to cut, return, update-from-base, and target PRs. Agent markdown does not interpolate it.
+16. **Base branch is configured, never guessed.** First `/<prefix>setit-se` asks for `agents.baseBranch` (suggested default `dev`). Later `/<prefix>setit-se` can change it. `.seh/scripts/` use only that value to cut, return, update-from-base, and target PRs. Agent markdown does not interpolate it.
 17. **Runtime config, not baked agent bodies.** Generated agents read `harness.config.json` for `agents.baseBranch`, statuses, tracker maps, `fetchFields`, content language, and product line. They call `.seh/scripts/` for the git allowlist and for Jira. Changing those config keys does not require regenerating agents. Role `model` is written into live agent frontmatter because the host loads it from the file. Live agents are copies into **every** `agentsDir` in `.seh/references/hosts.json`, not symlinks to `.seh/agents/`. `agents.roles.<role>.model` is a map keyed by host `id`; each live copy gets `model:` from that host’s entry only. `agents.brainstorm.model` uses the same map shape.
-18. **Template version is stamped.** `seh install` writes `.seh/VERSION`. `/seh-setup` writes `seh.generatedFrom` in `harness.config.json`. A later `/seh-setup` regenerates live agents, work skills, and rules when those two differ. Install never generates live files. Work skills stop on that mismatch the same way they stop when config is missing.
-19. **Always write every supported host.** `references/hosts.json` is the host table. Install and `/seh-setup` write all rows; they do not ask which hosts to use. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format, `modelSuggest`, hook shape). Each row may carry `modelSuggest` (per role and `brainstorm`) as interview defaults; seh does not translate one host’s model id into another’s. Do not maintain a second template tree per host.
-20. **Worktree always; parallel on `/seh-doit` and `/seh-checkit`.** Implementer and Reviewer work in `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` even for one task. Architect stays on the launch checkout. No fifth agent and no extra skill: `/seh-doit` and `/seh-checkit` accept a list; `/seh-shipit` stays one sequential task. Parallel children when the runtime allows.
+18. **Template version is stamped.** `seh install` writes `.seh/VERSION`. `/<prefix>setit-se` writes `seh.generatedFrom` in `harness.config.json`. A later `/<prefix>setit-se` regenerates live agents, work skills, and rules when those two differ. Install never generates live files. Work skills stop on that mismatch the same way they stop when config is missing.
+19. **Always write every supported host.** `references/hosts.json` is the host table. Install and `/<prefix>setit-se` write all rows; they do not ask which hosts to use. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format, `modelSuggest`, hook shape). Each row may carry `modelSuggest` (per role and `brainstorm`) as interview defaults; seh does not translate one host’s model id into another’s. Do not maintain a second template tree per host.
+20. **Worktree always; parallel on `/<prefix>doit` and `/<prefix>checkit`.** Implementer and Reviewer work in `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` even for one task. Architect stays on the launch checkout. No fifth agent and no extra skill: `/<prefix>doit` and `/<prefix>checkit` accept a list; `/<prefix>shipit` stays one sequential task. Parallel children when the runtime allows.
 21. **Session update check is GitHub tags, notify only.** Available version is the highest semver tag on `nbmh/dev-harness-layer`, not npm. Host session-start hooks run `.seh/scripts/check-update`. Fail-open. No `seh check` CLI and no silent install. Do not treat default-branch `package.json` or untagged commits as a new version.
 
 ## Deferred

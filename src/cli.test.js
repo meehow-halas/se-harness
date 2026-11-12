@@ -13,7 +13,8 @@ const {
   withTempDir,
 } = require("../test/helpers");
 
-const USAGE = "Usage: seh <install|uninstall>";
+const USAGE_FIRST_LINE = "Usage: seh <install|uninstall> [--prefix P]";
+const USAGE = USAGE_FIRST_LINE;
 
 function read(p) {
   return fs.readFileSync(p, "utf8");
@@ -27,26 +28,26 @@ describe("cli dispatch", () => {
   test("no args prints usage on stdout and exits 1", () => {
     const result = runCli([]);
     assert.equal(result.status, 1);
-    assert.equal(result.stdout.trim(), USAGE);
+    assert.equal(result.stdout.split("\n")[0], USAGE);
   });
 
   test("-h prints usage and exits 0", () => {
     const result = runCli(["-h"]);
     assert.equal(result.status, 0);
-    assert.equal(result.stdout.trim(), USAGE);
+    assert.equal(result.stdout.split("\n")[0], USAGE);
   });
 
   test("--help prints usage and exits 0", () => {
     const result = runCli(["--help"]);
     assert.equal(result.status, 0);
-    assert.equal(result.stdout.trim(), USAGE);
+    assert.equal(result.stdout.split("\n")[0], USAGE);
   });
 
   test("extra args print usage on stderr and exit 1", () => {
     withTempDir((cwd) => {
       const result = runCli(["install", "extra"], { cwd });
       assert.equal(result.status, 1);
-      assert.equal(result.stderr.trim(), USAGE);
+      assert.equal(result.stderr.split("\n")[0], USAGE);
       assert.equal(exists(path.join(cwd, ".seh")), false);
     });
   });
@@ -56,7 +57,7 @@ describe("cli dispatch", () => {
       const result = runCli(["status"], { cwd });
       assert.equal(result.status, 1);
       assert.match(result.stderr, /Unknown command: status/);
-      assert.match(result.stderr, new RegExp(USAGE));
+      assert.ok(result.stderr.includes(USAGE), result.stderr);
       assert.equal(exists(path.join(cwd, ".seh")), false);
     });
   });
@@ -88,15 +89,15 @@ describe("seh install", () => {
       );
       assert.equal(read(path.join(project, ".seh", "VERSION")), "9.8.7\n");
       assert.equal(
-        read(path.join(project, ".claude", "skills", "seh-setup", "SKILL.md")),
+        read(path.join(project, ".claude", "skills", "_setit-se", "SKILL.md")),
         "# setup\n"
       );
       assert.equal(
-        read(path.join(project, ".cursor", "skills", "seh-setup", "SKILL.md")),
+        read(path.join(project, ".cursor", "skills", "_setit-se", "SKILL.md")),
         "# setup\n"
       );
       assert.equal(
-        read(path.join(project, ".opencode", "skills", "seh-setup", "SKILL.md")),
+        read(path.join(project, ".opencode", "skills", "_setit-se", "SKILL.md")),
         "# setup\n"
       );
       assert.equal(
@@ -196,7 +197,7 @@ describe("seh install", () => {
     });
   });
 
-  test("fails when skills/seh-setup is missing", () => {
+  test("fails when skills/setit-se is missing", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -206,7 +207,7 @@ describe("seh install", () => {
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 1);
-      assert.match(result.stderr, /missing package skill at skills\/seh-setup/);
+      assert.match(result.stderr, /missing package skill at skills\/setit-se/);
     });
   });
 
@@ -229,7 +230,7 @@ describe("seh install", () => {
     });
   });
 
-  test("prints a /seh-setup reminder when harness.config.json exists and does not generate live files", () => {
+  test("prints a /_setit-se reminder when harness.config.json exists and does not generate live files", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -243,7 +244,7 @@ describe("seh install", () => {
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
-      assert.match(result.stdout, /Run \/seh-setup to apply the new templates/);
+      assert.match(result.stdout, /Run \/_setit-se to apply the new templates/);
       assert.equal(read(path.join(project, ".seh", "VERSION")), "1.2.3\n");
       assert.equal(exists(path.join(project, ".seh", "agents", "marker.txt")), true);
       assert.equal(exists(path.join(project, ".claude", "agents")), false);
@@ -282,7 +283,7 @@ describe("seh install", () => {
       assert.equal(result.status, 0, result.stderr);
       assert.match(result.stdout, /seh install: OK \S+ in .*/);
       assert.ok(result.stdout.includes(path.basename(project)), result.stdout);
-      assert.match(result.stdout, /\/seh-setup/);
+      assert.match(result.stdout, /\/_setit-se/);
     });
   });
 
@@ -598,15 +599,15 @@ describe("seh uninstall", () => {
       assert.equal(result.status, 0, result.stderr);
       assert.equal(exists(path.join(project, ".seh")), false);
       assert.equal(
-        exists(path.join(project, ".claude", "skills", "seh-setup")),
+        exists(path.join(project, ".claude", "skills", "_setit-se")),
         false
       );
       assert.equal(
-        exists(path.join(project, ".cursor", "skills", "seh-setup")),
+        exists(path.join(project, ".cursor", "skills", "_setit-se")),
         false
       );
       assert.equal(
-        exists(path.join(project, ".opencode", "skills", "seh-setup")),
+        exists(path.join(project, ".opencode", "skills", "_setit-se")),
         false
       );
       assert.equal(
@@ -731,6 +732,140 @@ describe("seh uninstall", () => {
       assert.equal(exists(path.join(project, ".claude")), false);
       assert.equal(exists(path.join(project, ".cursor")), false);
       assert.equal(exists(path.join(project, ".opencode")), false);
+    });
+  });
+});
+
+describe("seh install --prefix", () => {
+  const HOST_DIRS = [".claude", ".cursor", ".opencode"];
+
+  function setupPackage(root) {
+    const pkg = path.join(root, "pkg");
+    const project = path.join(root, "project");
+    fs.mkdirSync(pkg);
+    fs.mkdirSync(project);
+    makePackageRoot(pkg, { version: "1.2.3" });
+    fs.writeFileSync(
+      path.join(pkg, "skills", "setit-se", "SKILL.md"),
+      "---\nname: setit-se\ndescription: x\n---\nRun /{{prefix}}doit then /{{prefix}}setit-se.\n"
+    );
+    fs.rmSync(path.join(pkg, "skills", "setit-se", "marker.txt"), { force: true });
+    fs.writeFileSync(
+      path.join(pkg, "agents", "a.md"),
+      "go: /{{prefix}}shipit\n"
+    );
+    return { pkg, project };
+  }
+
+  test("default prefix is _ : skill dir, frontmatter name, rendered text, PREFIX file", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      for (const host of HOST_DIRS) {
+        const file = path.join(project, host, "skills", "_setit-se", "SKILL.md");
+        assert.equal(
+          read(file),
+          "---\nname: _setit-se\ndescription: x\n---\nRun /_doit then /_setit-se.\n"
+        );
+        assert.equal(exists(path.join(project, host, "skills", "setit-se")), false);
+      }
+      assert.equal(read(path.join(project, ".seh", "PREFIX")), "_\n");
+      assert.equal(read(path.join(project, ".seh", "agents", "a.md")), "go: /_shipit\n");
+      assert.match(result.stdout, /Next: run \/_setit-se in the project/);
+    });
+  });
+
+  test("custom prefix (both flag forms) names dir, name, text and next-step line", () => {
+    for (const args of [["install", "--prefix", "my-"], ["install", "--prefix=my-"]]) {
+      withTempDir((root) => {
+        const { pkg, project } = setupPackage(root);
+        const result = runCli(args, { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        for (const host of HOST_DIRS) {
+          const file = path.join(project, host, "skills", "my-setit-se", "SKILL.md");
+          assert.match(read(file), /^---\nname: my-setit-se\n/);
+          assert.match(read(file), /Run \/my-doit then \/my-setit-se\./);
+          assert.equal(exists(path.join(project, host, "skills", "_setit-se")), false);
+        }
+        assert.equal(read(path.join(project, ".seh", "PREFIX")), "my-\n");
+        assert.equal(read(path.join(project, ".seh", "agents", "a.md")), "go: /my-shipit\n");
+        assert.match(result.stdout, /Next: run \/my-setit-se in the project/);
+      });
+    }
+  });
+
+  test('--prefix "" installs unprefixed skill', () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      const result = runCli(["install", "--prefix", ""], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      const file = path.join(project, ".claude", "skills", "setit-se", "SKILL.md");
+      assert.match(read(file), /^---\nname: setit-se\n/);
+      assert.match(read(file), /Run \/doit then \/setit-se\./);
+      assert.equal(read(path.join(project, ".seh", "PREFIX")), "\n");
+      assert.equal(exists(path.join(project, ".claude", "skills", "_setit-se")), false);
+    });
+  });
+
+  test("invalid prefix or missing value fails and writes nothing", () => {
+    for (const args of [["install", "--prefix", "a b"], ["install", "--prefix", "../x"], ["install", "--prefix"]]) {
+      withTempDir((root) => {
+        const { pkg, project } = setupPackage(root);
+        const result = runCli(args, { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /--prefix/);
+        assert.equal(exists(path.join(project, ".seh")), false);
+        assert.equal(exists(path.join(project, ".claude")), false);
+      });
+    }
+  });
+
+  test("uninstall removes the skill made with the stored prefix and rejects --prefix", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      assert.equal(runCli(["install", "--prefix", "zz_"], { cwd: project, packageRoot: pkg }).status, 0);
+      const rejected = runCli(["uninstall", "--prefix", "_"], { cwd: project, packageRoot: pkg });
+      assert.equal(rejected.status, 1);
+      assert.equal(exists(path.join(project, ".seh")), true);
+      const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(exists(path.join(project, ".seh")), false);
+      for (const host of HOST_DIRS) {
+        assert.equal(exists(path.join(project, host, "skills", "zz_setit-se")), false);
+      }
+    });
+  });
+
+  test("reinstall with another prefix rewrites PREFIX and installs the new-name skill", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      runCli(["install", "--prefix", "a_"], { cwd: project, packageRoot: pkg });
+      runCli(["install", "--prefix", "b_"], { cwd: project, packageRoot: pkg });
+      assert.equal(read(path.join(project, ".seh", "PREFIX")), "b_\n");
+      assert.equal(exists(path.join(project, ".claude", "skills", "b_setit-se")), true);
+      for (const host of HOST_DIRS) {
+        assert.equal(exists(path.join(project, host, "skills", "a_setit-se")), false);
+      }
+    });
+  });
+
+  test("real package: no unrendered token left, work-skill templates keep source names", () => {
+    withTempDir((project) => {
+      const result = runCli(["install", "--prefix", "q_"], { cwd: project });
+      assert.equal(result.status, 0, result.stderr);
+      const walk = (d) =>
+        fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+          e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]
+        );
+      for (const f of walk(path.join(project, ".seh"))) {
+        assert.equal(read(f).includes("{{prefix}}"), false, f);
+      }
+      for (const name of ["planit", "doit", "checkit", "shipit", "grillit", "setit-se"]) {
+        assert.equal(exists(path.join(project, ".seh", "skills", name, "SKILL.md")), true, name);
+      }
+      assert.match(read(path.join(project, ".claude", "skills", "q_setit-se", "SKILL.md")), /^---\nname: q_setit-se\n/);
+      assert.match(read(path.join(project, ".seh", "skills", "shipit", "SKILL.md")), /\/q_doit/);
     });
   });
 });

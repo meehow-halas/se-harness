@@ -224,14 +224,14 @@ sys.stdout.write(b.strip())
 read_base_branch() {
   _cfg=$(config_path)
   if [ ! -f "$_cfg" ]; then
-    blocked "harness.config.json is missing" "run /seh-setup in this project"
+    blocked "harness.config.json is missing" "run /{{prefix}}setit-se in this project"
   fi
   SEH_BASE_BRANCH=
   if ! SEH_BASE_BRANCH=$(_extract_base_branch "$_cfg"); then
-    blocked "agents.baseBranch is missing from harness.config.json" "run /seh-setup and set the base git branch"
+    blocked "agents.baseBranch is missing from harness.config.json" "run /{{prefix}}setit-se and set the base git branch"
   fi
   if [ -z "$SEH_BASE_BRANCH" ]; then
-    blocked "agents.baseBranch is missing from harness.config.json" "run /seh-setup and set the base git branch"
+    blocked "agents.baseBranch is missing from harness.config.json" "run /{{prefix}}setit-se and set the base git branch"
   fi
 }
 

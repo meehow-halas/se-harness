@@ -32,7 +32,7 @@ Decision: no host gets a fake fan-out. Without `start_session` the user runs the
 - Who sets what: Architect leaves `todo`. Implementer sets `in progress` at start and `implemented` at the end. Reviewer sets `in review` before its review round, back to `in progress` after a ❌, and `done` after acceptance and the PR.
 - `done` ends the feature. Acceptance = commit, push, PR, `done`, return to base. The user merges the PR; the skill does not.
 
-Migration: an existing project gets the rename through `/seh-setup` ("Status migration (later run, once)"): rename `code review` → `implemented` in the config, and in spec files that still carry `code review`. Only a version bump plus `/seh-setup` reaches existing projects.
+Migration: an existing project gets the rename through `/<prefix>setit-se` ("Status migration (later run, once)"): rename `code review` → `implemented` in the config, and in spec files that still carry `code review`. Only a version bump plus `/<prefix>setit-se` reaches existing projects.
 
 ## 4. Acceptance and approval
 
@@ -60,7 +60,7 @@ Limitation seen in practice: a relayed acceptance was refused by a subagent once
 
 ## 7. Models
 
-Models per role come from `agents.roles.<role>.model[<host>]` in config. For Claude Code the live agent files are copies written by `/seh-setup` under each `agentsDir` in `hosts.json`. Editing the source in `seh/agents/` does not change a project until `seh install` and `/seh-setup` run there.
+Models per role come from `agents.roles.<role>.model[<host>]` in config. For Claude Code the live agent files are copies written by `/<prefix>setit-se` under each `agentsDir` in `hosts.json`. Editing the source in `seh/agents/` does not change a project until `seh install` and `/<prefix>setit-se` run there.
 
 Decision: config wins over live copies. Setup reports drift and asks.
 
@@ -83,7 +83,7 @@ Decision: config wins over live copies. Setup reports drift and asks.
 
 - Cursor and OpenCode fan-out (they are `manual`).
 - Automatic merge of PRs.
-- Migration of existing projects without `/seh-setup`.
+- Migration of existing projects without `/<prefix>setit-se`.
 
 Per `AGENTS.md`, these are scope boundaries, not tickets.
 
@@ -91,4 +91,4 @@ Per `AGENTS.md`, these are scope boundaries, not tickets.
 
 - Reviewer final report language (see section 6).
 - Commit trailer when `commit-task` is called without it (see section 5).
-- Existing projects migrate only via version bump and `/seh-setup`.
+- Existing projects migrate only via version bump and `/<prefix>setit-se`.

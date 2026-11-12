@@ -79,7 +79,7 @@ if git remote | grep -qx origin; then
 fi
 
 if [ "$base_ref" = "$base" ] && ! local_branch_exists "$base"; then
-  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /seh-setup"
+  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /{{prefix}}setit-se"
 fi
 
 if ! out=$(git worktree add -b "$branch" "$wt" "$base_ref" 2>&1); then

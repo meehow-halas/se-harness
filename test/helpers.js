@@ -262,7 +262,7 @@ function makePackageRoot(dir, { payload, setupSkill = true, version = "1.2.3" } 
     fs.writeFileSync(path.join(folder, "marker.txt"), `${name}\n`);
   }
   if (setupSkill) {
-    const skill = path.join(dir, "skills", "seh-setup");
+    const skill = path.join(dir, "skills", "setit-se");
     fs.mkdirSync(skill, { recursive: true });
     fs.writeFileSync(path.join(skill, "SKILL.md"), "# setup\n");
   }

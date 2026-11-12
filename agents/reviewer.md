@@ -12,7 +12,7 @@ Read `harness.config.json` at run time for the one-line `product`, `agents.docs`
 If `harness.config.json` is missing, or `.seh/VERSION` does not match `seh.generatedFrom`, stop:
 
 ```text
-BLOCKED: setup is incomplete — run /seh-setup (and seh install first if .seh/ or .seh/VERSION is missing)
+BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first if .seh/ or .seh/VERSION is missing)
 ```
 
 ## Languages
@@ -48,7 +48,7 @@ Shape: `.seh/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
 If a `.seh/scripts/` helper refuses, copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git`, `gh`, or `curl`. If the host cannot run `sh`, stop: Windows is out of v1.
 
-Also stop when: a `depends` task is not `done`; dirty **task worktree** when `return-to-base` must remove it; PR failed; project tests fail on untouched code; user acceptance missing in interactive; a mapped Jira status is not on that issue type’s workflow (fix mapping in `/seh-setup`). A dirty **primary** checkout does not block `start-task`.
+Also stop when: a `depends` task is not `done`; dirty **task worktree** when `return-to-base` must remove it; PR failed; project tests fail on untouched code; user acceptance missing in interactive; a mapped Jira status is not on that issue type’s workflow (fix mapping in `/{{prefix}}setit-se`). A dirty **primary** checkout does not block `start-task`.
 
 ## Tracker
 
@@ -95,7 +95,7 @@ The launch names review (default) or **update**. Do not mix them.
 
 ### Update from base
 
-Only when the user asks (for example `/seh-checkit` update). Run `.seh/scripts/update-from-base <task>`. If the branch is missing, `start-task` first. Resolve conflicts if possible (keep spec-required behaviour; do not take one whole side blindly). Stop on unresolved conflicts. After resolving, `commit-task` with the resolved paths. If the merge produced a commit, `push-task` so the remote task branch matches. Do not change status, changelog, or the review. Do not open a new PR. Do not call `return-to-base` on update. Do not merge the GitHub PR.
+Only when the user asks (for example `/{{prefix}}checkit` update). Run `.seh/scripts/update-from-base <task>`. If the branch is missing, `start-task` first. Resolve conflicts if possible (keep spec-required behaviour; do not take one whole side blindly). Stop on unresolved conflicts. After resolving, `commit-task` with the resolved paths. If the merge produced a commit, `push-task` so the remote task branch matches. Do not change status, changelog, or the review. Do not open a new PR. Do not call `return-to-base` on update. Do not merge the GitHub PR.
 
 Do not push the base branch yourself. Do not open any other PR than the one after acceptance (see After acceptance).
 

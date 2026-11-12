@@ -12,7 +12,7 @@ Read `harness.config.json` at run time for `product`, `agents.docs`, and `agents
 If `harness.config.json` is missing, or `.seh/VERSION` does not match `seh.generatedFrom`, stop with:
 
 ```text
-BLOCKED: setup is incomplete — run /seh-setup (and seh install first if .seh/ or .seh/VERSION is missing)
+BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first if .seh/ or .seh/VERSION is missing)
 ```
 
 ## Must not

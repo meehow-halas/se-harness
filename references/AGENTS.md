@@ -10,16 +10,16 @@ Supported hosts are the rows in `.seh/references/hosts.json`. Live skills, agent
 
 The only supported adoption path:
 
-1. **Bootstrap** — `npx -p dev-harness-layer seh install` (npm or GitHub). Result: `.seh/` plus the install-owned `/seh-setup` skill in every `skillsDir`, and `.seh/` and `harness.credentials.local.json` entries in the project-root `.gitignore`. Setup is not done. Do not offer work skills yet.
-2. **Finish setup** — `/seh-setup` only. The CLI does not configure the project.
-3. **Work** — `/seh-shipit`, `/seh-planit`, `/seh-doit`, `/seh-checkit`, `/seh-brainstorm`, or later `/seh-setup`.
-4. **Remove bootstrap (optional)** — `seh uninstall` with the **same source** as install. Removes `.seh/`, the install-owned `/seh-setup` skill from every `skillsDir`, and the install-owned session-start hook command. Leaves `harness.config.json` and files `/seh-setup` generated.
+1. **Bootstrap** — `npx -p dev-harness-layer seh install` (npm or GitHub). Result: `.seh/` plus the install-owned `/{{prefix}}setit-se` skill in every `skillsDir`, and `.seh/` and `harness.credentials.local.json` entries in the project-root `.gitignore`. Setup is not done. Do not offer work skills yet.
+2. **Finish setup** — `/{{prefix}}setit-se` only. The CLI does not configure the project.
+3. **Work** — `/{{prefix}}shipit`, `/{{prefix}}planit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}grillit`, or later `/{{prefix}}setit-se`.
+4. **Remove bootstrap (optional)** — `seh uninstall` with the **same source** as install. Removes `.seh/`, the install-owned `/{{prefix}}setit-se` skill from every `skillsDir`, and the install-owned session-start hook command. Leaves `harness.config.json` and files `/{{prefix}}setit-se` generated.
 
 CLI in v1: `seh install` and `seh uninstall` only.
 
-If this session’s context says a newer seh GitHub tag exists than `.seh/VERSION`, tell the user on the first reply and give both install commands (`npx -p dev-harness-layer seh install` and `npx -p github:nbmh/dev-harness-layer seh install`) plus `/seh-setup`. Do not query npm or GitHub yourself. Do not install unless they ask.
+If this session’s context says a newer seh GitHub tag exists than `.seh/VERSION`, tell the user on the first reply and give both install commands (`npx -p dev-harness-layer seh install` and `npx -p github:nbmh/dev-harness-layer seh install`) plus `/{{prefix}}setit-se`. Do not query npm or GitHub yourself. Do not install unless they ask.
 
-Work skills stop before doing work when `harness.config.json` is missing **or** `.seh/VERSION` does not match `seh.generatedFrom`. Tell the user to run `/seh-setup` (and `seh install` first if `.seh/` or `.seh/VERSION` is missing).
+Work skills stop before doing work when `harness.config.json` is missing **or** `.seh/VERSION` does not match `seh.generatedFrom`. Tell the user to run `/{{prefix}}setit-se` (and `seh install` first if `.seh/` or `.seh/VERSION` is missing).
 
 ## Roles
 
@@ -28,7 +28,7 @@ Exactly four product agents. Live copies live under every `agentsDir` in `.seh/r
 | Role | Job |
 |------|-----|
 | Architect | Spec + prompt + first log row on the active tracker. Status stays at the configured `todo` string. Read-only on application code. No git writes. |
-| Implementer | Implements the spec (`feature` or `bug`). Own phase plan. Runs inline in the session that invoked `/seh-doit` or `/seh-shipit`, not as a subagent. After each phase, that session launches Consultant. Calls `.seh/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
+| Implementer | Implements the spec (`feature` or `bug`). Own phase plan. Runs inline in the session that invoked `/{{prefix}}doit` or `/{{prefix}}shipit`, not as a subagent. After each phase, that session launches Consultant. Calls `.seh/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
 | Consultant | Code quality on the phase diff. Does not edit product code. Does not talk to the user. Does not judge spec compliance. Not a user-facing skill. |
 | Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, then git allowlist scripts. Does not merge the PR. |
 
@@ -38,12 +38,12 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 
 | Skill | Does |
 |-------|------|
-| `/seh-setup` | First-time setup when config is missing; later, one parameter at a time (including tracker). |
-| `/seh-planit` | Architect once. Offer the next step; do not start it. |
-| `/seh-doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
-| `/seh-checkit` | One Reviewer round per named task: review or update from base. An accepted review ends with commit, PR and `done`. |
-| `/seh-shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task only. |
-| `/seh-brainstorm` | Members, app context, and a consult round. |
+| `/{{prefix}}setit-se` | First-time setup when config is missing; later, one parameter at a time (including tracker). |
+| `/{{prefix}}planit` | Architect once. Offer the next step; do not start it. |
+| `/{{prefix}}doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
+| `/{{prefix}}checkit` | One Reviewer round per named task: review or update from base. An accepted review ends with commit, PR and `done`. |
+| `/{{prefix}}shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task only. |
+| `/{{prefix}}grillit` | Members, app context, and a consult round. |
 
 ## Tracker
 
@@ -77,7 +77,7 @@ Allowlisted git/`gh` and Jira operations run through `.seh/scripts/`. Agents cal
 | `open-pr` | Reviewer, after acceptance |
 | `update-from-base` | Reviewer, only when the user asks to update |
 | `return-to-base` | Reviewer, after PR opened (removes the seh worktree) |
-| `jira` | `/seh-setup` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
+| `jira` | `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 
 Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira`.
 
