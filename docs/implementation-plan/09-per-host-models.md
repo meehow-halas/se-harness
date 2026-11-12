@@ -8,8 +8,8 @@ Store a distinct model id per supported host for each product role and for brain
 
 - `agents.roles.<role>.model` and `agents.brainstorm.model` as maps keyed by `hosts.json` `id`.
 - `modelSuggest` on each host row (interview defaults only; no translation between hosts).
-- `/seh-setup` first-run one question per host (four-role table, optional overrides), generation, later-run one cell, legacy string migration.
-- `/seh-brainstorm` first-member model map, launch from this host’s key, legacy string migration.
+- `/<prefix>setit-se` first-run one question per host (four-role table, optional overrides), generation, later-run one cell, legacy string migration.
+- `/<prefix>grillit` first-member model map, launch from this host’s key, legacy string migration.
 - PRD Decision 17, Runtime config, setup/brainstorm detail, consumer `AGENTS.md`, config skeleton.
 
 ## Out of scope
@@ -23,19 +23,19 @@ Store a distinct model id per supported host for each product role and for brain
 
 ## Inputs
 
-- PRD: Runtime config; `/seh-setup` generation; `/seh-brainstorm` first member; Decisions 17 and 19.
+- PRD: Runtime config; `/<prefix>setit-se` generation; `/<prefix>grillit` first member; Decisions 17 and 19.
 - Phase 8 host table and copy loop.
 
 ## Outputs
 
 | Path | What |
 |------|------|
-| `references/harness.config.json` | Role `model` maps; brainstorm `model` is still written by `/seh-brainstorm` |
+| `references/harness.config.json` | Role `model` maps; brainstorm `model` is still written by `/<prefix>grillit` |
 | `references/harness.config.md` | Map contract |
 | `references/hosts.json` | `modelSuggest` per row |
 | `references/AGENTS.md` | Per-host `model` |
-| `skills/seh-setup/SKILL.md` | Interview, stamp, later-run cell, migration |
-| `skills/seh-brainstorm/SKILL.md` | Map, host resolve, launch, migration |
+| `skills/setit-se/SKILL.md` | Interview, stamp, later-run cell, migration |
+| `skills/grillit/SKILL.md` | Map, host resolve, launch, migration |
 
 ## Behaviour
 
@@ -51,8 +51,8 @@ Cite the PRD. Do not restate every question.
 ## Done when
 
 - Skeleton role `model` values are maps with a key per `hosts.json` `id`.
-- `/seh-setup` documents per-host confirm (table + optional overrides), per-host `model:` stamp, one-cell later-run, and string migration.
-- `/seh-brainstorm` documents a model map, host resolve, and launch from this host’s key.
+- `/<prefix>setit-se` documents per-host confirm (table + optional overrides), per-host `model:` stamp, one-cell later-run, and string migration.
+- `/<prefix>grillit` documents a model map, host resolve, and launch from this host’s key.
 - PRD Deferred no longer lists per-host role models.
 
 ## Handoff

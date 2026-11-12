@@ -10,7 +10,7 @@ Add OpenCode as a third row in `references/hosts.json` plus path/frontmatter/hoo
 - `modelSuggest` in OpenCode `provider/model` form. No translation from another host.
 - Skeleton role `model` maps include the `opencode` key.
 - CLI copies install-owned plugin `.opencode/plugins/seh-check-update.js`; uninstall removes only that file.
-- `/seh-setup`: OpenCode agent `mode: subagent`; consultant `permissions` deny `edit`; merge `.opencode/rules/*.md` into `.opencode/opencode.json` `instructions`.
+- `/<prefix>setit-se`: OpenCode agent `mode: subagent`; consultant `permissions` deny `edit`; merge `.opencode/rules/*.md` into `.opencode/opencode.json` `instructions`.
 - Consumer `AGENTS.md` / setup: never write `~/.config/opencode/`.
 
 ## Out of scope
@@ -25,7 +25,7 @@ Add OpenCode as a third row in `references/hosts.json` plus path/frontmatter/hoo
 
 ## Inputs
 
-- PRD: Package layout (`hosts.json`); Binding flow; What install writes; Runtime config; `/seh-setup` generation; Decisions 17–19, 21.
+- PRD: Package layout (`hosts.json`); Binding flow; What install writes; Runtime config; `/<prefix>setit-se` generation; Decisions 17–19, 21.
 - Phase 8 host table; phase 9 model maps; phase 11 session update check.
 
 ## Outputs
@@ -38,7 +38,7 @@ Add OpenCode as a third row in `references/hosts.json` plus path/frontmatter/hoo
 | `src/cli.js` | `opencode-plugin` copy/remove |
 | `src/cli.test.js` | Third host install/uninstall |
 | `scripts/check-update.test.js` | `--host opencode` plain text |
-| `skills/seh-setup/SKILL.md` | Agent/rules/instructions adapters |
+| `skills/setit-se/SKILL.md` | Agent/rules/instructions adapters |
 | `references/AGENTS.md` | Machine-wide path |
 
 ## Behaviour
@@ -54,10 +54,10 @@ Cite the PRD. Do not restate every question.
 
 ## Done when
 
-- `seh install` writes `/seh-setup` under `.opencode/skills/` and the check-update plugin under `.opencode/plugins/`.
+- `seh install` writes `/<prefix>setit-se` under `.opencode/skills/` and the check-update plugin under `.opencode/plugins/`.
 - A second install does not duplicate the plugin file.
 - `seh uninstall` removes that setup skill and plugin; prunes empty `.opencode/`; leaves generated files and other plugins.
-- `/seh-setup` documents OpenCode `mode` / consultant `permissions` and the `instructions` glob merge.
+- `/<prefix>setit-se` documents OpenCode `mode` / consultant `permissions` and the `instructions` glob merge.
 - `check-update --host opencode` prints the same plain-text notice as Claude, not Cursor JSON.
 - Codex is still Deferred. README is unchanged.
 

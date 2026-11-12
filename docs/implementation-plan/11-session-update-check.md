@@ -17,7 +17,7 @@ When Claude Code or Cursor Agent starts a session in a project that has seh, che
 ## Out of scope
 
 - `seh check` or any new CLI subcommand.
-- Silent `seh install` / `/seh-setup`.
+- Silent `seh install` / `/<prefix>setit-se`.
 - Treating default-branch `package.json` or untagged commits as a new version.
 - Recording which channel (npm vs GitHub) was used for bootstrap; the notice lists both commands.
 - README sync unless the user asks.

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Implementer and Reviewer always work in a git worktree for the task so the userâ€™s primary checkout is not switched. `/seh-doit` and `/seh-checkit` accept a list of tasks and run in parallel when the runtime allows. Architect stays independent. No fifth agent and no new skill.
+Implementer and Reviewer always work in a git worktree for the task so the userâ€™s primary checkout is not switched. `/<prefix>doit` and `/<prefix>checkit` accept a list of tasks and run in parallel when the runtime allows. Architect stays independent. No fifth agent and no new skill.
 
 ## In scope
 
@@ -10,8 +10,8 @@ Implementer and Reviewer always work in a git worktree for the task so the userâ
 - `return-to-base` removes a seh worktree when invoked from one; legacy checkout of base from the primary checkout.
 - File-tracker copy from the launch working tree; symlink `.seh/` and `harness.config.json` when missing in the worktree.
 - Implementer and Reviewer: `Worktree:` payload; Architect still no git / no worktrees.
-- `/seh-doit` and `/seh-checkit`: one or many keys; per-task `depends` / `Q<n>`.
-- `/seh-shipit`: one task; a list is `BLOCKED:`.
+- `/<prefix>doit` and `/<prefix>checkit`: one or many keys; per-task `depends` / `Q<n>`.
+- `/<prefix>shipit`: one task; a list is `BLOCKED:`.
 
 ## Out of scope
 
@@ -23,7 +23,7 @@ Implementer and Reviewer always work in a git worktree for the task so the userâ
 
 ## Inputs
 
-- PRD: Git; Agents (Implementer, Reviewer, Architect); Skills `/seh-doit`, `/seh-checkit`, `/seh-shipit`; Stops; Decisions 2, 9, 20.
+- PRD: Git; Agents (Implementer, Reviewer, Architect); Skills `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>shipit`; Stops; Decisions 2, 9, 20.
 
 ## Outputs
 
@@ -36,9 +36,9 @@ Implementer and Reviewer always work in a git worktree for the task so the userâ
 | `agents/implementer.md` | `Worktree:`; drop â€œNo worktreesâ€ |
 | `agents/reviewer.md` | `Worktree:`; `return-to-base` removes worktree |
 | `agents/architect.md` | still no worktrees |
-| `skills/seh-doit/SKILL.md` | list of tasks; parallel when allowed |
-| `skills/seh-checkit/SKILL.md` | list; one variant; parallel when allowed |
-| `skills/seh-shipit/SKILL.md` | one task; worktree for Implementer/Reviewer |
+| `skills/doit/SKILL.md` | list of tasks; parallel when allowed |
+| `skills/checkit/SKILL.md` | list; one variant; parallel when allowed |
+| `skills/shipit/SKILL.md` | one task; worktree for Implementer/Reviewer |
 | `references/AGENTS.md` | Git table + worktree |
 | `references/BLOCKED.md` | dirty worktree / feature list |
 | `docs/prd.md` | already the spec for this phase |
@@ -63,10 +63,10 @@ Implementer and Reviewer always work in a git worktree for the task so the userâ
 
 ### Skills
 
-Parent session: resolve keys, `start-task` per task, pass `Worktree:` to the child. N>1 in parallel when the runtime allows; otherwise sequential worktrees. Unmet `depends` blocks that task only. `/seh-checkit` one variant for the invocation. `/seh-shipit` with multiple keys:
+Parent session: resolve keys, `start-task` per task, pass `Worktree:` to the child. N>1 in parallel when the runtime allows; otherwise sequential worktrees. Unmet `depends` blocks that task only. `/<prefix>checkit` one variant for the invocation. `/<prefix>shipit` with multiple keys:
 
 ```text
-BLOCKED: /seh-shipit is one task â€” spec with /seh-planit, then /seh-doit with the list
+BLOCKED: /<prefix>shipit is one task â€” spec with /<prefix>planit, then /<prefix>doit with the list
 ```
 
 ## Done when
@@ -77,6 +77,6 @@ BLOCKED: /seh-shipit is one task â€” spec with /seh-planit, then /seh-doit with 
 - File-tracker files present only on the launch tree appear in the worktree; uncommitted copies of those paths are gone from launch.
 - `return-to-base` from the worktree removes it and leaves the primary checkout on its previous branch.
 - Implementer/Reviewer markdown mention `Worktree:`; Architect still forbids worktrees.
-- `/seh-doit` and `/seh-checkit` describe a task list; `/seh-shipit` refuses a list.
+- `/<prefix>doit` and `/<prefix>checkit` describe a task list; `/<prefix>shipit` refuses a list.
 - `npm test` passes.
 - Phase 10 Status in the index is set to `done` only after this checklist is true.

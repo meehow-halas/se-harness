@@ -19,7 +19,7 @@ branch=$(task_branch "$task")
 require_on_task "$branch"
 
 if ! local_branch_exists "$base"; then
-  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /seh-setup"
+  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /{{prefix}}setit-se"
 fi
 
 if git merge-base --is-ancestor "$base" HEAD 2>/dev/null; then

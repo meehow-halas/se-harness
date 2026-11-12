@@ -1,6 +1,6 @@
 #!/bin/sh
 # jira <verb> ...
-# Jira Cloud REST v3 allowlist. Agents and /seh-setup call this script.
+# Jira Cloud REST v3 allowlist. Agents and /{{prefix}}setit-se call this script.
 # They do not compose curl. Token stays in harness.credentials.local.json.
 
 . "$(dirname "$0")/lib-jira.sh"
@@ -112,7 +112,7 @@ case $verb in
     fi
     load_jira
     if ! jira_json issue-type "$SEH_JIRA_CFG" "$_type" >/dev/null; then
-      blocked "issue type $_type is not mapped" "set agents.tracker.issueTypes in /seh-setup"
+      blocked "issue type $_type is not mapped" "set agents.tracker.issueTypes in /{{prefix}}setit-se"
     fi
     _payload=$(mktemp)
     trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_payload"' EXIT
@@ -143,7 +143,7 @@ case $verb in
     fi
     _loc=$(jira_json mapped-field "$SEH_JIRA_CFG" "$_kind")
     if [ -z "$_loc" ]; then
-      blocked "$_kind is not mapped" "set agents.tracker.fields in /seh-setup"
+      blocked "$_kind is not mapped" "set agents.tracker.fields in /{{prefix}}setit-se"
     fi
     _src=$(read_body_file "$BODY_FILE")
     _payload=$(mktemp)
@@ -202,7 +202,7 @@ case $verb in
     require_tracker_config
     SEH_JIRA_CFG=$(config_path)
     if ! _want=$(jira_json status-map "$SEH_JIRA_CFG" "$_step"); then
-      blocked "invalid status key $_step" "fix agents.tracker.statuses in /seh-setup"
+      blocked "invalid status key $_step" "fix agents.tracker.statuses in /{{prefix}}setit-se"
     fi
     if [ "$_want" = "NULL" ]; then
       unchanged "key: ${_key}" "step: ${_step}" "status: skipped"
@@ -220,7 +220,7 @@ case $verb in
     jira_http GET "/rest/api/3/issue/${_key}/transitions"
     cp "$SEH_JIRA_BODY" "$_tr"
     if ! _tid=$(jira_json pick-transition "$_tr" "$_want"); then
-      blocked "mapped status ${_want} is not on this issue type's workflow" "fix the mapping in /seh-setup"
+      blocked "mapped status ${_want} is not on this issue type's workflow" "fix the mapping in /{{prefix}}setit-se"
     fi
     _payload=$(mktemp)
     jira_json transition-body "$_tid" > "$_payload"

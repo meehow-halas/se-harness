@@ -18,7 +18,7 @@ Bodies must instruct: **read** `harness.config.json` for base branch, statuses, 
 ## Out of scope
 
 - Putting facilitator templates into `agents/`. Facilitator templates belong in `brainstorm/` (phase 7).
-- Generating live copies into `.claude/agents/` (phase 5 `/seh-setup`).
+- Generating live copies into `.claude/agents/` (phase 5 `/<prefix>setit-se`).
 - Interpolating `agents.baseBranch`, status strings, Jira maps, `fetchFields`, content language, or product line into the template body as the project’s values.
 - Worktrees, merging PRs, a fifth role.
 - Architect writing file-by-file / line-level implementation recipes.
@@ -53,7 +53,7 @@ Bodies must instruct: **read** `harness.config.json` for base branch, statuses, 
 - Interactive: confirm title, then spec+prompt, before write. Critical/autonomous: write once Questions is satisfied.
 - May split tasks; `depends` / `relates`. A basename in `depends` must be `done` before implementation starts.
 - Paths in the spec are constraints, never a step list.
-- If a brainstorm round is needed: stop and ask `/seh-brainstorm` (do not interview personae in-process). Details: PRD Brainstorm; full skill in phase 7.
+- If a brainstorm round is needed: stop and ask `/<prefix>grillit` (do not interview personae in-process). Details: PRD Brainstorm; full skill in phase 7.
 - Read-only on application code.
 
 ### Implementer

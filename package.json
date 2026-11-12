@@ -1,6 +1,6 @@
 {
   "name": "dev-harness-layer",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "SE harness layer",
   "bin": {
     "seh": "./src/cli.js"

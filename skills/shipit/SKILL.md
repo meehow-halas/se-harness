@@ -1,14 +1,14 @@
 ---
-name: seh-shipit
-description: Full path Architect → Implementer (Consultant inside) → Reviewer. Use when the user runs /seh-shipit. Starts at the first missing stage.
+name: shipit
+description: Full path Architect → Implementer (Consultant inside) → Reviewer. Use when the user runs /{{prefix}}shipit. Starts at the first missing stage.
 ---
 
-# /seh-shipit
+# /{{prefix}}shipit
 
 Full path for **one task**. Single-stage skills do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR. There is no user-facing Consultant skill (Consultant stays inside Implementer). A list of keys:
 
 ```text
-BLOCKED: /seh-shipit is one task — spec with /seh-planit, then /seh-doit with the list
+BLOCKED: /{{prefix}}shipit is one task — spec with /{{prefix}}planit, then /{{prefix}}doit with the list
 ```
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands.
@@ -23,7 +23,7 @@ Shape: `.seh/references/BLOCKED.md`. If a `.seh/scripts/` helper refuses, copy i
 
 Do not pause between stages when there is no question and no stop. Report once at the end or at the first stop.
 
-This skill does **not** start a brainstorm round by itself. If Architect (inside this skill) needs a round, stop and ask `/seh-brainstorm`. Do not interview personae in-process.
+This skill does **not** start a brainstorm round by itself. If Architect (inside this skill) needs a round, stop and ask `/{{prefix}}grillit`. Do not interview personae in-process.
 
 ## Guard
 
@@ -32,25 +32,25 @@ Before any work. Compare `.seh/VERSION` and `seh.generatedFrom` after trimming w
 1. If `.seh/` or `.seh/VERSION` is missing:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /seh-setup
+BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se
 ```
 
 2. If `harness.config.json` is missing:
 
 ```text
-BLOCKED: setup is incomplete — run /seh-setup
+BLOCKED: setup is incomplete — run /{{prefix}}setit-se
 ```
 
 3. If `.seh/VERSION` does not match `seh.generatedFrom` in `harness.config.json`:
 
 ```text
-BLOCKED: generated files do not match the installed templates — run /seh-setup
+BLOCKED: generated files do not match the installed templates — run /{{prefix}}setit-se
 ```
 
 If a live agent this stage needs is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`):
 
 ```text
-BLOCKED: live agents are missing — run /seh-setup
+BLOCKED: live agents are missing — run /{{prefix}}setit-se
 ```
 
 ## Mode
@@ -67,20 +67,20 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `shipit`, one child session per key (each child runs the full pipeline for its key). Two or more keys and `sessionSpawn` is `manual`: print one `/seh-shipit <KEY>` command per key and stop. One key: continue below.
+This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `shipit`, one child session per key (each child runs the full pipeline for its key). Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}shipit <KEY>` command per key and stop. One key: continue below.
 
 ## Resolve the task
 
 Active tracker only: files if `agents.tracker` is absent; Jira if present (artifact bodies per `agents.tracker.artifactsOnTrackerOnly`). Never mirror.
 
 - New work (a sentence, no key) → no spec yet.
-- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /seh-shipit is one task` above).
+- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /{{prefix}}shipit is one task` above).
 - Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). Compare to those values; do not translate them.
 
 If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
 
 ```text
-BLOCKED: task is already done — the PR is opened; use /seh-checkit update only if the branch needs it
+BLOCKED: task is already done — the PR is opened; use /{{prefix}}checkit update only if the branch needs it
 ```
 
 ## Pipeline
@@ -93,7 +93,7 @@ Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.
 
 Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a Polish message gives `Polish`).
 
-If Architect asks `/seh-brainstorm`: stop and ask that skill; do not run the round here; do not continue the pipeline.
+If Architect asks `/{{prefix}}grillit`: stop and ask that skill; do not run the round here; do not continue the pipeline.
 
 If Architect stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
 
@@ -149,4 +149,4 @@ The Reviewer opens the PR and sets `done`. The user merges it on GitHub; this sk
 - `Conversation language: <name>` always (a Polish message gives `Polish`)
 - Stage 4: the ❌ list only
 
-Live files are copies from `/seh-setup` under every `agentsDir` in `.seh/references/hosts.json`, not symlinks to `.seh/agents/`. In this session use the copy this host loaded.
+Live files are copies from `/{{prefix}}setit-se` under every `agentsDir` in `.seh/references/hosts.json`, not symlinks to `.seh/agents/`. In this session use the copy this host loaded.

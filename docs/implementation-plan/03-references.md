@@ -2,7 +2,7 @@
 
 ## Goal
 
-Publish the extra file templates setup and agents need: config skeleton, artifact shapes, `BLOCKED` format, and the consumer `AGENTS.md` template. These are copied to `.seh/references/` on install. `/seh-setup` merges and generates from them; agent bodies (phase 4) tell the host to read config rather than baking values.
+Publish the extra file templates setup and agents need: config skeleton, artifact shapes, `BLOCKED` format, and the consumer `AGENTS.md` template. These are copied to `.seh/references/` on install. `/<prefix>setit-se` merges and generates from them; agent bodies (phase 4) tell the host to read config rather than baking values.
 
 ## In scope
 
@@ -17,14 +17,14 @@ Related small extras the PRD groups as “and the like” if they are required f
 
 ## Out of scope
 
-- Implementing `/seh-setup` (phase 5) or product agents (phase 4).
+- Implementing `/<prefix>setit-se` (phase 5) or product agents (phase 4).
 - Jira REST calls (phase 12).
 - Rewriting this repo’s own [AGENTS.md](../../AGENTS.md) into the consumer template (the consumer template is for **consuming** projects).
 - Status/log helper scripts for the files tracker.
 
 ## Inputs
 
-- PRD: Artifact contract; Statuses; Feature tracking; Runtime config and generated files; `/seh-setup` (AGENTS.md / CLAUDE.md merge); Stops; Decisions 12–14, 16–18.
+- PRD: Artifact contract; Statuses; Feature tracking; Runtime config and generated files; `/<prefix>setit-se` (AGENTS.md / CLAUDE.md merge); Stops; Decisions 12–14, 16–18.
 - This repo’s [AGENTS.md](../../AGENTS.md) is **this product’s** agents file, not the consumer template.
 
 ## Outputs
@@ -53,14 +53,14 @@ Place under `references/`. Exact filenames are the implementer’s choice except
 - `packsIgnored`.
 - `jiraOffer` (`declined` when they decline the first offer).
 - `agents.tracker` — present only when Jira is connected: project key, field mapping, `statuses` (`todo`, `inProgress`, `codeReview`, `inReview`, `done`, optional `blocker`), issue types for `feature` and `bug`, `fetchFields` as needed.
-- `agents.brainstorm.consult` — `any` \| `significant` (default if unset) \| `broad`. Members themselves are not this template’s job (phase 7 / `/seh-brainstorm`).
+- `agents.brainstorm.consult` — `any` \| `significant` (default if unset) \| `broad`. Members themselves are not this template’s job (phase 7 / `/<prefix>grillit`).
 
 Do not put credentials in the skeleton. Jira token lives in a local ignored file; never in git, never in chat.
 
 ## Behaviour
 
 - Templates describe **reading** `harness.config.json` and **calling** `.seh/scripts/`.
-- Consumer `AGENTS.md` is merge input for first `/seh-setup`, not a raw overwrite of an existing project file (merge rules are phase 5 / PRD).
+- Consumer `AGENTS.md` is merge input for first `/<prefix>setit-se`, not a raw overwrite of an existing project file (merge rules are phase 5 / PRD).
 - File-tracker paths (for the shapes): `docs/features/<basename>.feature.md`, `docs/prompt/<basename>.prompt.md`, `docs/feature-log/<basename>.log.md`. Basename example: `001-feature-example-name`.
 
 ## Done when

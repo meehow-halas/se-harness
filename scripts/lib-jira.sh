@@ -35,10 +35,10 @@ credentials_path() {
 require_tracker_config() {
   _cfg=$(config_path)
   if [ ! -f "$_cfg" ]; then
-    blocked "harness.config.json is missing" "run /seh-setup in this project"
+    blocked "harness.config.json is missing" "run /{{prefix}}setit-se in this project"
   fi
   if ! jira_json project-key "$_cfg" >/dev/null 2>&1; then
-    blocked "Jira is not connected" "run /seh-setup and connect Jira"
+    blocked "Jira is not connected" "run /{{prefix}}setit-se and connect Jira"
   fi
 }
 
@@ -64,10 +64,10 @@ load_jira() {
         blocked "Jira token is missing" "put jiraToken in harness.credentials.local.json"
         ;;
       missing)
-        blocked "Jira is not connected" "run /seh-setup and connect Jira"
+        blocked "Jira is not connected" "run /{{prefix}}setit-se and connect Jira"
         ;;
       *)
-        blocked "Jira URL or user is missing" "run /seh-setup and connect Jira"
+        blocked "Jira URL or user is missing" "run /{{prefix}}setit-se and connect Jira"
         ;;
     esac
   fi
@@ -91,7 +91,7 @@ jira_http() {
       ;;
   esac
   _err=$(jira_json http-error "$SEH_JIRA_CODE" "$SEH_JIRA_BODY" 2>/dev/null || printf '%s' "$SEH_JIRA_CODE")
-  blocked "Jira HTTP $_err" "fix the Jira mapping in /seh-setup or retry"
+  blocked "Jira HTTP $_err" "fix the Jira mapping in /{{prefix}}setit-se or retry"
 }
 
 read_body_file() {

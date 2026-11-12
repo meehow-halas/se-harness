@@ -7,7 +7,7 @@ When Jira is connected, allow spec, prompt, and log in repo files while Jira kee
 ## In scope
 
 - `agents.tracker.artifactsOnTrackerOnly` in [`references/harness.tracker.json`](../../references/harness.tracker.json) and docs.
-- `/seh-setup` question after `jira meta` (PL/EN per product plan).
+- `/<prefix>setit-se` question after `jira meta` (PL/EN per product plan).
 - `jira get` reads file bodies when `false`; `jira set` spec/prompt/log `BLOCKED` when `false`.
 - Agent and work-skill runtime instructions (read config at run time).
 - PRD feature-tracking and script table.

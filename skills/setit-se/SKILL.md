@@ -1,9 +1,9 @@
 ---
-name: seh-setup
-description: First-time seh setup and later parameter changes. Use when the user runs /seh-setup or needs to configure this project's seh install, models, base branch, packs, AGENTS.md, or Jira tracker.
+name: setit-se
+description: First-time seh setup and later parameter changes. Use when the user runs /{{prefix}}setit-se or needs to configure this project's seh install, models, base branch, packs, AGENTS.md, or Jira tracker.
 ---
 
-# /seh-setup
+# /{{prefix}}setit-se
 
 Finish first-time setup, or later change the same config. The CLI does not configure the project.
 
@@ -12,7 +12,7 @@ Generate from `.seh/` only. Do not invent CLI commands. Do not `npm install -g`.
 Read `.seh/references/hosts.json`. Install and this skill **always write every row**. Do not ask which hosts to use. If that file is missing, stop:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /seh-setup again
+BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se again
 ```
 
 Ask **one question at a time**. Wait. Do not dump a questionnaire. Stops (not questions) are one line:
@@ -25,10 +25,10 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 
 ## Entry
 
-1. If `.seh/` is missing, or `/seh-setup` is absent from **every** `skillsDir` in `.seh/references/hosts.json` (present in **any** listed `skillsDir` is enough):
+1. If `.seh/` is missing, or `/{{prefix}}setit-se` is absent from **every** `skillsDir` in `.seh/references/hosts.json` (present in **any** listed `skillsDir` is enough):
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /seh-setup again
+BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se again
 ```
 
 2. If `.seh/VERSION` is missing: same stop.
@@ -48,7 +48,7 @@ Interview defaults come from that host row’s `modelSuggest` (`architect` / `im
 If generation needs a model and `agents.roles.<key>.model[<host.id>]` is missing or empty:
 
 ```text
-BLOCKED: role model missing for host <id> — run /seh-setup
+BLOCKED: role model missing for host <id> — run /{{prefix}}setit-se
 ```
 
 **Per-host confirm (first run, legacy, missing host).** For each host in `.seh/references/hosts.json` (table order), prefill all four roles for that host’s `id`, show a table (architect / implementer / consultant / reviewer → model), then **one question per host**: whether to change any of those models. Skip / no = accept the table. Yes = the user may reply once with overrides (e.g. `architect: opus`); apply only named roles; leave the rest from prefill. If parsing is unclear, one follow-up question only. Do not stamp live `model:` until every host is confirmed.
@@ -154,12 +154,12 @@ After writing config and generating files (and after the agents-file step), offe
 If `.seh/VERSION` is missing:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /seh-setup again
+BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se again
 ```
 
 If any role `model` is still a string, or a map is missing a `hosts.json` `id`, finish **Role model maps** first. Do not regenerate live agents until every role has a complete map.
 
-If `.seh/VERSION` (trimmed) does not equal `seh.generatedFrom`: regenerate live agents, work skills, and rule packs from `.seh/` (same copy rules as first run), set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed package templates changed. That message must name the work-skill rename: `/seh-feature` was renamed to `/seh-shipit`; leftover live `seh-feature` was removed from every `skillsDir`. Do not rewrite `AGENTS.md` or `CLAUDE.md`; mention they may still contain the old name. Then continue below.
+If `.seh/VERSION` (trimmed) does not equal `seh.generatedFrom`: regenerate live agents, work skills, and rule packs from `.seh/` (same copy rules as first run), set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed package templates changed. That message must name the work-skill renames: `/seh-feature` and `/seh-shipit` are now `/{{prefix}}shipit`; `/seh-setup` is `/{{prefix}}setit-se`, `/seh-planit` is `/{{prefix}}planit`, `/seh-doit` is `/{{prefix}}doit`, `/seh-checkit` is `/{{prefix}}checkit`, `/seh-brainstorm` is `/{{prefix}}grillit`; leftover live `seh-*` skill directories were removed from every `skillsDir`. Do not rewrite `AGENTS.md` or `CLAUDE.md`; mention they may still contain the old name. Then continue below.
 
 **Status migration (once, on a later run).** If `agents.statuses` has the key `code review` and no `implemented` key, the flow changed. Rename it to `implemented` (key and value) in config and tell the user. Do not edit spec files. List every spec under `docs/features/` (or the mapped tracker) whose `status:` is `code review`, and tell the user to set it to `implemented`, or to `in review` if a review is running. `in review` stays valid.
 
@@ -172,7 +172,7 @@ Then **one change at a time**. Show current and new value, wait for confirmation
 | `agents.baseBranch` | `harness.config.json` only. |
 | Statuses, tracker maps, `fetchFields`, content language, product line | Config only. Do **not** regenerate agent bodies. |
 
-- Do not touch `agents.brainstorm` (that is `/seh-brainstorm`).
+- Do not touch `agents.brainstorm` (that is `/{{prefix}}grillit`).
 - Do not create or rewrite the project PRD.
 - Do not remake or re-merge `AGENTS.md`.
 - Do not commit.
@@ -236,7 +236,7 @@ Copy `.seh/agents/` files into **each** `agentsDir`. **Copies, not symlinks.**
 | `.seh/agents/consultant.md` | `<agentsDir>/consultant.md` | `consultant` |
 | `.seh/agents/reviewer.md` | `<agentsDir>/reviewer.md` | `reviewer` |
 
-Set frontmatter `model:` from `agents.roles.<key>.model[<host.id>]`. If that entry is missing or empty, stop with `BLOCKED: role model missing for host <id> — run /seh-setup`. Do not copy another host’s model. Leave `name`, `description`, and `tools` as in the template. Hosts that ignore `tools:` still get the field.
+Set frontmatter `model:` from `agents.roles.<key>.model[<host.id>]`. If that entry is missing or empty, stop with `BLOCKED: role model missing for host <id> — run /{{prefix}}setit-se`. Do not copy another host’s model. Leave `name`, `description`, and `tools` as in the template. Hosts that ignore `tools:` still get the field.
 
 When the host `id` is `cursor` and the role is `consultant`, also set `readonly: true`. Do not set `readonly` on architect, implementer, or reviewer.
 
@@ -259,21 +259,21 @@ On a confirmed role `model` cell change only: rewrite that one file’s `model:`
 
 ### Work skills
 
-Install writes **only** `/seh-setup` live (already in every `skillsDir`). This skill generates the rest.
+Install writes **only** `/{{prefix}}setit-se` live (already in every `skillsDir`). This skill generates the rest.
 
-Copy these directories from `.seh/skills/` to **each** `skillsDir`, if they exist in `.seh/skills/`:
+Read the prefix from `.seh/PREFIX` (first line, may be empty). Copy these directories from `.seh/skills/` to **each** `skillsDir`, if they exist in `.seh/skills/`. The live directory is `<prefix><name>`, and its `SKILL.md` frontmatter `name:` is rewritten to `<prefix><name>` (the slash command):
 
-- `seh-planit`
-- `seh-doit`
-- `seh-checkit`
-- `seh-shipit`
-- `seh-brainstorm` (when present)
+- `planit`
+- `doit`
+- `checkit`
+- `shipit`
+- `grillit` (when present)
 
-Do **not** overwrite the install-owned `/seh-setup` skill from this copy step. If a listed template is missing, still copy the others; the copied stub (when present) stops with `BLOCKED:` until a later package fills the body.
+Do **not** overwrite the install-owned `/{{prefix}}setit-se` skill from this copy step. If a listed template is missing, still copy the others; the copied stub (when present) stops with `BLOCKED:` until a later package fills the body.
 
-In **each** `skillsDir`, if a leftover `seh-feature` directory exists, delete it. Do not leave it as an alias.
+Cleanup in **each** `skillsDir`: delete a leftover `seh-feature` directory and the pre-prefix names `seh-setup`, `seh-planit`, `seh-doit`, `seh-checkit`, `seh-shipit`, `seh-brainstorm`. If `seh.generatedPrefix` in `harness.config.json` is set and differs from `.seh/PREFIX`, also delete the live directories made with that old prefix (only `setit-se`, `planit`, `doit`, `checkit`, `shipit`, `grillit` with that prefix). Never delete a directory whose name is not on these lists. Do not leave aliases. After generating, set `seh.generatedPrefix` to the `.seh/PREFIX` value (empty string allowed). A prefix change alone (VERSION equal, `seh.generatedPrefix` different) also triggers this regeneration.
 
-When the host `id` is `cursor`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/seh-setup`). The package templates may omit that field.
+When the host `id` is `cursor`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/{{prefix}}setit-se`). The package templates may omit that field.
 
 ### Rule packs
 
@@ -301,7 +301,7 @@ When the host `id` is `opencode`, after writing that host’s `seh-*` rule files
 
 - If `.opencode/opencode.json` is missing, create `{ "instructions": [".opencode/rules/*.md"] }`.
 - If it exists, parse JSON. Ensure `instructions` is an array and contains `.opencode/rules/*.md` exactly once. Do not remove other instructions or other keys.
-- Invalid JSON in that file: stop with `BLOCKED: invalid JSON at .opencode/opencode.json — fix the file, then /seh-setup again`.
+- Invalid JSON in that file: stop with `BLOCKED: invalid JSON at .opencode/opencode.json — fix the file, then /{{prefix}}setit-se again`.
 - Do not edit a project-root `opencode.json` or `opencode.jsonc`. OpenCode combines `instructions` from both configs.
 - Uninstall does not remove this glob (setup-owned, like the rule files).
 

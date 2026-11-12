@@ -1,9 +1,9 @@
 ---
-name: seh-doit
-description: Run the Implementer (Consultant loop inside) for one or more existing specs. Use when the user runs /seh-doit. Same skill for features and bugs.
+name: doit
+description: Run the Implementer (Consultant loop inside) for one or more existing specs. Use when the user runs /{{prefix}}doit. Same skill for features and bugs.
 ---
 
-# /seh-doit
+# /{{prefix}}doit
 
 Implementation only. Launch the Implementer for an existing spec + prompt. Same skill for `type: feature` and `type: bug`. One task or a list. This session applies the Implementer procedure inline and launches Consultant after each phase. Do not spec. Do not launch Architect or Reviewer. There is no user-facing Consultant skill.
 
@@ -24,25 +24,25 @@ Before any work. Compare `.seh/VERSION` and `seh.generatedFrom` after trimming w
 1. If `.seh/` or `.seh/VERSION` is missing:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /seh-setup
+BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se
 ```
 
 2. If `harness.config.json` is missing:
 
 ```text
-BLOCKED: setup is incomplete — run /seh-setup
+BLOCKED: setup is incomplete — run /{{prefix}}setit-se
 ```
 
 3. If `.seh/VERSION` does not match `seh.generatedFrom` in `harness.config.json`:
 
 ```text
-BLOCKED: generated files do not match the installed templates — run /seh-setup
+BLOCKED: generated files do not match the installed templates — run /{{prefix}}setit-se
 ```
 
 If the live Implementer file is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json`:
 
 ```text
-BLOCKED: live agents are missing — run /seh-setup
+BLOCKED: live agents are missing — run /{{prefix}}setit-se
 ```
 
 ## Mode
@@ -53,7 +53,7 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `doit`, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning, then the **Prompt check** in that file before each spawn (only the allowed lines; no shared folder, notes file, or extra instruction). Do not launch Implementer here. Two or more keys and `sessionSpawn` is `manual`: print the `start-task` and `/seh-doit <KEY>` commands per key and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `doit`, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning, then the **Prompt check** in that file before each spawn (only the allowed lines; no shared folder, notes file, or extra instruction). Do not launch Implementer here. Two or more keys and `sessionSpawn` is `manual`: print the `start-task` and `/{{prefix}}doit <KEY>` commands per key and stop. One key: continue below.
 
 ## Resolve the tasks
 
@@ -71,20 +71,20 @@ For **each** named task independently:
 If spec or prompt is missing:
 
 ```text
-BLOCKED: spec and prompt are missing — run /seh-planit or /seh-shipit
+BLOCKED: spec and prompt are missing — run /{{prefix}}planit or /{{prefix}}shipit
 ```
 
 Read status from the active tracker. Compare to `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). If status is already the configured `implemented`, `in review`, or `done` string:
 
 ```text
-BLOCKED: task is already implemented, in review, or done — use /seh-checkit for review or update; do not re-implement
+BLOCKED: task is already implemented, in review, or done — use /{{prefix}}checkit for review or update; do not re-implement
 ```
 
 A basename/key in `depends` that is not at the configured `done` status is a stop **for that task** (Implementer also enforces this). Do not work around it. Continue the other named tasks.
 
 ## Launch Implementer
 
-Follow the live Implementer file for this host (`<agentsDir>/implementer.md` from `.seh/references/hosts.json` — a copy from `/seh-setup`, not a symlink to `.seh/agents/`) **inline in this session**. Do not launch Implementer as a subagent: subagents cannot launch Consultant. Do not duplicate that procedure here. Launch Consultant from this session (Agent tool) after each phase; do not expose Consultant as a skill.
+Follow the live Implementer file for this host (`<agentsDir>/implementer.md` from `.seh/references/hosts.json` — a copy from `/{{prefix}}setit-se`, not a symlink to `.seh/agents/`) **inline in this session**. Do not launch Implementer as a subagent: subagents cannot launch Consultant. Do not duplicate that procedure here. Launch Consultant from this session (Agent tool) after each phase; do not expose Consultant as a skill.
 
 For each task that passed resolve:
 
@@ -105,4 +105,4 @@ When all phases have `continue`, status stays `in progress`. Do not start Review
 
 ## After Implementer finishes
 
-Report each task key, its `worktree:`, and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/seh-checkit` (one Reviewer round, same list) or `/seh-shipit` for a single leftover. Do **not** start review.
+Report each task key, its `worktree:`, and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/{{prefix}}checkit` (one Reviewer round, same list) or `/{{prefix}}shipit` for a single leftover. Do **not** start review.

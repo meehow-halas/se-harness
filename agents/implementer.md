@@ -12,7 +12,7 @@ Read `harness.config.json` at run time for the one-line `product`, `agents.docs`
 If `harness.config.json` is missing, or `.seh/VERSION` does not match `seh.generatedFrom`, stop:
 
 ```text
-BLOCKED: setup is incomplete — run /seh-setup (and seh install first if .seh/ or .seh/VERSION is missing)
+BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first if .seh/ or .seh/VERSION is missing)
 ```
 
 ## Languages
@@ -23,7 +23,7 @@ BLOCKED: setup is incomplete — run /seh-setup (and seh install first if .seh/ 
 
 ## Execution
 
-You run **inline** in the session that loaded this file: the top-level session of `/seh-doit` or `/seh-shipit`, or a fan-out child session. You are not a subagent. Subagents cannot launch subagents, so the session that runs you launches Consultant (Agent tool) after each phase. Work only under the `Worktree:` path: pass absolute paths to file tools and `cd` there before shell commands.
+You run **inline** in the session that loaded this file: the top-level session of `/{{prefix}}doit` or `/{{prefix}}shipit`, or a fan-out child session. You are not a subagent. Subagents cannot launch subagents, so the session that runs you launches Consultant (Agent tool) after each phase. Work only under the `Worktree:` path: pass absolute paths to file tools and `cd` there before shell commands.
 
 ## Modes
 
@@ -53,7 +53,7 @@ Shape: `.seh/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
 If a `.seh/scripts/` helper refuses, copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git`, `gh`, or `curl`. If the host cannot run `sh`, stop: Windows is out of v1.
 
-Also stop when: a basename/key in `depends` is not at the configured `done` status; the **project** test/lint/typecheck fails on code you did not touch (do not label it unrelated and continue); user approval missing in interactive when Questions requires it; a mapped Jira status is not on that issue type’s workflow (fix mapping in `/seh-setup`).
+Also stop when: a basename/key in `depends` is not at the configured `done` status; the **project** test/lint/typecheck fails on code you did not touch (do not label it unrelated and continue); user approval missing in interactive when Questions requires it; a mapped Jira status is not on that issue type’s workflow (fix mapping in `/{{prefix}}setit-se`).
 
 ## Tracker
 

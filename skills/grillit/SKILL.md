@@ -1,11 +1,11 @@
 ---
-name: seh-brainstorm
-description: CRUD brainstorm members, build app context, and run a consult round. Use when the user runs /seh-brainstorm or when Architect /seh-planit needs a persona round.
+name: grillit
+description: CRUD brainstorm members, build app context, and run a consult round. Use when the user runs /{{prefix}}grillit or when Architect /{{prefix}}planit needs a persona round.
 ---
 
-# /seh-brainstorm
+# /{{prefix}}grillit
 
-Members, app context, and a consult. Orchestrate the round. Do **not** role-play personae or the facilitator. Do not put a facilitator in `agents/`. Do not invent CLI commands. `/seh-setup` does not edit members.
+Members, app context, and a consult. Orchestrate the round. Do **not** role-play personae or the facilitator. Do not put a facilitator in `agents/`. Do not invent CLI commands. `/{{prefix}}setit-se` does not edit members.
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line.
 
@@ -28,29 +28,29 @@ Before any work. Compare `.seh/VERSION` and `seh.generatedFrom` after trimming w
 1. If `.seh/` or `.seh/VERSION` is missing:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /seh-setup
+BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se
 ```
 
 2. If `harness.config.json` is missing:
 
 ```text
-BLOCKED: setup is incomplete — run /seh-setup
+BLOCKED: setup is incomplete — run /{{prefix}}setit-se
 ```
 
 3. If `.seh/VERSION` does not match `seh.generatedFrom` in `harness.config.json`:
 
 ```text
-BLOCKED: generated files do not match the installed templates — run /seh-setup
+BLOCKED: generated files do not match the installed templates — run /{{prefix}}setit-se
 ```
 
 ---
 
 ## This host
 
-Read `.seh/references/hosts.json`. This session’s host `id` is the row whose `skillsDir` contains the `/seh-brainstorm` skill that loaded. Use that row’s `agentsDir` and `brainstormDir`. If no row matches:
+Read `.seh/references/hosts.json`. This session’s host `id` is the row whose `skillsDir` contains the `/{{prefix}}grillit` skill that loaded. Use that row’s `agentsDir` and `brainstormDir`. If no row matches:
 
 ```text
-BLOCKED: this skill is not in a hosts.json skillsDir — run /seh-setup
+BLOCKED: this skill is not in a hosts.json skillsDir — run /{{prefix}}setit-se
 ```
 
 ---
@@ -64,15 +64,15 @@ From the user message. Ask **one question** if it is unclear. Do not dump a menu
 | Members CRUD | Create, edit, or remove members. List if they ask. |
 | App context | Build or update `app-context.md` in every `brainstormDir`. |
 | Direct consult | A question or a spec. Threshold does **not** apply. |
-| During specification | `/seh-planit` or Architect inside `/seh-shipit` asked for a round. |
+| During specification | `/{{prefix}}planit` or Architect inside `/{{prefix}}shipit` asked for a round. |
 
-This skill does not start because `/seh-shipit` decided to. `/seh-shipit` never starts a round by itself.
+This skill does not start because `/{{prefix}}shipit` decided to. `/{{prefix}}shipit` never starts a round by itself.
 
 ---
 
 ## Config shape
 
-`agents.brainstorm` in `harness.config.json`. `/seh-setup` does not write members or the brainstorm model.
+`agents.brainstorm` in `harness.config.json`. `/{{prefix}}setit-se` does not write members or the brainstorm model.
 
 | Key | Role |
 |-----|------|
@@ -101,7 +101,7 @@ Change the brainstorm model for <host label>? Reply skip or no to keep <default 
 If a round needs a model and `agents.brainstorm.model[<host.id>]` is missing or empty:
 
 ```text
-BLOCKED: brainstorm model missing for host <id> — finish model map in /seh-brainstorm
+BLOCKED: brainstorm model missing for host <id> — finish model map in /{{prefix}}grillit
 ```
 
 ---
@@ -115,7 +115,7 @@ Live files: `<brainstormDir>/members/<id>.md` for **every** `brainstormDir` in `
 1. Consult threshold (`any` / `significant` / `broad`). Default if they skip: `significant`. Write `agents.brainstorm.consult`.
 2. Model for persona and facilitator turns. If `model` is already a complete map with every host `id`, reuse it. Otherwise use **per-host confirm** from above and write `agents.brainstorm.model` as a map keyed by host `id`.
 
-Later creates reuse those keys. Do not ask again unless the user is changing them here (not in `/seh-setup`). A model change is one cell `(host)` unless the map is incomplete.
+Later creates reuse those keys. Do not ask again unless the user is changing them here (not in `/{{prefix}}setit-se`). A model change is one cell `(host)` unless the map is incomplete.
 
 Then ask for `id`, `description`, `identity`, `cares`, `dislikes` (one question at a time). Append to `members` and write the markdown.
 
@@ -132,14 +132,14 @@ Build from the repo: one-line `product`, `agents.docs`, README, and those docs. 
 A consult needs this file ready in **this host’s** `brainstormDir`. If it is missing there or the user has not confirmed it:
 
 ```text
-BLOCKED: app context is not ready — finish app context in /seh-brainstorm
+BLOCKED: app context is not ready — finish app context in /{{prefix}}grillit
 ```
 
 ---
 
 ## When to consult during specification
 
-`/seh-planit` or Architect inside `/seh-shipit` stops and asks this skill. They do not interview personae.
+`/{{prefix}}planit` or Architect inside `/{{prefix}}shipit` stops and asks this skill. They do not interview personae.
 
 Consult **on its own** (without the user naming a question) only when there are **at least two** members **and** the work passes `agents.brainstorm.consult`:
 
@@ -160,7 +160,7 @@ If the user names members, ask those. Otherwise ask every member.
 If there are no members:
 
 ```text
-BLOCKED: no brainstorm members — create a member in /seh-brainstorm
+BLOCKED: no brainstorm members — create a member in /{{prefix}}grillit
 ```
 
 Then run the round with the question or spec as **material**.

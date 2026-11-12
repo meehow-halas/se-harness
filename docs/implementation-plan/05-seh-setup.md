@@ -1,14 +1,14 @@
-# Phase 5 — `/seh-setup`
+# Phase 5 — `/<prefix>setit-se`
 
 ## Goal
 
-Author the real `/seh-setup` skill. It is the only skill `seh install` writes live. It finishes first-time setup and later changes the same config. The CLI does not configure the project.
+Author the real `/<prefix>setit-se` skill. It is the only skill `seh install` writes live. It finishes first-time setup and later changes the same config. The CLI does not configure the project.
 
-Cite [prd.md](../prd.md) sections **Skills** and **`/seh-setup` (detail)** as the procedure. This file is the build slice, not a second copy of every question.
+Cite [prd.md](../prd.md) sections **Skills** and **`/<prefix>setit-se` (detail)** as the procedure. This file is the build slice, not a second copy of every question.
 
 ## In scope
 
-- Replace the phase 1 stub with the full skill template under `skills/` (source copied to `.seh/skills/` and written live as `/seh-setup` by install).
+- Replace the phase 1 stub with the full skill template under `skills/` (source copied to `.seh/skills/` and written live as `/<prefix>setit-se` by install).
 - First run (no `harness.config.json`).
 - Later run (config present), including VERSION vs `seh.generatedFrom` regeneration.
 - Generation of live agents (copies + `model:`), work-skill **files** from `.seh/skills/` (bodies may still be stubs until phase 6), and rule packs from `.seh/packs/` filtered by detection and `packsIgnored`.
@@ -24,13 +24,13 @@ Cite [prd.md](../prd.md) sections **Skills** and **`/seh-setup` (detail)** as th
 - Committing.
 - Rewriting an existing project PRD on later run.
 - Remaking `AGENTS.md` on later run.
-- Editing `agents.brainstorm` members (that is `/seh-brainstorm`).
+- Editing `agents.brainstorm` members (that is `/<prefix>grillit`).
 - Global install.
 - Regenerating agent **bodies** because base branch, statuses, tracker maps, `fetchFields`, content language, or product line changed.
 
 ## Inputs
 
-- PRD: Binding flow step 2; What `/seh-setup` does; Runtime config; Skills table; `/seh-setup` (detail) in full; Decisions 11–14, 16–18.
+- PRD: Binding flow step 2; What `/<prefix>setit-se` does; Runtime config; Skills table; `/<prefix>setit-se` (detail) in full; Decisions 11–14, 16–18.
 - Phase 1 install (writes this skill live).
 - Phase 3 `references/AGENTS.md` and config skeleton.
 - Phase 4 `agents/`.
@@ -40,7 +40,7 @@ Cite [prd.md](../prd.md) sections **Skills** and **`/seh-setup` (detail)** as th
 
 | Path | What |
 |------|------|
-| `skills/seh-setup/` (or host-shaped equivalent) | Full `/seh-setup` skill | 
+| `skills/setit-se/` (or host-shaped equivalent) | Full `/<prefix>setit-se` skill | 
 | Work-skill **templates** under `skills/` | At least filenames setup will copy live: `seh-planit`, `seh-doit`, `seh-checkit`, `seh-shipit` (bodies: phase 6). Optional thin `BLOCKED:` stubs if phase 6 is not in the same pass |
 
 Live files written **in a consuming project** (not in this repo during this phase, except as documented behaviour):
@@ -55,7 +55,7 @@ Live files written **in a consuming project** (not in this repo during this phas
 
 ### Entry
 
-If `.seh/` or the `/seh-setup` skill is missing: stop. Tell the user to run `seh install` here (npm or GitHub), then `/seh-setup` again.
+If `.seh/` or the `/<prefix>setit-se` skill is missing: stop. Tell the user to run `seh install` here (npm or GitHub), then `/<prefix>setit-se` again.
 
 If `.seh/VERSION` is missing: same stop.
 
@@ -63,7 +63,7 @@ If `harness.config.json` is missing → first run. If present → later run. Do 
 
 ### First run
 
-Follow PRD `/seh-setup` (detail) **First run**:
+Follow PRD `/<prefix>setit-se` (detail) **First run**:
 
 1. Read the repo; state inferences so the user can object. One question at a time for gaps.
 2. **PRD:** use existing; never overwrite. If none, gather from the repo, ask for missing product facts, write `docs/prd.md`, put the path in `agents.docs`. Config stores a one-line product plus doc paths, not the PRD body.
@@ -100,11 +100,11 @@ If the user names another config key, do that key first, then the tracker offer 
 
 ## Done when
 
-- `skills/` contains a complete `/seh-setup` that distinguishes first vs later run and VERSION mismatch.
+- `skills/` contains a complete `/<prefix>setit-se` that distinguishes first vs later run and VERSION mismatch.
 - Procedure matches PRD detail (PRD, questions one at a time, AGENTS.md acceptance, CLAUDE.md rules, Jira, no commit).
 - Setup generates from `.seh/`.
 - Install still writes **only** this skill live; it does not generate the rest.
 
 ## Handoff
 
-Phase 6 replaces work-skill stubs with real `/seh-planit`, `/seh-doit`, `/seh-checkit`, `/seh-shipit`. Those skills must stop when config is missing or VERSION ≠ `generatedFrom`, with a message to run `/seh-setup` (and `seh install` first if `.seh/` or VERSION is missing). Phase 7 adds `/seh-brainstorm` the same way.
+Phase 6 replaces work-skill stubs with real `/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>shipit`. Those skills must stop when config is missing or VERSION ≠ `generatedFrom`, with a message to run `/<prefix>setit-se` (and `seh install` first if `.seh/` or VERSION is missing). Phase 7 adds `/<prefix>grillit` the same way.

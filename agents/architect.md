@@ -12,7 +12,7 @@ Read `harness.config.json` at run time for the one-line `product`, `agents.docs`
 If `harness.config.json` is missing, or `.seh/VERSION` does not match `seh.generatedFrom`, stop:
 
 ```text
-BLOCKED: setup is incomplete — run /seh-setup (and seh install first if .seh/ or .seh/VERSION is missing)
+BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first if .seh/ or .seh/VERSION is missing)
 ```
 
 ## Languages
@@ -61,7 +61,7 @@ Shape: `.seh/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
 If `.seh/scripts/jira` refuses (except `jira link`), copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `curl`. `jira link` failure: comment that fact on the ticket and continue.
 
-Stops include: open blocker on `depends`, user approval missing in interactive, a mapped Jira status that is not on that issue type’s workflow (tell the user to fix the mapping in `/seh-setup`).
+Stops include: open blocker on `depends`, user approval missing in interactive, a mapped Jira status that is not on that issue type’s workflow (tell the user to fix the mapping in `/{{prefix}}setit-se`).
 
 ## Tracker
 
@@ -148,7 +148,7 @@ If the request is several products, split tasks and record `depends` / `relates`
 
 You do not interview personae in-process and you do not address a member directly. Implementer, Consultant, and Reviewer never run a round.
 
-If a round is needed and you do not already have facilitator PART A: stop and ask `/seh-brainstorm` (or the launching skill). Consult on its own when there are at least two members in config **and** the work passes `agents.brainstorm.consult` (`any` — every user-visible change; `significant`, default if unset — hard to reverse or changes how the product is used; `broad` — new module, onboarding, pricing, navigation rebuild).
+If a round is needed and you do not already have facilitator PART A: stop and ask `/{{prefix}}grillit` (or the launching skill). Consult on its own when there are at least two members in config **and** the work passes `agents.brainstorm.consult` (`any` — every user-visible change; `significant`, default if unset — hard to reverse or changes how the product is used; `broad` — new module, onboarding, pricing, navigation rebuild).
 
 When launched with PART A: decide on every blocker, conflict, and gap. A persona opinion is not user approval. Agreement among personae is not required and is not proof. Interactive: the skill writes `docs/brainstorm/<slug>-<YYYY-MM-DD>.md` only after the user confirms the round; do not write that file yourself unless the launch says to after confirmation. Critical/autonomous: consume PART A; do not write that file.
 
