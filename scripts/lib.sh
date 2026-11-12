@@ -37,6 +37,16 @@ repo_root() {
   git rev-parse --show-toplevel
 }
 
+# Project root: the git toplevel when there is a repo, else the current
+# directory. Lets the scripts read harness.config.json when git is disabled.
+project_root() {
+  if _pr=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$_pr" ]; then
+    printf '%s\n' "$_pr"
+    return 0
+  fi
+  pwd
+}
+
 abs_git_common_dir() {
   _g=$(git rev-parse --git-common-dir)
   CDPATH= cd -- "$_g" && pwd
@@ -162,7 +172,7 @@ next_task_branch() {
 }
 
 config_path() {
-  printf '%s/harness.config.json\n' "$(repo_root)"
+  printf '%s/harness.config.json\n' "$(project_root)"
 }
 
 # Print agents.commitTrailer (one trailer line, e.g. "Co-Authored-By: Name <mail>")
@@ -192,31 +202,67 @@ if isinstance(t, str) and t.strip():
   fi
 }
 
-# Print agents.baseBranch. Empty result means missing or invalid.
+# Print agents.baseBranch. Exit 0 with the (trimmed) value; empty output with
+# exit 0 means the key is present but empty or null (git disabled). Exit 3
+# means the key is absent or not a string; exit 2 means unreadable JSON.
 _extract_base_branch() {
   _cfg=$1
   if command -v node >/dev/null 2>&1; then
     node -e '
 var fs = require("fs");
-var c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-var b = c && c.agents && c.agents.baseBranch;
-if (typeof b !== "string" || !String(b).trim()) process.exit(1);
-    process.stdout.write(String(b).trim());
+var c;
+try { c = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); } catch (e) { process.exit(2); }
+var a = c && c.agents;
+if (!a || typeof a !== "object" || !("baseBranch" in a)) process.exit(3);
+var b = a.baseBranch;
+if (b === null) process.exit(0);
+if (typeof b !== "string") process.exit(3);
+process.stdout.write(b.trim());
 ' "$_cfg"
     return $?
   fi
   if command -v python3 >/dev/null 2>&1; then
     python3 -c '
 import json, sys
-c = json.load(open(sys.argv[1], encoding="utf-8"))
-b = (c.get("agents") or {}).get("baseBranch")
-if not isinstance(b, str) or not b.strip():
-    sys.exit(1)
+try:
+    c = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(2)
+a = c.get("agents") if isinstance(c, dict) else None
+if not isinstance(a, dict) or "baseBranch" not in a:
+    sys.exit(3)
+b = a["baseBranch"]
+if b is None:
+    sys.exit(0)
+if not isinstance(b, str):
+    sys.exit(3)
 sys.stdout.write(b.strip())
 ' "$_cfg"
     return $?
   fi
-  tr -d '\n' < "$_cfg" | sed -n 's/.*"baseBranch"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+  _flat=$(tr -d '\n' < "$_cfg")
+  case $_flat in
+    *'"baseBranch"'*) ;;
+    *) return 3 ;;
+  esac
+  printf '%s' "$_flat" | sed -n 's/.*"baseBranch"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+# Git is disabled when harness.config.json exists and agents.baseBranch is
+# present but empty or null. Call before require_git. Prints UNCHANGED with
+# "git: disabled" plus any extra lines passed in, then exits 0. Returns
+# normally when git is enabled or the config cannot decide (the usual
+# BLOCKED: checks then run).
+git_gate() {
+  _cfg=$(config_path)
+  if [ ! -f "$_cfg" ]; then
+    return 0
+  fi
+  _gb=$(_extract_base_branch "$_cfg") || return 0
+  if [ -z "$_gb" ]; then
+    unchanged "git: disabled" "$@"
+  fi
+  return 0
 }
 
 # Sets SEH_BASE_BRANCH. Must not be called from command substitution
@@ -227,11 +273,13 @@ read_base_branch() {
     blocked "harness.config.json is missing" "run /{{prefix}}setit-se in this project"
   fi
   SEH_BASE_BRANCH=
-  if ! SEH_BASE_BRANCH=$(_extract_base_branch "$_cfg"); then
+  _rc=0
+  SEH_BASE_BRANCH=$(_extract_base_branch "$_cfg") || _rc=$?
+  if [ "$_rc" -ne 0 ]; then
     blocked "agents.baseBranch is missing from harness.config.json" "run /{{prefix}}setit-se and set the base git branch"
   fi
   if [ -z "$SEH_BASE_BRANCH" ]; then
-    blocked "agents.baseBranch is missing from harness.config.json" "run /{{prefix}}setit-se and set the base git branch"
+    unchanged "git: disabled"
   fi
 }
 

@@ -103,10 +103,10 @@ describe("shared refusals", () => {
       });
     });
 
-    test(`${name}: whitespace-only agents.baseBranch is BLOCKED`, () => {
+    test(`${name}: unreadable harness.config.json is BLOCKED`, () => {
       withTempDir((cwd) => {
         initGitRepo(cwd, { config: false });
-        writeHarnessConfig(cwd, "   ");
+        fs.writeFileSync(path.join(cwd, "harness.config.json"), "{not json\n");
         assertBlocked(
           runAllowlisted(cwd, name, args),
           /agents\.baseBranch is missing/

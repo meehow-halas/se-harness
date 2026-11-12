@@ -85,6 +85,8 @@ Before work: run `.seh/scripts/start-task` with the task basename (files) or iss
 .seh/scripts/start-task <task>
 ```
 
+**Git disabled.** When `agents.baseBranch` in `harness.config.json` is empty or `null`, git is off for this project: skip `start-task`, make no branch or worktree, work in the launch checkout, and leave `worktree:` and branch out of the report.
+
 Do not compose that git yourself. Do not call other git scripts. Reviewer commits and pushes. No rebase, reset, or force. Success prints `OK` or `UNCHANGED` and `key: value` lines.
 
 ## Rules, tests, files
@@ -146,7 +148,7 @@ When Reviewer returns ❌ items: implement only those items. Launch Consultant a
 ## Workflow
 
 1. Read spec and prompt on the active tracker. Check `depends`: every listed task must be at the configured `done` status; otherwise stop. `relates` is context. If the prompt names a dependency not in `depends`, say so in the report (you cannot edit those lists).
-2. Run `.seh/scripts/start-task <task>` (from the launch checkout or the named worktree). Then set status to the configured `in progress` string (files) or Jira mapped `inProgress` when not `null`. Append a start row to the log (files) or a comment (Jira). Do remaining work only under the `worktree:` path.
+2. Run `.seh/scripts/start-task <task>` (from the launch checkout or the named worktree); git disabled (empty `agents.baseBranch`): skip it and work in the launch checkout. Then set status to the configured `in progress` string (files) or Jira mapped `inProgress` when not `null`. Append a start row to the log (files) or a comment (Jira). Do remaining work only under the `worktree:` path.
 
 **Step 2 is mandatory and checked.** Before any code is written, re-read the spec file's `status:` line and the log. The status must be the configured `in progress` string, and the log must contain the start row. If either is missing, fix it now (set status, append the row) and only then continue. Never start implementation with the spec at `todo`. A run that finishes with status `todo` is a failed run: say so in the report with `BLOCKED: status not in progress`.
 3. Plan 2–6 phases. Implement one phase, run the project’s checks for the code you touched, then launch Consultant. Repeat until every phase has `continue` (or debt protocol / launch cap says to finish).

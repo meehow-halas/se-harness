@@ -79,6 +79,8 @@ Allowlisted git/`gh` and Jira operations run through `.seh/scripts/`. Agents cal
 | `return-to-base` | Reviewer, after PR opened (removes the seh worktree) |
 | `jira` | `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 
+**Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR, `update`), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with changelog and status written to files. The scripts also answer `UNCHANGED` + `git: disabled`.
+
 Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira`.
 
 ## Tests

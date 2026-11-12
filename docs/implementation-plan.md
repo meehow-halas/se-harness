@@ -27,6 +27,7 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 12 | [12-jira-rest-scripts.md](implementation-plan/12-jira-rest-scripts.md) | [12-jira-rest-scripts.prompt.md](implementation-plan/12-jira-rest-scripts.prompt.md) |
 | Phase 13 | [13-opencode-host.md](implementation-plan/13-opencode-host.md) | — |
 | Phase 14 | [14-artifacts-on-tracker-only.md](implementation-plan/14-artifacts-on-tracker-only.md) | — |
+| Phase 15 | [optional-git/plan.md](optional-git/plan.md) | — |
 
 Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longest because `/<prefix>setit-se` and the work-skill pipeline are large; they still point at the PRD rather than restating it.
 
@@ -118,6 +119,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 12 | Jira Cloud REST scripts (no MCP) | 2, 3, 4, 5 | done |
 | 13 | OpenCode host | 8, 9, 11 | done |
 | 14 | `artifactsOnTrackerOnly` | 12, 5 | done |
+| 15 | Optional git (empty `agents.baseBranch` disables git) | 2, 4, 5, 6, 10 | done |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.seh/VERSION`.
 

@@ -2,7 +2,8 @@
 # fanout-plan --skill <planit|doit|checkit|shipit> --keys <k,...> [--variant review|update]
 #   [--depends <key:dep,...>] [--done <k,...>] [--running <k,...>] [--max <n>]
 # Stateless planner for multi-key fan-out. Prints which keys may start a session now.
-# Does not start sessions, read the tracker, or touch git. The parent calls it again
+# Does not start sessions, read the tracker, or touch git. When agents.baseBranch
+# is empty (git disabled) it plans sequentially: mode sequential, max 1. The parent calls it again
 # after each session ends, with --done and --running updated.
 # Output: OK, then mode / max / ready / waiting / blocked / queued / stuck lines.
 
@@ -89,6 +90,14 @@ if [ "$max" -lt 1 ]; then
 fi
 
 mode=parallel
+_cfg=$(config_path)
+if [ -f "$_cfg" ]; then
+  _gb=$(_extract_base_branch "$_cfg") || _gb=x
+  if [ -z "$_gb" ]; then
+    mode=sequential
+    max=1
+  fi
+fi
 
 seen=
 for k in $(split "$keys"); do

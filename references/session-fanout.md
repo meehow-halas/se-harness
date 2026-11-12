@@ -19,7 +19,7 @@ Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in
 
 Output: `OK`, then `mode`, `max`, `ready` (comma list, may be empty), and optional `waiting`, `blocked`, `queued`, `stuck` lines. `BLOCKED: ...` means fix the arguments and retry.
 
-- `mode` is always `parallel`.
+- `mode` is `parallel`, or `sequential` (with `max: 1`) when git is disabled (`agents.baseBranch` empty). On `sequential`, do not start sessions: run the keys one after another in this session.
 - Default `--max 4`. Above that, ask the user first.
 
 ## 3. Start sessions (desktop app host)

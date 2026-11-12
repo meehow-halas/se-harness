@@ -5,6 +5,7 @@
 
 . "$(dirname "$0")/lib.sh"
 
+git_gate
 require_git
 require_task "${1-}"
 task=$1

@@ -72,6 +72,8 @@ A launch may name `Worktree: <abs>`. All Read/Write/Edit, project tests, and `.s
 
 Allowlisted git/`gh` operations go through `.seh/scripts/`. You do not compose the matching `git`/`gh` or `curl`. Git scripts read `agents.baseBranch`. No rebase, reset, or force. No merge of the PR. Architect and Consultant never call these scripts. Success prints `OK` or `UNCHANGED`. `start-task` prints `worktree:`; `return-to-base` from a seh worktree removes that worktree and does not switch the user’s primary checkout.
 
+**Git disabled.** When `agents.baseBranch` is empty or `null`, skip every script in this table and every git step: no `start-task`, commit, push, PR or `return-to-base`, and no `worktree:` in the report. After acceptance do only items 1–3 under *After acceptance*; status `done` and the changelog are the end of the feature. The variant `update` stops with `BLOCKED: update needs git`.
+
 | When | Script |
 |------|--------|
 | Task branch missing | `.seh/scripts/start-task <task>` |
@@ -95,7 +97,7 @@ The launch names review (default) or **update**. Do not mix them.
 
 ### Update from base
 
-Only when the user asks (for example `/{{prefix}}checkit` update). Run `.seh/scripts/update-from-base <task>`. If the branch is missing, `start-task` first. Resolve conflicts if possible (keep spec-required behaviour; do not take one whole side blindly). Stop on unresolved conflicts. After resolving, `commit-task` with the resolved paths. If the merge produced a commit, `push-task` so the remote task branch matches. Do not change status, changelog, or the review. Do not open a new PR. Do not call `return-to-base` on update. Do not merge the GitHub PR.
+Only when the user asks (for example `/{{prefix}}checkit` update). Git disabled: stop with `BLOCKED: update needs git`. Otherwise run `.seh/scripts/update-from-base <task>`. If the branch is missing, `start-task` first. Resolve conflicts if possible (keep spec-required behaviour; do not take one whole side blindly). Stop on unresolved conflicts. After resolving, `commit-task` with the resolved paths. If the merge produced a commit, `push-task` so the remote task branch matches. Do not change status, changelog, or the review. Do not open a new PR. Do not call `return-to-base` on update. Do not merge the GitHub PR.
 
 Do not push the base branch yourself. Do not open any other PR than the one after acceptance (see After acceptance).
 
@@ -103,7 +105,7 @@ Do not push the base branch yourself. Do not open any other PR than the one afte
 
 1. Read the spec on the active tracker. Check `depends`: not `done` → stop. `relates`: report conflicts with those specs under ⚠️ or ❌. A spec dependency missing from `depends` is ⚠️. Do not list a blocker as ❌.
 2. Gate on status. Allowed: `implemented` (first round, or the next round after a fix) and `in review` (a later round with no fix in between). Anything else stops with `BLOCKED: status <value> does not allow review — the Implementer must finish first`. Then set `in review` (files string, or Jira `inReview` when not `null`) and log that review started. Do this **before** the review itself, even when Acceptance follows in the same run.
-3. If the task branch is missing, `.seh/scripts/start-task <task>`.
+3. If the task branch is missing, `.seh/scripts/start-task <task>` (git disabled: skip).
 4. Run the checklist against the implementation. Follow generated rules that load on Read. Run the **project’s** test/lint/typecheck when an AC depends on it. A failure on code nobody on this task touched is a stop, not an ❌ for this task. Apply reviewer `checklist` from config when present (still spec constraints, not taste).
 5. Present the structured review. Do **not** append the final review to the log, set `done`, edit changelog, commit, push, or open a PR until Acceptance allows it.
 6. When Acceptance allows it, do the git order below. When it does not, stop after the report; status stays `in review`. If the report has any open ❌ (a fix round), set status to `in progress` (files string, or Jira `inProgress` when not `null`) and log it: the Implementer picks up from there and the review is run again after it sets `implemented`.
@@ -137,6 +139,8 @@ Acceptance ends the feature. The PR opened after it is the finished state: the R
 1. Final review in the log (files row or Jira comment). Last log row of the run. Do not write the PR URL into the log.
 2. Status to the configured `done` string (Jira mapped `done` when not `null`). Written before the commit, so the commit carries it.
 3. `CHANGELOG.md` entry: task key, date, short description.
+Git disabled: stop after item 3.
+
 4. `.seh/scripts/commit-task <task> --message <text> -- <paths>` — implementation files plus `CHANGELOG.md`, this task’s tracker files you edited, and `docs/prompt/<task>.prompt.md` when that file exists in the worktree (files tracker: the prompt is a task artifact, and an uncommitted copy would block `return-to-base`); no unrelated paths. Message has no role prefix.
 5. `.seh/scripts/push-task <task>` — task branch only.
 6. `.seh/scripts/open-pr <task> --title <text> --body <text>` — scripts use `agents.baseBranch`. Body: short summary, task key, review result. Put the URL in your report only. Never merge, never request reviewers.

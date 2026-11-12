@@ -53,7 +53,7 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `doit`, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning, then the **Prompt check** in that file before each spawn (only the allowed lines; no shared folder, notes file, or extra instruction). Do not launch Implementer here. Two or more keys and `sessionSpawn` is `manual`: print the `start-task` and `/{{prefix}}doit <KEY>` commands per key and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `doit`, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning, then the **Prompt check** in that file before each spawn (only the allowed lines; no shared folder, notes file, or extra instruction). Do not launch Implementer here. Two or more keys and `sessionSpawn` is `manual`: print the `start-task` and `/{{prefix}}doit <KEY>` commands per key and stop. One key: continue below.
 
 ## Resolve the tasks
 
@@ -88,7 +88,9 @@ Follow the live Implementer file for this host (`<agentsDir>/implementer.md` fro
 
 For each task that passed resolve:
 
-1. Run `.seh/scripts/start-task <task>` from the launch checkout. Copy its `worktree:` path. Do not compose `git`. Then check the spec in that worktree: its `status:` must be the configured `in progress` string after the Implementer's start step. When the Implementer reports done, its `status:` must be the configured `implemented` string. Otherwise stop that task: `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
+**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout.
+
+1. Run `.seh/scripts/start-task <task>` from the launch checkout. Copy its `worktree:` path (git disabled: skip). Do not compose `git`. Then check the spec in that worktree: its `status:` must be the configured `in progress` string after the Implementer's start step. When the Implementer reports done, its `status:` must be the configured `implemented` string. Otherwise stop that task: `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
 2. Apply the Implementer procedure in this session with at least:
    - `Mode: <mode>`
    - Task key (basename or issue key)
@@ -105,4 +107,4 @@ When all phases have `continue`, status stays `in progress`. Do not start Review
 
 ## After Implementer finishes
 
-Report each task key, its `worktree:`, and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/{{prefix}}checkit` (one Reviewer round, same list) or `/{{prefix}}shipit` for a single leftover. Do **not** start review.
+Report each task key, its `worktree:` (git enabled only), and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/{{prefix}}checkit` (one Reviewer round, same list) or `/{{prefix}}shipit` for a single leftover. Do **not** start review.
