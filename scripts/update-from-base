@@ -1,0 +1,40 @@
+#!/bin/sh
+# update-from-base <task>
+# Merge agents.baseBranch into the task branch. Stop on conflicts.
+# No rebase, reset, or force. Does not merge the GitHub pull request.
+
+. "$(dirname "$0")/lib.sh"
+
+require_git
+require_task "${1-}"
+task=$1
+if [ $# -ne 1 ]; then
+  blocked "unexpected arguments" "usage: update-from-base <task>"
+fi
+
+read_base_branch
+base=$SEH_BASE_BRANCH
+require_not_base "$task" "$base"
+branch=$(task_branch "$task")
+require_on_task "$branch"
+
+if ! local_branch_exists "$base"; then
+  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /{{prefix}}setit-se"
+fi
+
+if git merge-base --is-ancestor "$base" HEAD 2>/dev/null; then
+  unchanged "branch: $branch" "base: $base"
+fi
+
+if merge_out=$(git merge --no-edit "$base" 2>&1); then
+  sha=$(git rev-parse --short HEAD)
+  ok "branch: $branch" "base: $base" "commit: $sha"
+fi
+unset merge_out
+
+unmerged=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
+if [ -n "$unmerged" ]; then
+  blocked "merge of $base into $task has conflicts" "resolve the conflicts, then run commit-task $task -- <resolved files>"
+fi
+
+blocked "merge of $base into $task failed" "fix the working tree, then retry update-from-base"

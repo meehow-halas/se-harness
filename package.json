@@ -1,13 +1,33 @@
 {
-  "name": "dhs",
-  "version": "1.0.0",
+  "name": "dev-harness-layer",
+  "version": "2.0.0",
   "description": "SE harness layer",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
+  "bin": {
+    "seh": "./src/cli.js"
   },
+  "files": [
+    "src",
+    "agents",
+    "packs",
+    "skills",
+    "brainstorm",
+    "references",
+    "scripts",
+    "!**/*.test.js"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test src/cli.test.js scripts/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nbmh/dev-harness-layer.git"
+  },
+  "homepage": "https://github.com/nbmh/dev-harness-layer",
+  "bugs": {
+    "url": "https://github.com/nbmh/dev-harness-layer/issues"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "author": "",
   "license": "ISC"

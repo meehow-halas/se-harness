@@ -1,0 +1,171 @@
+#!/bin/sh
+# fanout-plan --skill <planit|doit|checkit|shipit> --keys <k,...> [--variant review|update]
+#   [--depends <key:dep,...>] [--done <k,...>] [--running <k,...>] [--max <n>]
+# Stateless planner for multi-key fan-out. Prints which keys may start a session now.
+# Does not start sessions, read the tracker, or touch git. The parent calls it again
+# after each session ends, with --done and --running updated.
+# Output: OK, then mode / max / ready / waiting / blocked / queued / stuck lines.
+
+. "$(dirname "$0")/lib.sh"
+
+set -f
+
+NL='
+'
+
+skill=
+variant=review
+keys=
+depends=
+done_keys=
+running=
+max=4
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --skill|--variant|--keys|--depends|--done|--running|--max)
+      if [ $# -lt 2 ]; then
+        blocked "missing value for $1" "pass fanout-plan $1 <value>"
+      fi
+      case $1 in
+        --skill) skill=$2 ;;
+        --variant) variant=$2 ;;
+        --keys) keys=$2 ;;
+        --depends) depends=$2 ;;
+        --done) done_keys=$2 ;;
+        --running) running=$2 ;;
+        --max) max=$2 ;;
+      esac
+      shift 2
+      ;;
+    *)
+      blocked "unknown argument $1" "pass fanout-plan --skill <name> --keys <k,...> [--variant ...] [--depends ...] [--done ...] [--running ...] [--max <n>]"
+      ;;
+  esac
+done
+
+split() {
+  printf '%s' "$1" | tr ',' ' '
+}
+
+in_list() {
+  case ",$2," in
+    *",$1,"*) return 0 ;;
+  esac
+  return 1
+}
+
+deps_of() {
+  for _p in $(split "$depends"); do
+    if [ "${_p%%:*}" = "$1" ]; then
+      printf '%s\n' "${_p#*:}"
+    fi
+  done
+}
+
+case $skill in
+  planit|doit|checkit|shipit) ;;
+  '') blocked "missing --skill" "pass --skill planit, doit, checkit or shipit" ;;
+  *) blocked "unknown skill $skill" "use planit, doit, checkit or shipit" ;;
+esac
+
+if [ -z "$keys" ]; then
+  blocked "missing --keys" "pass --keys KEY1,KEY2"
+fi
+case ",$keys," in
+  *,,*) blocked "empty key in --keys" "remove the extra comma from --keys" ;;
+esac
+
+case $variant in
+  review|update) ;;
+  *) blocked "unknown variant $variant" "use review or update" ;;
+esac
+
+case $max in
+  ''|*[!0-9]*) blocked "max is not a positive integer: $max" "pass --max 1 or more" ;;
+esac
+if [ "$max" -lt 1 ]; then
+  blocked "max is not a positive integer: $max" "pass --max 1 or more"
+fi
+
+mode=parallel
+
+seen=
+for k in $(split "$keys"); do
+  if in_list "$k" "$seen"; then
+    blocked "duplicate key $k" "pass each key once"
+  fi
+  seen="$seen,$k"
+done
+
+for p in $(split "$depends"); do
+  case $p in
+    *:*) ;;
+    *) blocked "bad --depends entry $p" "use KEY:DEP" ;;
+  esac
+  pk=${p%%:*}
+  pd=${p#*:}
+  if [ -z "$pk" ] || [ -z "$pd" ]; then
+    blocked "bad --depends entry $p" "use KEY:DEP"
+  fi
+  if ! in_list "$pk" "$keys"; then
+    blocked "--depends names $pk which is not in --keys" "add $pk to --keys or drop the entry"
+  fi
+done
+
+running_count=0
+for _r in $(split "$running"); do
+  running_count=$((running_count + 1))
+done
+
+slots=$((max - running_count))
+ready=
+report=
+any_waiting=
+
+for k in $(split "$keys"); do
+  if in_list "$k" "$done_keys" || in_list "$k" "$running"; then
+    continue
+  fi
+  unmet_int=
+  unmet_ext=
+  for d in $(deps_of "$k"); do
+    if in_list "$d" "$done_keys"; then
+      continue
+    fi
+    if in_list "$d" "$keys"; then
+      unmet_int="$unmet_int $d"
+    else
+      unmet_ext="$unmet_ext $d"
+    fi
+  done
+  if [ -n "$unmet_ext" ]; then
+    report="${report}blocked: $k needs$unmet_ext (not done)$NL"
+    continue
+  fi
+  if [ -n "$unmet_int" ]; then
+    report="${report}waiting: $k after$unmet_int$NL"
+    any_waiting=1
+    continue
+  fi
+  if [ "$slots" -gt 0 ]; then
+    if [ -n "$ready" ]; then
+      ready="$ready,$k"
+    else
+      ready=$k
+    fi
+    slots=$((slots - 1))
+  else
+    report="${report}queued: $k (max $max reached)$NL"
+  fi
+done
+
+printf 'OK\n'
+printf 'mode: %s\n' "$mode"
+printf 'max: %s\n' "$max"
+printf 'ready: %s\n' "$ready"
+printf '%s' "$report"
+if [ -z "$ready" ] && [ "$running_count" -eq 0 ] && [ -n "$any_waiting" ]; then
+  printf 'stuck: nothing ready and nothing running; check --depends for a cycle\n'
+fi
+exit 0

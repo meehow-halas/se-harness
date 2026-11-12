@@ -1,0 +1,66 @@
+{
+  "hosts": [
+    {
+      "id": "claude-code",
+      "skillsDir": ".claude/skills",
+      "agentsDir": ".claude/agents",
+      "rulesDir": ".claude/rules",
+      "rulesExt": ".md",
+      "brainstormDir": ".claude/brainstorm",
+      "projectAgentsFile": "CLAUDE.md",
+      "hooksFile": ".claude/settings.json",
+      "hooksEvent": "SessionStart",
+      "hooksShape": "claude-nested",
+      "hooksHostArg": "claude-code",
+      "sessionSpawn": "start_session",
+      "modelSuggest": {
+        "architect": "opus",
+        "implementer": "sonnet",
+        "consultant": "haiku",
+        "reviewer": "sonnet",
+        "brainstorm": "sonnet"
+      }
+    },
+    {
+      "id": "cursor",
+      "skillsDir": ".cursor/skills",
+      "agentsDir": ".cursor/agents",
+      "rulesDir": ".cursor/rules",
+      "rulesExt": ".mdc",
+      "brainstormDir": ".cursor/brainstorm",
+      "projectAgentsFile": null,
+      "hooksFile": ".cursor/hooks.json",
+      "hooksEvent": "sessionStart",
+      "hooksShape": "cursor-flat",
+      "hooksHostArg": "cursor",
+      "sessionSpawn": "manual",
+      "modelSuggest": {
+        "architect": "cursor-grok-4.6-medium",
+        "implementer": "cursor-grok-4.6-medium",
+        "consultant": "composer-2.5",
+        "reviewer": "cursor-grok-4.6-medium",
+        "brainstorm": "cursor-grok-4.6-medium"
+      }
+    },
+    {
+      "id": "opencode",
+      "skillsDir": ".opencode/skills",
+      "agentsDir": ".opencode/agents",
+      "rulesDir": ".opencode/rules",
+      "rulesExt": ".md",
+      "brainstormDir": ".opencode/brainstorm",
+      "projectAgentsFile": null,
+      "hooksFile": ".opencode/plugins/seh-check-update.js",
+      "hooksShape": "opencode-plugin",
+      "hooksHostArg": "opencode",
+      "sessionSpawn": "manual",
+      "modelSuggest": {
+        "architect": "anthropic/claude-opus-4-5",
+        "implementer": "anthropic/claude-sonnet-5-5",
+        "consultant": "anthropic/claude-haiku-4-5",
+        "reviewer": "anthropic/claude-sonnet-5-5",
+        "brainstorm": "anthropic/claude-sonnet-5-5"
+      }
+    }
+  ]
+}

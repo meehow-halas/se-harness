@@ -1,0 +1,209 @@
+#!/bin/sh
+# Compare .seh/VERSION to the highest semver tag on GitHub. Notify only.
+# Fail-open: empty stdout and exit 0 on any problem.
+
+set -eu
+
+quiet_exit() {
+  exit 0
+}
+
+HOST=
+while [ $# -gt 0 ]; do
+  case $1 in
+    --host)
+      if [ $# -lt 2 ]; then
+        quiet_exit
+      fi
+      HOST=$2
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+if [ ! -t 0 ]; then
+  cat >/dev/null || true
+fi
+
+ROOT=${SEH_CHECK_ROOT:-$(pwd)}
+VERSION_FILE=$ROOT/.seh/VERSION
+CACHE_FILE=$ROOT/.seh/update-check.json
+REMOTE=${SEH_CHECK_REMOTE:-https://github.com/nbmh/dev-harness-layer.git}
+TTL=${SEH_CHECK_TTL:-86400}
+
+if [ ! -f "$VERSION_FILE" ]; then
+  quiet_exit
+fi
+
+INSTALLED=$(tr -d '[:space:]' <"$VERSION_FILE")
+case $INSTALLED in
+  *[!\.0-9]* | "")
+    quiet_exit
+    ;;
+esac
+
+now=${SEH_CHECK_NOW:-$(date +%s)}
+case $now in
+  '' | *[!0-9]*)
+    quiet_exit
+    ;;
+esac
+
+is_release() {
+  case $1 in
+    '' | *[!0-9.]* | .* | *.)
+      return 1
+      ;;
+  esac
+  case $1 in
+    *.*.*)
+      :
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+  old_ifs=$IFS
+  IFS=.
+  # shellcheck disable=SC2086
+  set -- $1
+  IFS=$old_ifs
+  [ $# -eq 3 ] || return 1
+  case $1$2$3 in
+    '' | *[!0-9]*)
+      return 1
+      ;;
+  esac
+  return 0
+}
+
+# Compare $1 > $2 for X.Y.Z. Return 0 if greater.
+version_gt() {
+  left=$1
+  right=$2
+  old_ifs=$IFS
+  IFS=.
+  # shellcheck disable=SC2086
+  set -- $left
+  l1=${1:-0} l2=${2:-0} l3=${3:-0}
+  IFS=.
+  # shellcheck disable=SC2086
+  set -- $right
+  r1=${1:-0} r2=${2:-0} r3=${3:-0}
+  IFS=$old_ifs
+  [ "$l1" -gt "$r1" ] && return 0
+  [ "$l1" -lt "$r1" ] && return 1
+  [ "$l2" -gt "$r2" ] && return 0
+  [ "$l2" -lt "$r2" ] && return 1
+  [ "$l3" -gt "$r3" ] && return 0
+  return 1
+}
+
+normalize_tag() {
+  tag=$1
+  tag=${tag#refs/tags/}
+  case $tag in
+    v[0-9]*)
+      tag=${tag#v}
+      ;;
+  esac
+  printf '%s' "$tag"
+}
+
+highest_from_ls_remote() {
+  highest=
+  while IFS= read -r line || [ -n "$line" ]; do
+    ref=${line##*	}
+    ver=$(normalize_tag "$ref")
+    if ! is_release "$ver"; then
+      continue
+    fi
+    if [ -z "$highest" ] || version_gt "$ver" "$highest"; then
+      highest=$ver
+    fi
+  done
+  printf '%s' "$highest"
+}
+
+read_cache() {
+  if [ ! -f "$CACHE_FILE" ]; then
+    return 1
+  fi
+  checked_at=$(sed -n 's/.*"checkedAt":[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$CACHE_FILE" | head -n 1)
+  cached_latest=$(sed -n 's/.*"latest":[[:space:]]*"\([^"]*\)".*/\1/p' "$CACHE_FILE" | head -n 1)
+  case $checked_at in
+    '' | *[!0-9]*)
+      return 1
+      ;;
+  esac
+  age=$((now - checked_at))
+  if [ "$age" -lt 0 ] || [ "$age" -ge "$TTL" ]; then
+    return 1
+  fi
+  LATEST=$cached_latest
+  return 0
+}
+
+write_cache() {
+  dir=$(dirname "$CACHE_FILE")
+  if [ ! -d "$dir" ]; then
+    return 0
+  fi
+  printf '{"checkedAt":%s,"latest":"%s"}\n' "$now" "$1" >"$CACHE_FILE" || true
+}
+
+fetch_latest() {
+  if [ -n "${SEH_GIT_LS_REMOTE:-}" ]; then
+    out=$(sh -c "$SEH_GIT_LS_REMOTE" 2>/dev/null) || return 1
+  else
+    out=$(
+      GIT_TERMINAL_PROMPT=0 git \
+        -c http.lowSpeedLimit=1000 \
+        -c http.lowSpeedTime=3 \
+        ls-remote --tags --refs "$REMOTE" 2>/dev/null
+    ) || return 1
+  fi
+  printf '%s\n' "$out" | highest_from_ls_remote
+}
+
+LATEST=
+if ! read_cache; then
+  if ! LATEST=$(fetch_latest); then
+    quiet_exit
+  fi
+  write_cache "$LATEST"
+fi
+
+if [ -z "$LATEST" ]; then
+  quiet_exit
+fi
+if ! is_release "$LATEST"; then
+  quiet_exit
+fi
+if ! version_gt "$LATEST" "$INSTALLED"; then
+  quiet_exit
+fi
+
+msg=$(
+  printf \
+    'seh %s is installed; %s is available (GitHub tag). Run npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install, then /{{prefix}}setit-se.' \
+    "$INSTALLED" "$LATEST"
+)
+
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+case $HOST in
+  cursor)
+    printf '{"additional_context":"%s"}\n' "$(json_escape "$msg")"
+    ;;
+  *)
+    printf '%s\n' "$msg"
+    ;;
+esac
+
+exit 0

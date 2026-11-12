@@ -1,0 +1,116 @@
+#!/bin/sh
+# commit-task <task> [--message <text>] [--] <path> [<path> ...]
+# git add of the listed paths only, then git commit on the task branch.
+# After an update-from-base merge, --message may be omitted (finishes the merge).
+# Reads project-root harness.config.json. No rebase, reset, or force.
+
+. "$(dirname "$0")/lib.sh"
+
+require_git
+
+task=
+message=
+paths=
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --message)
+      if [ $# -lt 2 ]; then
+        blocked "missing value for --message" "pass commit-task <task> --message <text> -- <path> ..."
+      fi
+      message=$2
+      shift 2
+      ;;
+    --)
+      shift
+      while [ $# -gt 0 ]; do
+        paths="$paths
+$1"
+        shift
+      done
+      ;;
+    --*)
+      blocked "unknown option $1" "usage: commit-task <task> [--message <text>] [--] <path> ..."
+      ;;
+    *)
+      if [ -z "$task" ]; then
+        task=$1
+        shift
+      else
+        paths="$paths
+$1"
+        shift
+      fi
+      ;;
+  esac
+done
+
+require_task "$task"
+read_base_branch
+base=$SEH_BASE_BRANCH
+require_not_base "$task" "$base"
+branch=$(task_branch "$task")
+require_on_task "$branch"
+
+if [ -z "$paths" ]; then
+  blocked "no paths listed" "pass the files to add and commit"
+fi
+
+in_merge=no
+if [ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
+  in_merge=yes
+fi
+
+added=no
+set -f
+old_ifs=$IFS
+IFS='
+'
+for p in $paths; do
+  [ -n "$p" ] || continue
+  if [ ! -e "$p" ]; then
+    if ! git ls-files --error-unmatch "$p" >/dev/null 2>&1; then
+      blocked "path $p does not exist" "pass paths that were changed on this task"
+    fi
+  fi
+  if ! out=$(git add -- "$p" 2>&1); then
+    blocked "git add failed ($out)" "fix the listed paths and retry commit-task"
+  fi
+  added=yes
+done
+IFS=$old_ifs
+set +f
+
+if [ "$added" = "no" ]; then
+  blocked "no paths listed" "pass the files to add and commit"
+fi
+
+if git diff --cached --quiet && [ "$in_merge" = "no" ]; then
+  unchanged "branch: $branch" "commit: none"
+fi
+
+trailer=$(read_commit_trailer)
+
+if [ "$in_merge" = "yes" ] && [ -z "$message" ]; then
+  if [ -n "$trailer" ]; then
+    printf '\n%s\n' "$trailer" >> "$(git rev-parse --git-dir)/MERGE_MSG"
+  fi
+  if ! out=$(git commit --no-edit 2>&1); then
+    blocked "git commit failed ($out)" "resolve the merge, then retry commit-task"
+  fi
+else
+  if [ -z "$message" ]; then
+    message=$task
+  fi
+  if [ -n "$trailer" ]; then
+    message="$message
+
+$trailer"
+  fi
+  if ! out=$(git commit -m "$message" 2>&1); then
+    blocked "git commit failed ($out)" "set git user.name and user.email if needed, then retry commit-task"
+  fi
+fi
+
+sha=$(git rev-parse --short HEAD)
+ok "branch: $branch" "commit: $sha"

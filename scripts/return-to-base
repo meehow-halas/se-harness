@@ -1,0 +1,45 @@
+#!/bin/sh
+# return-to-base
+# From a seh worktree: remove it when clean. From the primary checkout: git checkout base.
+# Does not delete the task branch or merge a PR.
+
+. "$(dirname "$0")/lib.sh"
+
+require_git
+if [ $# -ne 0 ]; then
+  blocked "unexpected arguments" "usage: return-to-base"
+fi
+
+read_base_branch
+base=$SEH_BASE_BRANCH
+
+if ! local_branch_exists "$base"; then
+  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /{{prefix}}setit-se"
+fi
+
+if is_seh_worktree; then
+  wt=$(repo_root)
+  main=$(CDPATH= cd -- "$(abs_git_common_dir)/.." && pwd)
+  CDPATH= cd -- "$main" || blocked "could not enter the primary checkout" "retry return-to-base from the project directory"
+  if [ -L "$wt/.seh" ]; then
+    rm "$wt/.seh"
+  fi
+  if [ -L "$wt/harness.config.json" ]; then
+    rm "$wt/harness.config.json"
+  fi
+  if ! out=$(git worktree remove "$wt" 2>&1); then
+    blocked "could not remove worktree $wt ($out)" "commit or stash the task worktree, then retry return-to-base"
+  fi
+  ok "branch: $base" "worktree: removed" "path: $wt"
+fi
+
+cur=$(current_branch)
+if [ "$cur" = "$base" ]; then
+  unchanged "branch: $base"
+fi
+
+if ! out=$(git checkout "$base" 2>&1); then
+  blocked "could not check out $base ($out)" "commit or stash the working tree, then retry return-to-base"
+fi
+
+ok "branch: $base"
