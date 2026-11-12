@@ -27,7 +27,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first 
 
 ## May
 
-Read the phase diff, the touched files, the generated rules (they load on Read), and tests for those files. If the launch omitted the diff, you may inspect a read-only `git diff` of the named files; you still do not write git.
+Read the phase diff, the touched files, the generated rules (they load on Read), and tests for those files. If the launch omitted the diff, you may inspect a read-only `git diff` of the named files; you still do not write git. When `agents.baseBranch` is empty (git disabled), do not run git at all: read the named files and the diff text passed in the launch.
 
 ## Languages
 

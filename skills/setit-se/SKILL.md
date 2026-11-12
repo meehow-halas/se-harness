@@ -96,7 +96,7 @@ Do not write `harness.config.json` or generate live files until these are confir
 
 **`agents.contentLanguage`.** Language of files and tracker text. Ask once. Suggest the conversation language.
 
-**`agents.baseBranch`.** The git branch `.seh/scripts/` cut task branches from, open PRs against, merge into a task branch on **update**, and return to after the PR is opened. Ask once. Suggested default is `dev`. If the repo already names a default branch, state that inference so the user can object. Without this key, the scripts have no base and must not guess one. Do not write this value into generated agent markdown.
+**`agents.baseBranch`.** The git branch `.seh/scripts/` cut task branches from, open PRs against, merge into a task branch on **update**, and return to after the PR is opened. Ask once. Suggested default is `dev`. If the repo already names a default branch, state that inference so the user can object. **Detect git first.** Git counts as connected only when both hold: `git rev-parse --is-inside-work-tree` succeeds and `git remote get-url origin` succeeds. Not connected: do not ask; leave `agents.baseBranch` empty, say what is missing (no repo, or no `origin`) and that adding it and running `/{{prefix}}setit-se` again enables git. Never accept a branch name the user types while git is not detected. Connected: ask as above; the user may answer “no git” (or decline to name a branch), which leaves it empty. Empty is the only switch for git-disabled mode (git disabled: no worktrees, branches, commits, PRs; tasks run sequentially); the scripts do not guess a base. Do not write this value into generated agent markdown.
 
 **Project rule (optional).** One question, after models, content language, and base branch. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. Store it on the roles (`rules`; reviewer `checklist` when it is a review constraint). **Skip is the default:** empty is fine. Do not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
 
@@ -169,7 +169,7 @@ Then **one change at a time**. Show current and new value, wait for confirmation
 |--------|--------|
 | Role `model` cell `(role, host)` | Rewrite that live agent’s **frontmatter** `model:` only, in **that** host’s `agentsDir`. If the user names a role without a host, ask which host. Do not regenerate the body. Do not rewrite other hosts. |
 | `packsIgnored` or detected frameworks | Regenerate rule packs. |
-| `agents.baseBranch` | `harness.config.json` only. |
+| `agents.baseBranch` | `harness.config.json` only. **Connect** (empty → branch): only when git is detected (repo + `origin`); otherwise refuse and say what is missing. **Disconnect** (branch → empty): always allowed, including when git is no longer detected; confirm that worktrees, commits and PRs stop and runs become sequential. If the value is set but git is no longer detected, say so and offer to disconnect. When the value is empty and git is detected, offer to connect only if the user names git or the base branch; do not nag on other runs. Existing task branches and worktrees are left alone either way. |
 | Statuses, tracker maps, `fetchFields`, content language, product line | Config only. Do **not** regenerate agent bodies. |
 
 - Do not touch `agents.brainstorm` (that is `/{{prefix}}grillit`).

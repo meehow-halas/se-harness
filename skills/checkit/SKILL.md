@@ -66,7 +66,7 @@ Parse the user message. Do not mix variants.
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit` and the same variant for every child, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys and `sessionSpawn` is `manual`: print the commands per key and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit` and the same variant for every child, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys and `sessionSpawn` is `manual`: print the commands per key and stop. One key: continue below.
 
 ## Resolve the tasks
 
@@ -92,6 +92,8 @@ This skill is the parent. Follow the live Reviewer file for this host (`<agentsD
 
 For each resolved task:
 
+**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout. Variant `update` needs git: stop with `BLOCKED: update needs git`.
+
 1. Run `.seh/scripts/start-task <task>` from the launch checkout if a worktree is not already printed for it. Copy `worktree:`. Do not compose `git`.
 2. Launch Reviewer with at least:
    - `Mode: <mode>`
@@ -110,8 +112,8 @@ Do not merge. After a clean accepted review, the Reviewer may open a PR; this sk
 
 ## After Reviewer finishes
 
-Report the variant, each task key, ✅/⚠️/❌, status, `worktree:`, and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
+Report the variant, each task key, ✅/⚠️/❌, status, `worktree:` (git enabled only), and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
 
 - Open ❌ → offer `/{{prefix}}doit` (those items only, same list) or `/{{prefix}}shipit` for a single task. Do not start them unless the user already asked to fix in this invocation.
-- Clean review accepted → the Reviewer committed, opened the PR and set `done`. Report the PR URL. Nothing left for this skill; the user merges on GitHub, and that does not reopen the task.
+- Clean review accepted → the Reviewer committed, opened the PR and set `done` (git disabled: no commit or PR, only changelog and `done`). Report the PR URL when there is one. Nothing left for this skill; the user merges on GitHub, and that does not reopen the task.
 - Update finished → report; do not review unless they also asked for review (they did not: this invocation was update only).

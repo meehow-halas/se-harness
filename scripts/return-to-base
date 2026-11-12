@@ -5,6 +5,7 @@
 
 . "$(dirname "$0")/lib.sh"
 
+git_gate
 require_git
 if [ $# -ne 0 ]; then
   blocked "unexpected arguments" "usage: return-to-base"
