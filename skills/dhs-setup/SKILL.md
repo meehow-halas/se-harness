@@ -53,6 +53,8 @@ BLOCKED: role model missing for host <id> — run /dhs-setup
 
 **Per-host confirm (first run, legacy, missing host).** For each host in `.dhs/references/hosts.json` (table order), prefill all four roles for that host’s `id`, show a table (architect / implementer / consultant / reviewer → model), then **one question per host**: whether to change any of those models. Skip / no = accept the table. Yes = the user may reply once with overrides (e.g. `architect: opus`); apply only named roles; leave the rest from prefill. If parsing is unclear, one follow-up question only. Do not stamp live `model:` until every host is confirmed.
 
+**Show each table once.** The table and its question appear once, in the question itself. Do not repeat the same table or the same question in a message before it, after it, or in the closing summary. The same rule applies to every confirmation in this skill (project name, tracker, language, Jira offer): one message per question, no re-printed copies.
+
 **Question wording.** Frame the question as **change**, not **keep**. Do not ask “Keep these models?”, “Czy zostawić te modele?”, or similar — **yes** on a keep-framed question means accept, but this flow treats **yes** as “I want overrides”. After the table, use a **change** question plus helper text in this shape (replace `<host label>` with a readable name from the host row’s `id`, e.g. `claude-code` → Claude Code):
 
 ```text
@@ -80,7 +82,9 @@ Read the tree (README, manifests, existing docs, default-branch clues, `AGENTS.m
 Look for an existing product requirements document (typical `docs/prd.md`, or a path the repo already treats as the PRD).
 
 - If one exists: **use it. Do not rewrite it.** Put that path in `agents.docs`.
-- If none exists: gather product facts from the repo. Ask one question at a time only for facts the repo does not contain. Then write `docs/prd.md`. Put that path in `agents.docs`.
+- If none exists: gather product facts from the repo. Ask one question at a time for each fact the repo does not contain. Ask at least: purpose, users, scope, and **non-goals** (what must not be built). Do not invent any of these from the repo's current contents. Then write `docs/prd.md`. Put that path in `agents.docs`.
+- A section the user did not answer is written as `TBD — not stated by the user`, not as a rule. Do not write non-goals the user did not state. An empty non-goals list is written as `None stated`.
+- Agents treat `TBD` lines as no constraint and must not report a conflict with them. A conflict is reported only against a stated non-goal or scope line.
 
 Config stores a one-line `product` plus doc paths, **not** the PRD body.
 
@@ -92,7 +96,7 @@ Do not write `harness.config.json` or generate live files until these are confir
 
 **`agents.contentLanguage`.** Language of files and tracker text. Ask once. Suggest the conversation language.
 
-**`agents.baseBranch`.** The git branch `.dhs/scripts/` cut task branches from, open PRs against, merge into a task branch on **update**, and return to after PR or **close**. Ask once. Suggested default is `dev`. If the repo already names a default branch, state that inference so the user can object. Without this key, the scripts have no base and must not guess one. Do not write this value into generated agent markdown.
+**`agents.baseBranch`.** The git branch `.dhs/scripts/` cut task branches from, open PRs against, merge into a task branch on **update**, and return to after the PR is opened. Ask once. Suggested default is `dev`. If the repo already names a default branch, state that inference so the user can object. Without this key, the scripts have no base and must not guess one. Do not write this value into generated agent markdown.
 
 **Project rule (optional).** One question, after models, content language, and base branch. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. Store it on the roles (`rules`; reviewer `checklist` when it is a review constraint). **Skip is the default:** empty is fine. Do not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
 
@@ -156,6 +160,8 @@ BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harne
 If any role `model` is still a string, or a map is missing a `hosts.json` `id`, finish **Role model maps** first. Do not regenerate live agents until every role has a complete map.
 
 If `.dhs/VERSION` (trimmed) does not equal `dhs.generatedFrom`: regenerate live agents, work skills, and rule packs from `.dhs/` (same copy rules as first run), set `dhs.generatedFrom` to `.dhs/VERSION`, and tell the user the installed package templates changed. That message must name the work-skill rename: `/dhs-feature` was renamed to `/dhs-shipit`; leftover live `dhs-feature` was removed from every `skillsDir`. Do not rewrite `AGENTS.md` or `CLAUDE.md`; mention they may still contain the old name. Then continue below.
+
+**Status migration (once, on a later run).** If `agents.statuses` has the key `code review` and no `implemented` key, the flow changed. Rename it to `implemented` (key and value) in config and tell the user. Do not edit spec files. List every spec under `docs/features/` (or the mapped tracker) whose `status:` is `code review`, and tell the user to set it to `implemented`, or to `in review` if a review is running. `in review` stays valid.
 
 Then **one change at a time**. Show current and new value, wait for confirmation, then write. Do not overwrite keys the user did not confirm.
 

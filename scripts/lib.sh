@@ -91,6 +91,12 @@ sync_launch_files() {
     "docs/prompt/${_task}.prompt.md" \
     "docs/feature-log/${_task}.log.md"; do
     if [ -f "$_launch/$_rel" ]; then
+      if [ -f "$_wt/$_rel" ] && [ -n "$(git -C "$_wt" status --porcelain -- "$_rel")" ]; then
+        # The worktree already holds uncommitted work on this file (the
+        # Implementer or Reviewer wrote it there). A launch copy is stale
+        # relative to that work: leave both files alone, do not overwrite.
+        continue
+      fi
       mkdir -p "$_wt/$(dirname "$_rel")"
       cp "$_launch/$_rel" "$_wt/$_rel"
       _st=$(git -C "$_launch" status --porcelain -- "$_rel")
@@ -114,6 +120,33 @@ current_branch() {
 
 config_path() {
   printf '%s/harness.config.json\n' "$(repo_root)"
+}
+
+# Print agents.commitTrailer (one trailer line, e.g. "Co-Authored-By: Name <mail>")
+# when it is set in harness.config.json; print nothing when it is absent or empty.
+read_commit_trailer() {
+  _cfg=$(config_path)
+  if [ ! -f "$_cfg" ]; then
+    return 0
+  fi
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+var fs = require("fs");
+var c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+var t = c && c.agents && c.agents.commitTrailer;
+if (typeof t === "string" && t.trim()) process.stdout.write(t.trim());
+' "$_cfg" || true
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import json, sys
+c = json.load(open(sys.argv[1], encoding="utf-8"))
+t = (c.get("agents") or {}).get("commitTrailer")
+if isinstance(t, str) and t.strip():
+    sys.stdout.write(t.strip())
+' "$_cfg" || true
+  fi
 }
 
 # Print agents.baseBranch. Empty result means missing or invalid.

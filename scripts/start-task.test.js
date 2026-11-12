@@ -11,6 +11,7 @@ const {
   assertBlocked,
   assertOk,
   assertUnchanged,
+  cloneFrom,
   currentBranch,
   git,
   initGitRepo,
@@ -116,6 +117,26 @@ describe("start-task", () => {
       assert.equal(currentBranch(cwd), "dev");
       assert.equal(revParse(fields.worktree, "HEAD"), taskSha);
       assert.equal(fs.existsSync(path.join(fields.worktree, "task.txt")), true);
+    });
+  });
+
+  test("cuts a new task branch from origin/base, not from a stale local base", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const bare = addBareOrigin(cwd);
+      const other = cloneFrom(bare, path.join(cwd, "..", `${path.basename(cwd)}-peer`));
+      writeFile(other, "merged-elsewhere.txt", "from origin\n");
+      git(other, ["add", "merged-elsewhere.txt"]);
+      git(other, ["commit", "-m", "merged elsewhere"]);
+      git(other, ["push", "origin", "dev"]);
+      assert.equal(fs.existsSync(path.join(cwd, "merged-elsewhere.txt")), false);
+      const result = runScript("start-task", ["001-feature"], { cwd });
+      const { fields } = assertOk(result, { branch: "001-feature", created: "yes" });
+      assert.equal(
+        fs.existsSync(path.join(fields.worktree, "merged-elsewhere.txt")),
+        true,
+        "new task branch must include commits that are on origin/dev"
+      );
     });
   });
 
@@ -271,6 +292,26 @@ describe("start-task", () => {
       assert.equal(
         fs.readFileSync(path.join(cwd, `docs/feature-log/${task}.log.md`), "utf8"),
         "clean-log\n"
+      );
+    });
+  });
+
+  test("second start-task keeps the worktree spec when the launch copy is stale", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const task = "047-gadget";
+      writeFile(cwd, `docs/features/${task}.feature.md`, "status: todo\n");
+      const wt = startWorktree(cwd, task);
+      writeFile(wt, `docs/features/${task}.feature.md`, "status: in progress\n");
+      writeFile(cwd, `docs/features/${task}.feature.md`, "status: todo\n");
+      assertUnchanged(startTask(cwd, task), { branch: task, created: "no", worktree: wt });
+      assert.equal(
+        fs.readFileSync(path.join(wt, `docs/features/${task}.feature.md`), "utf8"),
+        "status: in progress\n"
+      );
+      assert.equal(
+        fs.readFileSync(path.join(cwd, `docs/features/${task}.feature.md`), "utf8"),
+        "status: todo\n"
       );
     });
   });

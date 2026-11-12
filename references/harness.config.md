@@ -23,7 +23,7 @@ Supported hosts are **not** a tree in this config. They live in `hosts.json` in 
     "statuses": {
       "todo": "todo",
       "in progress": "in progress",
-      "code review": "code review",
+      "implemented": "implemented",
       "in review": "in review",
       "done": "done"
     },

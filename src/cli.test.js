@@ -256,6 +256,51 @@ describe("dhs install", () => {
     });
   });
 
+  test("copies the session fan-out reference and host spawn adapters unchanged", () => {
+    withTempDir((project) => {
+      const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
+      assert.equal(result.status, 0, result.stderr);
+      const refDir = path.join(project, ".dhs", "references");
+      assert.equal(exists(path.join(refDir, "session-fanout.md")), true);
+      const copied = fs.readFileSync(path.join(refDir, "hosts.json"), "utf8");
+      const source = fs.readFileSync(path.join(REPO_ROOT, "references", "hosts.json"), "utf8");
+      assert.equal(copied, source);
+      const spawn = Object.fromEntries(
+        JSON.parse(copied).hosts.map((h) => [h.id, h.sessionSpawn])
+      );
+      assert.deepEqual(spawn, {
+        "claude-code": "start_session",
+        cursor: "manual",
+        opencode: "manual",
+      });
+    });
+  });
+
+  test("install prints a confirmation naming the project folder and the next step", () => {
+    withTempDir((project) => {
+      const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /dhs install: OK \S+ in .*/);
+      assert.ok(result.stdout.includes(path.basename(project)), result.stdout);
+      assert.match(result.stdout, /\/dhs-setup/);
+    });
+  });
+
+  test("installed fanout-plan runs from .dhs/scripts and plans a fan-out", () => {
+    withTempDir((project) => {
+      const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
+      assert.equal(result.status, 0, result.stderr);
+      const planner = path.join(project, ".dhs", "scripts", "fanout-plan");
+      const run = require("child_process").spawnSync(
+        "sh",
+        [planner, "--skill", "doit", "--keys", "IN-7,IN-9", "--depends", "IN-9:IN-7"],
+        { cwd: project, encoding: "utf8" }
+      );
+      assert.equal(run.status, 0, run.stderr);
+      assert.match(run.stdout, /^OK\nmode: parallel\nmax: 4\nready: IN-7\nwaiting: IN-9 after IN-7\n/);
+    });
+  });
+
   test("copied git helpers stay executable", () => {
     withTempDir((project) => {
       const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
@@ -268,6 +313,7 @@ describe("dhs install", () => {
         "update-from-base",
         "return-to-base",
         "check-update",
+        "fanout-plan",
       ]) {
         const mode = fs.statSync(path.join(project, ".dhs", "scripts", name)).mode;
         assert.notEqual(mode & 0o111, 0, name);

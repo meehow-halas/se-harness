@@ -15,7 +15,7 @@ The six scripts named in the PRD Git table:
 | `push-task` | Reviewer | Push **only** the task branch |
 | `open-pr` | Reviewer after Acceptance | `gh pr create --base <base> --head <task>` |
 | `update-from-base` | Reviewer, only on **update** | Merge `agents.baseBranch` into the task branch; stop on conflicts |
-| `return-to-base` | Reviewer after PR opened or after **close** | `git checkout` that base |
+| `return-to-base` | Reviewer after PR opened | `git checkout` that base |
 
 Scripts read `harness.config.json` (including `agents.baseBranch`). They do not guess `main`, `master`, or the current checkout.
 

@@ -426,6 +426,9 @@ function install(ctx) {
 
   ensureGitignore(cwd);
 
+  console.log(`dhs install: OK ${version} in ${cwd}`);
+  console.log("Next: run /dhs-setup in the project.");
+
   if (fs.existsSync(path.join(cwd, "harness.config.json"))) {
     console.log(
       "harness.config.json is present. Run /dhs-setup to apply the new templates."

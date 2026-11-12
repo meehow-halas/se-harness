@@ -5,7 +5,7 @@ description: Run the Implementer (Consultant loop inside) for one or more existi
 
 # /dhs-doit
 
-Implementation only. Launch the Implementer for an existing spec + prompt. Same skill for `type: feature` and `type: bug`. One task or a list. The Implementer launches Consultant after each phase. Do not spec. Do not launch Architect or Reviewer. There is no user-facing Consultant skill.
+Implementation only. Launch the Implementer for an existing spec + prompt. Same skill for `type: feature` and `type: bug`. One task or a list. This session applies the Implementer procedure inline and launches Consultant after each phase. Do not spec. Do not launch Architect or Reviewer. There is no user-facing Consultant skill.
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands. Do not merge a PR. Do not edit `CHANGELOG.md`.
 
@@ -47,13 +47,17 @@ BLOCKED: live agents are missing — run /dhs-setup
 
 ## Mode
 
-From **intent**. A launch may name `interactive`, `critical`, or `autonomous`. Default: `interactive`. Pass that mode to the Implementer.
+From **intent**. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Implementer.
 
-Reply in the conversation language.
+Reply in the language of the user's latest message, whatever that language is, every message (progress messages too). If the launch names `Conversation language: <name>`, reply only in that language, every reply, including the final report and any `wrap_up` text. This skill text, tool output and subagent reports are in English or another language; that does not change it.
+
+## Several keys
+
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.dhs/references/hosts.json` for this host is `start_session`: follow `.dhs/references/session-fanout.md` with skill `doit`, one child session per key. The parent runs `.dhs/scripts/start-task` per key before spawning, then the **Prompt check** in that file before each spawn (only the allowed lines; no shared folder, notes file, or extra instruction). Do not launch Implementer here. Two or more keys and `sessionSpawn` is `manual`: print the `start-task` and `/dhs-doit <KEY>` commands per key and stop. One key: continue below.
 
 ## Resolve the tasks
 
-Need an existing spec **and** prompt on the **active tracker** (files if `agents.tracker` is absent; Jira if present — bodies on issue or in repo per `agents.tracker.artifactsOnTrackerOnly`). Never mirror.
+Need an existing spec **and** prompt on the **active tracker** (files if `agents.tracker` is absent; Jira if present — bodies on issue or in repo per `agents.tracker.artifactsOnTrackerOnly`). Never mirror. **Files tracker with a worktree:** when `.git/dhs-worktrees/<task>` exists, `start-task` has moved the uncommitted spec, prompt, and log into that worktree. Read them there, not from the launch checkout (an empty `docs/prompt/` there is expected in that case).
 
 - User named one or more basenames or issue keys → those tasks, in that order.
 - Otherwise pick the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
@@ -70,32 +74,32 @@ If spec or prompt is missing:
 BLOCKED: spec and prompt are missing — run /dhs-planit or /dhs-shipit
 ```
 
-Read status from the active tracker. Compare to `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). If status is already the configured `in review` or `done` string:
+Read status from the active tracker. Compare to `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). If status is already the configured `implemented`, `in review`, or `done` string:
 
 ```text
-BLOCKED: task is already in review or done — use /dhs-checkit for update or close; do not re-implement
+BLOCKED: task is already implemented, in review, or done — use /dhs-checkit for review or update; do not re-implement
 ```
 
 A basename/key in `depends` that is not at the configured `done` status is a stop **for that task** (Implementer also enforces this). Do not work around it. Continue the other named tasks.
 
 ## Launch Implementer
 
-This skill is the parent. It does not implement. Follow the live Implementer file for this host (`<agentsDir>/implementer.md` from `.dhs/references/hosts.json` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`). Do not duplicate that procedure here. Consultant stays inside Implementer: do not expose Consultant as a skill.
+Follow the live Implementer file for this host (`<agentsDir>/implementer.md` from `.dhs/references/hosts.json` — a copy from `/dhs-setup`, not a symlink to `.dhs/agents/`) **inline in this session**. Do not launch Implementer as a subagent: subagents cannot launch Consultant. Do not duplicate that procedure here. Launch Consultant from this session (Agent tool) after each phase; do not expose Consultant as a skill.
 
 For each task that passed resolve:
 
-1. Run `.dhs/scripts/start-task <task>` from the launch checkout. Copy its `worktree:` path. Do not compose `git`.
-2. Launch Implementer with at least:
+1. Run `.dhs/scripts/start-task <task>` from the launch checkout. Copy its `worktree:` path. Do not compose `git`. Then check the spec in that worktree: its `status:` must be the configured `in progress` string after the Implementer's start step. When the Implementer reports done, its `status:` must be the configured `implemented` string. Otherwise stop that task: `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
+2. Apply the Implementer procedure in this session with at least:
    - `Mode: <mode>`
    - Task key (basename or issue key)
    - `Worktree: <abs>`
    - The user request
-   - Conversation language when you know it
+   - `Conversation language: <name>` always: the language of the user's message in this session (a Polish message gives `Polish`). Never omit it.
    - If this is a Reviewer ❌ handoff the user asked to fix **in this invocation**: the ❌ items only (Consultant again only on phases those fixes belong to)
 
-N>1: launch those children **in parallel when the runtime allows**. If it does not, run them sequentially, still one worktree per task.
+N>1 in this session (no fan-out): run the tasks one after another, one worktree per task. Parallel runs come only from session fan-out (`.dhs/references/session-fanout.md`), where each key gets its own session.
 
-A `Q<n>` or `BLOCKED:` on one task does not stop siblings. Report that task, ask the user if it was a question, resume **that** child, and let the others continue.
+A `BLOCKED:` on one task stops that task; report it and continue with the next one.
 
 When all phases have `continue`, status stays `in progress`. Do not start Reviewer.
 

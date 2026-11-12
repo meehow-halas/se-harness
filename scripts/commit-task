@@ -88,13 +88,23 @@ if git diff --cached --quiet && [ "$in_merge" = "no" ]; then
   unchanged "branch: $task" "commit: none"
 fi
 
+trailer=$(read_commit_trailer)
+
 if [ "$in_merge" = "yes" ] && [ -z "$message" ]; then
+  if [ -n "$trailer" ]; then
+    printf '\n%s\n' "$trailer" >> "$(git rev-parse --git-dir)/MERGE_MSG"
+  fi
   if ! out=$(git commit --no-edit 2>&1); then
     blocked "git commit failed ($out)" "resolve the merge, then retry commit-task"
   fi
 else
   if [ -z "$message" ]; then
     message=$task
+  fi
+  if [ -n "$trailer" ]; then
+    message="$message
+
+$trailer"
   fi
   if ! out=$(git commit -m "$message" 2>&1); then
     blocked "git commit failed ($out)" "set git user.name and user.email if needed, then retry commit-task"

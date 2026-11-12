@@ -89,7 +89,7 @@ A git/`gh` script that refuses ends with a `BLOCKED:` line. The agent copies it 
 Implementing agents do not bake these into markdown as literals. Templates say to **read** `harness.config.json`.
 
 - Modes (from intent; default `interactive`): `interactive`, `critical`, `autonomous`. Definitions: PRD Modes.
-- File-tracker status keys: `todo` → `in progress` → `code review` → `in review` → `done`. Stored strings come from `agents.statuses`.
+- File-tracker status keys: `todo` → `in progress` → `implemented` → `in review` → `done`. Stored strings come from `agents.statuses`.
 - Jira: `agents.tracker.statuses` mapped in `/dhs-setup`. `null` means that step does not transition.
 
 ## Repo state before phase 1

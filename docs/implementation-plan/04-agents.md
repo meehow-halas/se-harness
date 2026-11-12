@@ -11,7 +11,7 @@ Publish Architect, Implementer, Consultant, and Reviewer under package `agents/`
 | `agents/architect.md` | Spec + prompt + first log row on the active tracker. Status stays `todo`. Read-only on application code. No git writes | opus |
 | `agents/implementer.md` | Implement the spec (feature or bug). Own 2–6 phase plan. After each phase, launch Consultant. Calls `start-task` | sonnet |
 | `agents/consultant.md` | Quality on the phase diff. Structured report. Does not edit product code, does not talk to the user, does not judge spec compliance | haiku |
-| `agents/reviewer.md` | Spec compliance only. Git allowlist after acceptance. Update-from-base and close | sonnet |
+| `agents/reviewer.md` | Spec compliance only. Git allowlist after acceptance. Update-from-base | sonnet |
 
 Bodies must instruct: **read** `harness.config.json` for base branch, statuses, tracker maps, `fetchFields`, content language, product line; **call** `.dhs/scripts/` for git and for Jira.
 
@@ -65,7 +65,7 @@ Bodies must instruct: **read** `harness.config.json` for base branch, statuses, 
 - Do not edit `CHANGELOG.md`.
 - Unclear spec: follow Questions; do not invent architecture beyond that.
 - If the project test/lint command fails on code they did not touch: stop and tell the user. Do not label it unrelated and continue.
-- When all phases have `continue`, leave status `in progress`. Reviewer moves it to `code review`.
+- When all phases have `continue`, set status `implemented`. Reviewer moves it to `in review` when it starts.
 
 ### Consultant
 
@@ -87,14 +87,13 @@ Loop, hard caps, anti-thrash, and debt protocol: copy the rules from PRD Consult
 ### Reviewer
 
 - Spec requirements + AC only. Not style. Not Consultant `should-fix`. May ❌ leftover `must-fix` only when it misses an AC.
-- First review while `in progress` → set `code review`.
+- Gate: `implemented` (first round, or after a fix) or `in review` (later round). Set `in review` before the review. ❌ → set `in progress`.
 - ❌ → back to Implementer with only those items (Consultant again only on phases those fixes belong to, same caps). ⚠️ do not start a round.
 - Max three Reviewer rounds. Same ❌ with no code change ends the loop.
 - An ❌ that contradicts the spec goes to the user; changing the spec is Architect work.
 - Acceptance only with no open ❌. Interactive: wait for explicit user acceptance (no changelog/commit/push/PR until then). Critical/autonomous: this run is acceptance; then git steps; do not merge.
-- After acceptance, in order: final review in the log → status `in review` → `CHANGELOG.md` entry → `.dhs/scripts/commit-task` → `push-task` → `open-pr` → `return-to-base`.
+- After acceptance, in order: final review in the log → status `done` → `CHANGELOG.md` entry → `.dhs/scripts/commit-task` → `push-task` → `open-pr` → `return-to-base`.
 - **Update** only when asked: `update-from-base`; stop on conflicts.
-- **Close** only when the user says the PR is merged: verify, set `done`, `return-to-base` if still on the task branch.
 - If the task branch is missing, Reviewer may call `start-task`. Architect and Consultant never call git scripts.
 
 ## Done when

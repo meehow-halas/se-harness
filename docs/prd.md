@@ -67,11 +67,11 @@ Only after step 2:
 | Full path | `/dhs-shipit` plus what to build |
 | Spec only | `/dhs-planit` |
 | Implementation only | `/dhs-doit` (one task or a list) |
-| One review / update from base / close after merge | `/dhs-checkit` (one task or a list; one variant) |
+| One review or update from base | `/dhs-checkit` (one task or a list; one variant) |
 | Change parameters or Jira | `/dhs-setup` |
 | Personae | `/dhs-brainstorm` |
 
-The user merges the GitHub PR. Close is `/dhs-checkit` after they confirm the merge.
+After an accepted review the Reviewer commits, opens the PR and sets `done`. That is the end of the feature. The user merges the GitHub PR; the merge does not change the task status.
 
 ### 4. Remove bootstrap (optional)
 
@@ -178,9 +178,9 @@ The five dhs steps are the same as on files. **Which Jira status each step uses 
 |-----|-------------------------------|--------|
 | `todo` | Architect has created spec + prompt | Jira status or `null` |
 | `inProgress` | Implementer starts | Jira status or `null` |
-| `codeReview` | Reviewer starts the first round | Jira status or `null` |
-| `inReview` | User accepted a clean review (commit/PR) | Jira status or `null` |
-| `done` | PR merged and close confirmed | Jira status or `null` |
+| `codeReview` | Implementer finishes (`implemented`) | Jira status or `null` |
+| `inReview` | Reviewer starts a review round (`in review`) | Jira status or `null` |
+| `done` | Clean review accepted: commit, push and PR opened (feature finished) | Jira status or `null` |
 | `blocker` (optional extra) | Status a **depends** issue must already have before this one may start | Jira status; required if `depends` is used |
 
 `null` = this step does not call a Jira transition. There is no file fallback and no invented name. If the mapped status does not exist on that issue type’s workflow, stop and tell the user to fix the mapping in `/dhs-setup`.
@@ -194,10 +194,11 @@ While Jira is connected and `artifactsOnTrackerOnly` is `true`, `agents.statuses
 | Implementer starts | Transition to mapped `inProgress` when not `null`. |
 | Consultant pass | Nowhere on the ticket (noise). |
 | User decision `Q<n>` | Comment. |
-| Reviewer starts (first round) | Transition to mapped `codeReview` when not `null`. |
+| Implementer finishes | Transition to mapped `codeReview` when not `null`. |
+| Reviewer starts a round | Transition to mapped `inReview` when not `null`. |
+| Reviewer sends the task back (❌) | Transition to mapped `inProgress` when not `null`. |
 | Reviewer report (✅/❌/⚠️) | Comment. |
-| Acceptance (clean review) | Transition to mapped `inReview` when not `null`. |
-| Close after merge | Transition to mapped `done` when not `null`. |
+| Acceptance (clean review, PR opened) | Transition to mapped `done` when not `null`. |
 | Other log rows (Architect summary, debt `C<id>: accepted`, …) | Comment, or the mapped log field if one exists. |
 
 `depends` / `relates`: issue links when the project allows them. If linking fails, comment that fact; do not write a feature file and do not block the task.
@@ -240,18 +241,18 @@ Table `date | agent | action | note`. User decisions: `Q<n>: …`. Consultant it
 English keys. Stored strings come from `agents.statuses` (defaults below). Do not translate them from the conversation language.
 
 ```text
-todo → in progress → code review → in review → done
+todo → in progress → implemented → in review → done
 ```
 
 | Status | Meaning | Who may run |
 |--------|---------|-------------|
 | `todo` | Spec and prompt exist or are being written. Architect does not advance past this. | Architect; then Implementer |
-| `in progress` | Implementation + Consultant loop. | Implementer (+ Consultant, launched by them) |
-| `code review` | Implementation finished; Reviewer working or open ❌. | Reviewer; fix round → Implementer |
-| `in review` | Clean review accepted: commit + push + PR. Waiting for merge. | Reviewer: update-from-base or close |
-| `done` | PR merged to the base branch and confirmed. | None |
+| `in progress` | Implementation + Consultant loop. | Implementer (inline in the invoking session; Consultant launched by that session) |
+| `implemented` | Implementation finished; the Reviewer may start. | Implementer at the end of its run; Reviewer gate |
+| `in review` | A review round is running, or waiting for user acceptance. ❌ moves it back to `in progress`. | Reviewer |
+| `done` | Clean review accepted: commit + push + PR opened. The feature is finished; the PR merge does not change it. | Reviewer, at acceptance only |
 
-Earlier names: `backlog` → `todo`; `reviewReady` is not a status (stay on `in progress` until the Reviewer starts); `reviewDone` → `in review`.
+Earlier names: `backlog` → `todo`; `reviewReady` is not a status (stay on `in progress` until the Implementer finishes); `reviewDone` → `in review`; `code review` → `implemented` (the Reviewer no longer sets it).
 
 Agents update status **only** on the active tracker. Files: write the strings from `agents.statuses` (read from `harness.config.json` at run time) into the feature file. Jira: `.dhs/scripts/jira transition` to `agents.tracker.statuses.<key>` from that same file. There is no `dhs` CLI for status. File-tracker status is not a script in v1.
 
@@ -284,7 +285,7 @@ Exactly four agents. No others.
 | Architect | opus | Spec + prompt. May split tasks. May consult brainstorm members. Read-only on application code. No git writes. |
 | Implementer | sonnet | Implements the task (feature or bug). Own phase plan. After each phase, runs Consultant. Tests with the code. |
 | Consultant | haiku | Code **quality** on the phase diff. Does not edit product code. Does not judge spec compliance. |
-| Reviewer | sonnet | Spec compliance (requirements + AC) only. Not style. Commits, pushes, opens PR, returns to base, closes after merge. |
+| Reviewer | sonnet | Spec compliance (requirements + AC) only. Not style. Commits, pushes, opens PR, returns to base, sets `done`. |
 
 Brainstorm members are not agents and are not `@`-addressable.
 
@@ -305,13 +306,13 @@ Brainstorm members are not agents and are not `@`-addressable.
 - Do not edit `CHANGELOG.md`.
 - Unclear spec: follow Questions; do not invent architecture beyond that.
 - If the **project** test/lint command fails on code they did not touch: stop and tell the user. Do not label it unrelated and continue.
-- When all phases have `continue`, leave status `in progress`. The Reviewer moves it to `code review`.
+- When all phases have `continue`, set status `implemented`. The Reviewer moves it to `in review` when it starts.
 
 ### Consultant (quality loop)
 
 Consultant exists so cheap, frequent quality feedback happens **during** implementation, while Reviewer stays spec-only. It is not optional in v1.
 
-**Not a user skill.** The Implementer launches it.
+**Not a user skill.** The session that runs the Implementer launches it (Agent tool). The Implementer itself runs inline in that session, not as a subagent, because subagents cannot launch subagents.
 
 **May:** read the phase diff, the touched files, the generated rules, and tests for those files. Return a structured report.
 
@@ -377,21 +378,21 @@ Reviewer **does not** turn leftover `should-fix` into ❌. Reviewer **may** ❌ 
 
 Checks the finished implementation against the spec. Not formatting, not Consultant’s `should-fix` list.
 
-- First review while `in progress` → set `code review`.
+- Gate: status `implemented` (first round, or after a fix) or `in review` (later round with no fix between). Set `in review` before the review. ❌ → set `in progress`.
 - ❌ → back to Implementer with only those items (Consultant runs again only on phases those fixes belong to, still under the same caps). ⚠️ do not start a round.
 - Max **three** Reviewer rounds. The same ❌ with no code change ends the loop.
 - An ❌ that contradicts the spec goes to the user; changing the spec is Architect work.
 
 **Acceptance** — only with no open ❌:
 
-- `interactive`: wait for explicit user acceptance. Until then: no changelog, no commit, no push, no PR, status stays `code review`.
+- `interactive`: wait for explicit user acceptance. It counts when the user says it in this session, or when the launch passes it as `User acceptance: <the user's own words>` (the launching skill copies the words exactly). Until then: no changelog, no commit, no push, no PR, status stays `in review`.
 - `critical` / `autonomous`: this Reviewer run is acceptance. Then the git steps. Do not merge.
 
-After acceptance, in order: final review in the log → status `in review` → `CHANGELOG.md` entry → `.dhs/scripts/commit-task` → `.dhs/scripts/push-task` → `.dhs/scripts/open-pr` (base is `agents.baseBranch` from config) → `.dhs/scripts/return-to-base`. Do not merge. PR body notes unfinished blockers.
+After acceptance, in order: final review in the log → status `done` → `CHANGELOG.md` entry → `.dhs/scripts/commit-task` (includes `docs/prompt/<task>.prompt.md` when it exists in the worktree) → `.dhs/scripts/push-task` → `.dhs/scripts/open-pr` (base is `agents.baseBranch` from config) → `.dhs/scripts/return-to-base`. Do not merge. PR body notes unfinished blockers.
 
 **Update from base:** only when the user asks (e.g. `/dhs-checkit … update`). Run `.dhs/scripts/update-from-base`. Resolve if possible, stop on conflicts.
 
-**Close:** only when the user says the PR is merged. Verify the merge, set `done`, run `.dhs/scripts/return-to-base` from the task worktree (it removes that worktree; it does not switch the user’s primary checkout).
+**Feature end:** the PR opened after acceptance is the finished state. The Reviewer does not wait for the merge, does not ask for a confirmation, and runs no later round for it.
 
 ---
 
@@ -414,7 +415,7 @@ Implementer and Reviewer always use a **git worktree** for the task. The path is
 | `push-task` | Reviewer | — | Push **only** the task branch. |
 | `open-pr` | Reviewer, after Acceptance | `agents.baseBranch` | `gh pr create --base <base> --head <task>`. |
 | `update-from-base` | Reviewer, only on **update** | `agents.baseBranch` | Merge that base into the task branch. Stop on conflicts. |
-| `return-to-base` | Reviewer, after PR opened or after **close** | `agents.baseBranch` | From a dhs worktree: drop launch-only symlinks (`.dhs`, `harness.config.json`) then `git worktree remove` when clean (does not switch the primary checkout). From the primary checkout: `git checkout` that base (legacy). |
+| `return-to-base` | Reviewer, after PR opened | `agents.baseBranch` | From a dhs worktree: drop launch-only symlinks (`.dhs`, `harness.config.json`) then `git worktree remove` when clean (does not switch the primary checkout). From the primary checkout: `git checkout` that base (legacy). |
 | Merge the PR | Human (GitHub) | — | Not a script. |
 
 Architect and Consultant: no git writes. They do not call these scripts.
@@ -462,9 +463,9 @@ Work skills (`/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-shipit`, `/dhs-br
 |-------|------|
 | `/dhs-setup` | Project-local, written by `dhs install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Asks for `agents.baseBranch` (suggested default `dev`). Writes config (including `dhs.generatedFrom` = `.dhs/VERSION`), generates agents/skills/rules from `.dhs/` without baking runtime config into agent bodies. Merges existing `AGENTS.md` and/or `CLAUDE.md` with the dhs template, shows the proposed body, writes `AGENTS.md` only after acceptance (even if the project had only `CLAUDE.md`). Writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (symlink, or independent file if the link cannot be created). Offers Jira once. Does not commit. **Later run** (config already there): if `.dhs/VERSION` ≠ `dhs.generatedFrom`, regenerate live agents, work skills, and rules first. Then change one parameter at a time, including the base branch and add/change/remove Jira. Does not rewrite the project PRD or remake `AGENTS.md`. Rewrites that live agent’s `model:` in **that host’s** `agentsDir` when one role `model` cell changes; regenerates rules when packs change. Ensures `CLAUDE.md` if `.claude/` is present and the file is still missing (symlink first, independent file if the link fails). |
 | `/dhs-planit` | Architect once. Offer next step; do not start it. |
-| `/dhs-doit` | Implementer, including the Consultant loop. Feature or bug: same agent. One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. |
-| `/dhs-checkit` | One Reviewer round per named task. Variants: review, update, close (one variant for the whole invocation). Same worktree / parallel rules as `/dhs-doit`. |
-| `/dhs-shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. **One task only.** Starts at the first missing stage. Stops if already `in review` or `done`. Implementer and Reviewer still use a worktree. |
+| `/dhs-doit` | Implementer, including the Consultant loop. Feature or bug: same agent. One task or a list. Parent runs `start-task` and applies the Implementer procedure inline per task with `Worktree:`. Several tasks in one session run sequentially; parallel only via session fan-out (`references/session-fanout.md`). |
+| `/dhs-checkit` | One Reviewer round per named task. Variants: review, update (one variant for the whole invocation). Same worktree / parallel rules as `/dhs-doit`. |
+| `/dhs-shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. **One task only.** Starts at the first missing stage. Stops if already `done`. Implementer and Reviewer still use a worktree. |
 | `/dhs-brainstorm` | Project-local. Members CRUD, app context, run a consult: personae → facilitator (collect only) → Architect (PART A). |
 
 There is no user-facing Consultant skill.
@@ -483,7 +484,7 @@ If `harness.config.json` is missing: first-run path below. If it is present: lat
 - Generate live agents and work skills from `.dhs/` as copies into every host tree (see Runtime config and generated files). Write `dhs.generatedFrom` from `.dhs/VERSION`. If `.dhs/VERSION` is missing, stop and tell the user to run `dhs install` here, then `/dhs-setup` again.
 - Roles: architect, implementer, consultant, reviewer. For each host in `.dhs/references/hosts.json`, one question per host: prefill all four roles from that row’s `modelSuggest`, show the table, ask whether to change any (optional overrides in one reply). The question must be framed as **change**, not “keep these models” — **no** / skip = accept the table, **yes** = overrides. `agents.roles.<role>.model` is a map keyed by that host’s `id`. Do not translate a Claude alias into a Cursor id. No other roles. No brainstorm-facilitator model question.
 - `agents.contentLanguage`: language of files and tracker text; ask once, suggest the conversation language.
-- `agents.baseBranch`: the git branch `.dhs/scripts/` cut task branches from, open PRs against, merge into a task branch on **update**, and return to after PR or **close**. Ask once. Suggested default is `dev` (for example `dev` vs `main`). If the repo already names a default branch, state that inference so the user can object; do not silently take `main`, `master`, or the current checkout. Without this key, the scripts have no base and must not guess one. Do not write this value into generated agent markdown.
+- `agents.baseBranch`: the git branch `.dhs/scripts/` cut task branches from, open PRs against, merge into a task branch on **update**, and return to after the PR is opened. Ask once. Suggested default is `dev` (for example `dev` vs `main`). If the repo already names a default branch, state that inference so the user can object; do not silently take `main`, `master`, or the current checkout. Without this key, the scripts have no base and must not guess one. Do not write this value into generated agent markdown.
 - **Project rule (optional).** One question, after models, content language, and base branch. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. It is stored on the roles (`rules`; reviewer `checklist` when it is a review constraint). Skip is the default: empty is fine, and the skill must not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
 - **Project agents file (`AGENTS.md` / `CLAUDE.md`).** After writing config and generating files, first run **always** inspects project-root `AGENTS.md` and `CLAUDE.md`. Every combination is in scope: neither, only `AGENTS.md`, only `CLAUDE.md`, or both. Do not skip a file that exists. The dhs source is the template `.dhs/references/AGENTS.md` (package `references/AGENTS.md`).
 
@@ -519,6 +520,8 @@ If `harness.config.json` is missing: first-run path below. If it is present: lat
 
 If `.dhs/VERSION` is missing, stop and tell the user to run `dhs install` here, then `/dhs-setup` again. If a role `model` is still a string, or the map is missing a `hosts.json` `id`, finish that map first (prefill, then per host show the four-role table and one confirm-or-change question framed as **change** — not “keep these models”; **no** / skip = accept, **yes** = overrides; do not stamp one host’s model onto another). Then if `.dhs/VERSION` does not equal `dhs.generatedFrom`, regenerate live agents, work skills, and rule packs from `.dhs/` into every host tree (same copy rules as first run: agent files are copies with `model:` from `agents.roles.<role>.model[<host.id>]`; bodies still do not interpolate runtime keys; leftover `dhs-feature` is deleted from each `skillsDir`), set `dhs.generatedFrom` to `.dhs/VERSION`, and tell the user the installed package templates changed, including that `/dhs-feature` was renamed to `/dhs-shipit`. Do not rewrite `AGENTS.md`; mention it may still contain the old name. Then one change at a time. Show current and new value, wait for confirmation, then write. The base branch (`agents.baseBranch`) is one of those parameters; writing it updates `harness.config.json` only. A role `model` change is one cell `(role, host)`: rewrite that live agent’s frontmatter in **that** `agentsDir` only. A `packsIgnored` (or framework) change regenerates rule packs. Do not touch `agents.brainstorm` (that is `/dhs-brainstorm`). Do not create or rewrite the project PRD. Do not remake or re-merge `AGENTS.md`. Do not commit. If `.claude/` is present and `CLAUDE.md` is still missing, create the symlink the same way as on first run; if the link fails, write `CLAUDE.md` as an independent file with the current `AGENTS.md` body. If `CLAUDE.md` already exists as a regular file on a later run, do not overwrite it and do not re-run the first-run merge.
 
+**Status migration** (later run, once): if `agents.statuses` has the key `code review` and no `implemented` key, the status flow changed (`code review` is now `implemented`, set by the Implementer). Rename that key and value to `implemented` in config and tell the user. Do not edit spec files. List every spec whose `status:` is `code review` and tell the user to set it to `implemented`, or to `in review` when a review is running. `in review` stays valid.
+
 **Tracker (Jira)** — first-run offer and every later run:
 
 | Intent | What happens |
@@ -546,6 +549,10 @@ Do not pause between stages when there is no question and no stop. Report once a
 ### `/dhs-doit` and `/dhs-checkit` (one or many)
 
 The user may name one basename/issue key or several. For each task the parent: resolves the spec, enforces `depends` (unmet `depends` stops **that** task; siblings continue), runs `start-task` from the launch checkout, and launches the role with `Worktree: <abs>` from the script output. N>1: in parallel when the runtime allows; otherwise sequential, still one worktree per task. A `Q<n>` or interactive acceptance on one task does not stop siblings; the parent asks the user and resumes that child. `/dhs-checkit` applies one variant (`review` / `update` / `close`) to the whole invocation. Interactive acceptance is per task. Overlapping product files across parallel tasks are not a stop.
+
+### Session fan-out (multi-key runs)
+
+When the host’s `sessionSpawn` in `references/hosts.json` is `start_session` (Claude Code desktop app), a multi-key run of `/dhs-planit`, `/dhs-doit`, `/dhs-checkit` or `/dhs-shipit` may start one **dedicated session per key** instead of running them in the parent. Procedure: `references/session-fanout.md`. Planner: `.dhs/scripts/fanout-plan` (stateless: ready / waiting / blocked / queued; `serial` only for `checkit close`; default `--max 4`). Each child runs the skill for one key (`/dhs-doit MT-01`), keeps its own `Q<n>` / `BLOCKED:` dialogue with the user, and does not spawn children. Hosts with `manual` print one command per key. Single key: unchanged.
 
 ---
 
@@ -633,7 +640,7 @@ Not questions and not Consultant `must-fix`. Report in one line:
 
 `BLOCKED: <what stopped> — <what the user or another skill must do>`
 
-Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does not match `dhs.generatedFrom`, user approval missing, open blocker task, merge not confirmed, dirty **task worktree** when `return-to-base` must remove it, `/dhs-shipit` given a list of tasks, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused. A dirty **primary** checkout does not block `start-task`; after the file-tracker copy, `start-task` removes only this task’s uncommitted tracker copies from the launch tree (it does not uncommit files the user already committed).
+Examples: `dhs install` missing, `/dhs-setup` not run yet, `.dhs/VERSION` does not match `dhs.generatedFrom`, user approval missing, open blocker task, dirty **task worktree** when `return-to-base` must remove it, `/dhs-shipit` given a list of tasks, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused. A dirty **primary** checkout does not block `start-task`; after the file-tracker copy, `start-task` removes only this task’s uncommitted tracker copies from the launch tree (it does not uncommit files the user already committed).
 
 ---
 
