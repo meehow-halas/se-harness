@@ -113,6 +113,45 @@ describe("commit-task", () => {
     });
   });
 
+  test("appends agents.commitTrailer to the commit message when it is set", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const trailer = "Co-Authored-By: Trailer Probe <probe-7f3@example.org>";
+      fs.writeFileSync(
+        require("path").join(cwd, "harness.config.json"),
+        JSON.stringify({ agents: { baseBranch: "dev", commitTrailer: trailer } }, null, 2)
+      );
+      const wt = startWorktree(cwd, "011-trailer");
+      writeFile(wt, "b.txt", "b\n");
+      assertOk(
+        runScript(
+          "commit-task",
+          ["011-trailer", "--message", "trailer subject", "--", "b.txt"],
+          { cwd: wt }
+        )
+      );
+      const body = git(wt, ["log", "-1", "--pretty=%B"]).stdout;
+      assert.match(body, /^trailer subject\n\n/);
+      assert.ok(body.includes(trailer), body);
+    });
+  });
+
+  test("adds no trailer when agents.commitTrailer is absent", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const wt = startWorktree(cwd, "012-plain");
+      writeFile(wt, "c.txt", "c\n");
+      assertOk(
+        runScript(
+          "commit-task",
+          ["012-plain", "--message", "plain subject", "--", "c.txt"],
+          { cwd: wt }
+        )
+      );
+      assert.equal(git(wt, ["log", "-1", "--pretty=%B"]).stdout.trim(), "plain subject");
+    });
+  });
+
   test("UNCHANGED when listed paths have no staged diff", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);

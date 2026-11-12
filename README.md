@@ -75,11 +75,11 @@ Say what you want in ordinary language. The assistant matches **intent** to a sk
 | Full path | `/dhs-shipit` |
 | Spec only | `/dhs-planit` |
 | Implementation only | `/dhs-doit` (one task or a list) |
-| One review / update from base / close after merge | `/dhs-checkit` (one task or a list; one variant) |
+| One review or update from base | `/dhs-checkit` (one task or a list; one variant) |
 | Change parameters or Jira | `/dhs-setup` |
 | Personae | `/dhs-brainstorm` |
 
-You merge the GitHub PR. Close is `/dhs-checkit` after you confirm the merge.
+After you accept a clean review, the Reviewer commits, opens the PR and sets `done`. That ends the feature. You merge the PR on GitHub; nothing else is needed from dhs.
 
 ## 4. Uninstall (optional)
 
@@ -106,8 +106,8 @@ If Architect needs a persona round, work skills **stop and ask** `/dhs-brainstor
 |-------|------|----------------|---------|
 | `/dhs-setup` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit. See [`/dhs-setup`](#dhs-setup). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" |
 | `/dhs-planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
-| `/dhs-doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. Status stays `in progress` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
-| `/dhs-checkit` | One Reviewer round per named task | Variants: review (default), update from base, close after **you** confirm merge. One variant for the whole invocation; same worktree / parallel rules as `/dhs-doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" · "the PR is merged, close the task" |
+| `/dhs-doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. Ends with status `implemented` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
+| `/dhs-checkit` | One Reviewer round per named task | Variants: review (default), update from base. One variant for the whole invocation; same worktree / parallel rules as `/dhs-doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" |
 | `/dhs-shipit` | Full path, **one task** | Starts at the first missing stage; does not merge. A list of keys is a stop — spec with `/dhs-planit`, then `/dhs-doit`. Implementer and Reviewer still use a worktree | "add password reset from spec through PR" |
 | `/dhs-brainstorm` | Personae | CRUD members, app context, consult round; does not role-play. See [Brainstorm](#brainstorm). | "consult this spec with the personae" · "build the app context" |
 
@@ -120,8 +120,8 @@ flowchart LR
   shipit["/dhs-shipit"] --> architect
   shipit --> implementer
   shipit --> reviewer
-  reviewer --> humanMerge[You merge on GitHub]
-  humanMerge --> close["/dhs-checkit close"]
+  reviewer --> prDone["PR opened, status done"]
+  prDone --> humanMerge[You merge on GitHub]
 ```
 
 ## /dhs-setup
@@ -192,7 +192,7 @@ If a persona round is needed, Architect **stops and asks** `/dhs-brainstorm`. It
 
 Consultant is **not** a slash skill. The Implementer launches it after **each** phase so cheap quality feedback happens during implementation, and Reviewer can stay spec-only.
 
-The Implementer plans 2–6 coherent phases (a slice of behaviour, not one file), runs `.dhs/scripts/start-task` (git worktree; your primary checkout stays put), sets status `in progress`, and does the work under `Worktree:`. After a phase:
+The Implementer plans 2–6 coherent phases (a slice of behaviour, not one file), runs `.dhs/scripts/start-task` (git worktree; your primary checkout stays put), sets status `in progress`, and does the work under `Worktree:`. When all phases are done it sets `implemented`, which lets the Reviewer start. After a phase:
 
 ```text
 phase work → Consultant pass 1
@@ -218,7 +218,7 @@ Consultant never talks to the user. In interactive mode, if `must-fix` is still 
 
 A different axis from Consultant: **does this match the spec** (requirements + acceptance criteria), not how the code is written. Leftover Consultant `should-fix` is not ❌. Leftover `must-fix` may be ❌ only when it actually misses an acceptance criterion.
 
-First review while `in progress` sets `code review`. ❌ goes back to the Implementer with those items only. After acceptance: changelog, commit, push, PR from the worktree; `return-to-base` removes that worktree. You merge on GitHub. Max three Reviewer rounds.
+The Reviewer starts from `implemented` (or from `in review` on a later round without a fix in between) and sets `in review`. ❌ sets `in progress` and sends those items back to the Implementer, who sets `implemented` again. After acceptance: changelog, `done`, commit, push, PR from the worktree; `return-to-base` removes that worktree. You merge on GitHub. Max three Reviewer rounds.
 
 ## Brainstorm
 
@@ -306,7 +306,7 @@ Consultant never talks to the user; the Implementer does, if the debt protocol r
 
 ### Reviewer variants
 
-These are **not** a substitute for interaction modes. Reviewer still receives `Mode:` from `/dhs-checkit` (same default). That skill also picks **one** variant for the whole invocation: `review` (default) | `update` | `close`. Both apply together (for example `autonomous` + `update`).
+These are **not** a substitute for interaction modes. Reviewer still receives `Mode:` from `/dhs-checkit` (same default). That skill also picks **one** variant for the whole invocation: `review` (default) | `update`. Both apply together (for example `autonomous` + `update`).
 
 ## Trackers and statuses
 
@@ -373,28 +373,29 @@ Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log, an
 | Implementer starts | Transition to mapped `inProgress` when not `null`. |
 | Consultant pass | Nowhere (noise). |
 | User decision `Q<n>` and other log rows | Comment, or the mapped log field if one exists. |
-| Reviewer starts (first round) | Transition to mapped `codeReview` when not `null`. |
+| Implementer finishes | Transition to mapped `codeReview` when not `null`. |
+| Reviewer starts a round | Transition to mapped `inReview` when not `null`. |
+| Reviewer sends the task back (❌) | Transition to mapped `inProgress` when not `null`. |
 | Reviewer report (✅/❌/⚠️) | Comment. |
-| Acceptance (clean review) | Transition to mapped `inReview` when not `null`. |
-| Close after merge | Transition to mapped `done` when not `null`. |
+| Acceptance (clean review, PR opened) | Transition to mapped `done` when not `null`. |
 
 ### Statuses
 
 The five dhs steps are the same on both trackers. On files, the labels are the strings in `agents.statuses`. On Jira, each step uses the mapped `agents.tracker.statuses` name (or is skipped when that key is `null`).
 
 ```text
-todo → in progress → code review → in review → done
+todo → in progress → implemented → in review → done
 ```
 
 | Status | Meaning | Who may run |
 |--------|---------|-------------|
 | `todo` | Spec and prompt exist or are being written. Architect does not advance past this. | Architect; then Implementer |
 | `in progress` | Implementation + Consultant loop. | Implementer (+ Consultant, launched by them) |
-| `code review` | Implementation finished; Reviewer working or open ❌. | Reviewer; fix round → Implementer |
-| `in review` | Clean review accepted: commit + push + PR. Waiting for merge. | Reviewer: update-from-base or close |
-| `done` | PR merged to the base branch and confirmed. | None |
+| `implemented` | Implementation finished; the Reviewer may start. | Implementer (end of its run) |
+| `in review` | A review round is running or waiting for your acceptance. ❌ moves it back to `in progress`. | Reviewer |
+| `done` | Clean review accepted: commit + push + PR opened. The feature is finished. | Reviewer, at acceptance |
 
-You merge on GitHub. Close is `/dhs-checkit` after you confirm.
+You merge the PR on GitHub. The merge does not change the status; `done` is already set.
 
 ## Rule packs
 

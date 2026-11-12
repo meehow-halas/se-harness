@@ -28,7 +28,7 @@ Exactly four product agents. Live copies live under every `agentsDir` in `.dhs/r
 | Role | Job |
 |------|-----|
 | Architect | Spec + prompt + first log row on the active tracker. Status stays at the configured `todo` string. Read-only on application code. No git writes. |
-| Implementer | Implements the spec (`feature` or `bug`). Own phase plan. After each phase, launches Consultant. Calls `.dhs/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
+| Implementer | Implements the spec (`feature` or `bug`). Own phase plan. Runs inline in the session that invoked `/dhs-doit` or `/dhs-shipit`, not as a subagent. After each phase, that session launches Consultant. Calls `.dhs/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
 | Consultant | Code quality on the phase diff. Does not edit product code. Does not talk to the user. Does not judge spec compliance. Not a user-facing skill. |
 | Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, then git allowlist scripts. Does not merge the PR. |
 
@@ -41,7 +41,7 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | `/dhs-setup` | First-time setup when config is missing; later, one parameter at a time (including tracker). |
 | `/dhs-planit` | Architect once. Offer the next step; do not start it. |
 | `/dhs-doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
-| `/dhs-checkit` | One Reviewer round per named task: review, update from base, or close after the user confirms merge. |
+| `/dhs-checkit` | One Reviewer round per named task: review or update from base. An accepted review ends with commit, PR and `done`. |
 | `/dhs-shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task only. |
 | `/dhs-brainstorm` | Members, app context, and a consult round. |
 
@@ -59,13 +59,15 @@ If `agents.tracker` is absent, the files tracker is active. Same basename for al
 | `docs/prompt/<basename>.prompt.md` | Implementation prompt |
 | `docs/feature-log/<basename>.log.md` | Append-only log |
 
-Task key = basename. Branch name = basename. Status strings = `agents.statuses` (read from config; do not translate them from the conversation language). Artifact shapes: `.dhs/references/` (`spec.feature.md`, `prompt.prompt.md`, `log.log.md`).
+Task key = basename. Branch name = basename, or `<basename>-N` when the old branch has a closed or merged PR. Status strings = `agents.statuses` (read from config; do not translate them from the conversation language). Artifact shapes: `.dhs/references/` (`spec.feature.md`, `prompt.prompt.md`, `log.log.md`).
 
 `CHANGELOG.md` and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
 
+Several keys in one work-skill call: on hosts whose `sessionSpawn` is `start_session`, one session per key (`.dhs/references/session-fanout.md`, planner `.dhs/scripts/fanout-plan`). On `manual` hosts, one command per key is printed. One key runs in the current session.
+
 ## Git
 
-Allowlisted git/`gh` and Jira operations run through `.dhs/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh` or `curl` themselves. Git scripts read `agents.baseBranch` from `harness.config.json`. Jira scripts read `agents.tracker` and `harness.credentials.local.json`. No rebase, reset, or force. No merge of the PR (human on GitHub). Implementer and Reviewer always use a git worktree at `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>`. A launch may name `Worktree: <abs>`. Architect does not use worktrees.
+Allowlisted git/`gh` and Jira operations run through `.dhs/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh` or `curl` themselves. Git scripts read `agents.baseBranch` from `harness.config.json`. Optional `agents.commitTrailer` (one line, for example `Co-Authored-By: Name <mail>`) is appended to every commit `commit-task` makes; absent means no trailer. Jira scripts read `agents.tracker` and `harness.credentials.local.json`. No rebase, reset, or force. No merge of the PR (human on GitHub). Implementer and Reviewer always use a git worktree at `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>`. A launch may name `Worktree: <abs>`. Architect does not use worktrees.
 
 | Script | Who |
 |--------|-----|
@@ -74,8 +76,8 @@ Allowlisted git/`gh` and Jira operations run through `.dhs/scripts/`. Agents cal
 | `push-task` | Reviewer |
 | `open-pr` | Reviewer, after acceptance |
 | `update-from-base` | Reviewer, only when the user asks to update |
-| `return-to-base` | Reviewer, after PR opened or after close (removes the dhs worktree) |
-| `jira` | `/dhs-setup` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `comment` / `set log`); Reviewer (`get`, `transition codeReview` / `inReview` / `done`, `comment`) |
+| `return-to-base` | Reviewer, after PR opened (removes the dhs worktree) |
+| `jira` | `/dhs-setup` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 
 Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira`.
 

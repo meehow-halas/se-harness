@@ -160,7 +160,7 @@ function argvLogCommand(logFile) {
   return `node -e 'require("fs").appendFileSync(process.argv[1], JSON.stringify(process.argv.slice(2)) + "\\n")' -- ${JSON.stringify(logFile)} "$@"`;
 }
 
-function writeGhStub(binDir, { existingUrl, createFails = false } = {}) {
+function writeGhStub(binDir, { existingUrl, createFails = false, prStates = "" } = {}) {
   fs.mkdirSync(binDir, { recursive: true });
   const logFile = path.join(binDir, "gh-argv.log");
   const gh = path.join(binDir, "gh");
@@ -181,6 +181,13 @@ if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
     exit 0
   fi
   exit 1
+fi
+if [ "$1" = "pr" ] && [ "$2" = "list" ]; then
+  case "$*" in
+    *"--state all"*) printf '%s\\n' ${JSON.stringify(prStates)} ;;
+    *) printf '%s\\n' ${JSON.stringify(existingUrl || "")} ;;
+  esac
+  exit 0
 fi
 if [ "$1" = "pr" ] && [ "$2" = "create" ]; then
   ${createBranch}

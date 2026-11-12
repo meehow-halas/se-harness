@@ -78,7 +78,7 @@ Not questions and not Consultant `must-fix`. One line:
 BLOCKED: <what stopped> — <what the user or another skill must do>
 ```
 
-Examples in the PRD (Stops): install missing, setup not run, VERSION mismatch, approval missing, open blocker task, merge not confirmed, dirty task worktree on `return-to-base`, `/dhs-shipit` given a list, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
+Examples in the PRD (Stops): install missing, setup not run, VERSION mismatch, approval missing, open blocker task, dirty task worktree on `return-to-base`, `/dhs-shipit` given a list, PR failed, project tests failing on untouched code, a `.dhs/scripts/` helper refused.
 
 Do not use a `BLOCKED: rule=<id>` shape. Published product uses the PRD line above.
 
@@ -89,7 +89,7 @@ A git/`gh` script that refuses ends with a `BLOCKED:` line. The agent copies it 
 Implementing agents do not bake these into markdown as literals. Templates say to **read** `harness.config.json`.
 
 - Modes (from intent; default `interactive`): `interactive`, `critical`, `autonomous`. Definitions: PRD Modes.
-- File-tracker status keys: `todo` → `in progress` → `code review` → `in review` → `done`. Stored strings come from `agents.statuses`.
+- File-tracker status keys: `todo` → `in progress` → `implemented` → `in review` → `done`. Stored strings come from `agents.statuses`.
 - Jira: `agents.tracker.statuses` mapped in `/dhs-setup`. `null` means that step does not transition.
 
 ## Repo state before phase 1

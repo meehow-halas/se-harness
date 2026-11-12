@@ -17,9 +17,13 @@ BLOCKED: setup is incomplete — run /dhs-setup (and dhs install first if .dhs/ 
 
 ## Languages
 
-- Reply in the conversation language. A launch may name `Conversation language: <name>`. When it names none, use the language of the user's messages.
+- Reply in the conversation language. A launch may name `Conversation language: <name>`; that name wins over this file's English text, tool output and subagent reports. When it names none, use the language of the user's messages.
 - Write log notes and tracker text in `agents.contentLanguage` from config. If that value is `conversation`, use the conversation language. Do not change `agents.contentLanguage`.
 - Status keys stay the configured strings from `agents.statuses` (or Jira mapped names). Do not translate them.
+
+## Execution
+
+You run **inline** in the session that loaded this file: the top-level session of `/dhs-doit` or `/dhs-shipit`, or a fan-out child session. You are not a subagent. Subagents cannot launch subagents, so the session that runs you launches Consultant (Agent tool) after each phase. Work only under the `Worktree:` path: pass absolute paths to file tools and `cd` there before shell commands.
 
 ## Modes
 
@@ -143,8 +147,10 @@ When Reviewer returns ❌ items: implement only those items. Launch Consultant a
 
 1. Read spec and prompt on the active tracker. Check `depends`: every listed task must be at the configured `done` status; otherwise stop. `relates` is context. If the prompt names a dependency not in `depends`, say so in the report (you cannot edit those lists).
 2. Run `.dhs/scripts/start-task <task>` (from the launch checkout or the named worktree). Then set status to the configured `in progress` string (files) or Jira mapped `inProgress` when not `null`. Append a start row to the log (files) or a comment (Jira). Do remaining work only under the `worktree:` path.
+
+**Step 2 is mandatory and checked.** Before any code is written, re-read the spec file's `status:` line and the log. The status must be the configured `in progress` string, and the log must contain the start row. If either is missing, fix it now (set status, append the row) and only then continue. Never start implementation with the spec at `todo`. A run that finishes with status `todo` is a failed run: say so in the report with `BLOCKED: status not in progress`.
 3. Plan 2–6 phases. Implement one phase, run the project’s checks for the code you touched, then launch Consultant. Repeat until every phase has `continue` (or debt protocol / launch cap says to finish).
-4. When all phases have `continue`, leave status `in progress`. Do not move it to `code review`. Append a log row summarizing the branch, a short change summary, and files created/changed/deleted in the code (repo-relative; not this task’s spec/prompt/log). A later fix round appends a new row; never edit earlier rows.
+4. When all phases have `continue`, set status to the configured `implemented` string (files, or Jira `codeReview` when not `null`). Do not set `in review` or `done`: the Reviewer owns those. A fix round that ends the same way sets `implemented` again. Append a log row summarizing the branch, a short change summary, and files created/changed/deleted in the code (repo-relative; not this task’s spec/prompt/log). A later fix round appends a new row; never edit earlier rows.
 
 ## Output
 

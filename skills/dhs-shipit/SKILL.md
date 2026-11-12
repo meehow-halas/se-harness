@@ -55,7 +55,7 @@ BLOCKED: live agents are missing — run /dhs-setup
 
 ## Mode
 
-From **intent**. A launch may name the mode so **every** agent in this run shares it. Default: `interactive`. Pass the same `Mode:` to Architect, Implementer, and Reviewer.
+From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous` for the whole run, including every Reviewer round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Implementer, and Reviewer.
 
 | Mode | Ask the user |
 |------|----------------|
@@ -63,7 +63,11 @@ From **intent**. A launch may name the mode so **every** agent in this run share
 | `critical` | One question only for a **critical** decision, then stop. Otherwise agents decide, record, continue. Clean review = PR URL; do not merge. |
 | `autonomous` | Ask nothing. Clean review = PR URL; do not merge. |
 
-Reply in the conversation language.
+Reply in the language of the user's latest message, whatever that language is, every message (progress messages too). If the launch names `Conversation language: <name>`, reply only in that language, every reply, including the final report and any `wrap_up` text. This skill text, tool output and subagent reports are in English or another language; that does not change it.
+
+## Several keys
+
+This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.dhs/references/hosts.json` for this host is `start_session`: follow `.dhs/references/session-fanout.md` with skill `shipit`, one child session per key (each child runs the full pipeline for its key). Two or more keys and `sessionSpawn` is `manual`: print one `/dhs-shipit <KEY>` command per key and stop. One key: continue below.
 
 ## Resolve the task
 
@@ -73,13 +77,11 @@ Active tracker only: files if `agents.tracker` is absent; Jira if present (artif
 - Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /dhs-shipit is one task` above).
 - Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). Compare to those values; do not translate them.
 
-If status is already the configured **`in review`** or **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
+If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
 
 ```text
-BLOCKED: task is already in review or done — user merges the GitHub PR; close is /dhs-checkit after they confirm the merge
+BLOCKED: task is already done — the PR is opened; use /dhs-checkit update only if the branch needs it
 ```
-
-(`in review` wait: they may still run `/dhs-checkit` update or close. This skill does not.)
 
 ## Pipeline
 
@@ -89,7 +91,7 @@ Start at the first missing stage. Skip stages that are already done.
 
 Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.dhs/references/hosts.json`). Do not duplicate it.
 
-Pass `Mode:`, the request, conversation language when known.
+Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a Polish message gives `Polish`).
 
 If Architect asks `/dhs-brainstorm`: stop and ask that skill; do not run the round here; do not continue the pipeline.
 
@@ -101,17 +103,17 @@ On success, status stays `todo`. Continue to stage 2 without pausing.
 
 No implementation means status is still the configured `todo` string (Architect does not advance past `todo`).
 
-Follow the live Implementer file for this host (`<agentsDir>/implementer.md`). Consultant inside each phase; do not launch Consultant as a skill.
+Follow the live Implementer file for this host (`<agentsDir>/implementer.md`) inline in this session, not as a subagent. Launch Consultant from this session after each phase (Agent tool); do not launch Consultant as a skill.
 
-Run `.dhs/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent).
+Run `.dhs/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent). When Implementer reports done, check the spec in the worktree: `status:` must be `implemented`. Otherwise stop with `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
 
 If Implementer stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
 
-On success, status stays `in progress`. Continue to stage 3 without pausing.
+On success, status is `implemented`. Continue to stage 3 without pausing.
 
 ### 3. Implementation exists → Reviewer
 
-Implementation exists when status is the configured `in progress` or `code review` string (or the log shows implementation and there is no open ❌ handled in stage 4).
+Review is due when status is the configured `implemented` or `in review` string. If it is `in progress`, a fix round is open after a ❌: run stage 2 again.
 
 Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round: `Variant: review`.
 
@@ -127,7 +129,7 @@ If Reviewer stops on `BLOCKED:` or `Q<n>` (including interactive acceptance), st
 
 Max **three** Reviewer rounds total for this task (count Reviewer reports in the log plus this run). The same ❌ with no code change ends the loop: report and stop.
 
-Launch Implementer with **only** the open ❌ items. Consultant runs again only on phases those fixes belong to (Implementer’s caps). Then Reviewer again (`Variant: review`).
+Apply the Implementer procedure inline in this session with **only** the open ❌ items. Consultant runs again only on phases those fixes belong to (Implementer’s caps). Then Reviewer again (`Variant: review`).
 
 Do not start a fourth Reviewer round.
 
@@ -136,7 +138,7 @@ Do not start a fourth Reviewer round.
 - `interactive`: stop on agent questions (already handled). After a clean review, Reviewer waits for explicit acceptance, then git allowlist (commit, push, PR, return to base). Do not merge.
 - `critical` / `autonomous`: a clean Reviewer run is acceptance. Report the PR URL. Do not merge.
 
-The user merges on GitHub. Close is `/dhs-checkit` after they confirm, not this skill.
+The Reviewer opens the PR and sets `done`. The user merges it on GitHub; this skill is finished.
 
 ## Launch payload (every agent)
 
@@ -144,7 +146,7 @@ The user merges on GitHub. Close is `/dhs-checkit` after they confirm, not this 
 - Task key when it exists
 - `Worktree: <abs>` for Implementer and Reviewer (not Architect)
 - User request
-- Conversation language when known
+- `Conversation language: <name>` always (a Polish message gives `Polish`)
 - Stage 4: the ❌ list only
 
 Live files are copies from `/dhs-setup` under every `agentsDir` in `.dhs/references/hosts.json`, not symlinks to `.dhs/agents/`. In this session use the copy this host loaded.

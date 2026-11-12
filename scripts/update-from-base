@@ -15,19 +15,20 @@ fi
 read_base_branch
 base=$DHS_BASE_BRANCH
 require_not_base "$task" "$base"
-require_on_task "$task"
+branch=$(task_branch "$task")
+require_on_task "$branch"
 
 if ! local_branch_exists "$base"; then
   blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /dhs-setup"
 fi
 
 if git merge-base --is-ancestor "$base" HEAD 2>/dev/null; then
-  unchanged "branch: $task" "base: $base"
+  unchanged "branch: $branch" "base: $base"
 fi
 
 if merge_out=$(git merge --no-edit "$base" 2>&1); then
   sha=$(git rev-parse --short HEAD)
-  ok "branch: $task" "base: $base" "commit: $sha"
+  ok "branch: $branch" "base: $base" "commit: $sha"
 fi
 unset merge_out
 
