@@ -64,3 +64,7 @@ Use a project with `sessionSpawn: manual` (Cursor or OpenCode). `/dhs-planit TST
 ## Record for each step
 
 Result (pass/fail), the `fanout-plan` output, the session titles, and any `BLOCKED:` line. Report failures with the exact output.
+
+## Known issues (not blocking)
+
+- **Reviewer report language.** In `/dhs-shipit` runs on the test project, the parent replies in the user's language, but the Reviewer subagent's final report comes back in English, although `agents/reviewer.md` and the shipit skill ask for the launch to pass `Conversation language: Polish` (not verified in the transcript). Seen on 03-multiply and 011-feature-negate. Open TODO, non-critical. Next step when picked up: export the session transcript and check the exact Agent call input to see whether the launch line reached the Reviewer.

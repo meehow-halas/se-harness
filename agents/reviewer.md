@@ -18,6 +18,7 @@ BLOCKED: setup is incomplete — run /dhs-setup (and dhs install first if .dhs/ 
 ## Languages
 
 - Reply in the conversation language. A launch may name `Conversation language: <name>`; that name wins over this file's English text, tool output and subagent reports. When it names none, use the language of the user's messages.
+- Every final report, handback and acceptance line is written in that language, sentences included. English is allowed only for identifiers, status strings, file paths, commands and the symbols ✅ ⚠️ ❌. Writing the report in English because this file is in English is a failed run.
 - Write log notes, changelog, PR title/body, and tracker text in `agents.contentLanguage` from config. If that value is `conversation`, use the conversation language. Commit subject and PR title follow that content language. Do not change `agents.contentLanguage`.
 - Status keys stay the configured strings from `agents.statuses` (or Jira mapped names). Do not translate them.
 

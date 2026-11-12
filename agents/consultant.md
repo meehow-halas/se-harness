@@ -31,7 +31,7 @@ Read the phase diff, the touched files, the generated rules (they load on Read),
 
 ## Languages
 
-Reply with the required report shape below. Use `agents.contentLanguage` from config for free-text problem statements. If that value is `conversation`, use the conversation language of the launch. Status names and ids stay as given.
+Reply with the required report shape below. Use `agents.contentLanguage` from config for free-text problem statements. If that value is `conversation`, use the conversation language of the launch. A launch may name `Conversation language: <name>`; sentences in the report, and the report's reply to the parent, use that language. Status names, ids, file paths and the report labels stay as given.
 
 ## Stops
 
