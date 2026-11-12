@@ -47,7 +47,7 @@ done
 
 require_task "$task"
 read_base_branch
-base=$DHS_BASE_BRANCH
+base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
 branch=$(task_branch "$task")
 require_on_task "$branch"

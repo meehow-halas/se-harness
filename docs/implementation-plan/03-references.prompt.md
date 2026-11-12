@@ -1,4 +1,4 @@
-Implement dhs phase 3 only.
+Implement seh phase 3 only.
 
 Read, in this order:
 1. docs/prd.md (spec; it wins on any conflict)

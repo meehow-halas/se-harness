@@ -148,8 +148,8 @@ describe("fanout-plan", () => {
   });
 
   test("unknown skill is blocked and names it", () => {
-    const stdout = blockedResult(["--skill", "dhs-feature", "--keys", "NS-1"]);
-    assert.match(stdout, /unknown skill dhs-feature/);
+    const stdout = blockedResult(["--skill", "seh-feature", "--keys", "NS-1"]);
+    assert.match(stdout, /unknown skill seh-feature/);
   });
 
   test("missing --keys is blocked", () => {

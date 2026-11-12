@@ -1,14 +1,14 @@
 ---
-name: dhs-shipit
-description: Full path Architect → Implementer (Consultant inside) → Reviewer. Use when the user runs /dhs-shipit. Starts at the first missing stage.
+name: seh-shipit
+description: Full path Architect → Implementer (Consultant inside) → Reviewer. Use when the user runs /seh-shipit. Starts at the first missing stage.
 ---
 
-# /dhs-shipit
+# /seh-shipit
 
 Full path for **one task**. Single-stage skills do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR. There is no user-facing Consultant skill (Consultant stays inside Implementer). A list of keys:
 
 ```text
-BLOCKED: /dhs-shipit is one task — spec with /dhs-planit, then /dhs-doit with the list
+BLOCKED: /seh-shipit is one task — spec with /seh-planit, then /seh-doit with the list
 ```
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands.
@@ -19,38 +19,38 @@ Stops (not questions) are one line:
 BLOCKED: <what stopped> — <what the user or another skill must do>
 ```
 
-Shape: `.dhs/references/BLOCKED.md`. If a `.dhs/scripts/` helper refuses, copy its `BLOCKED:` line, stop that path, and do not work around it with raw `git` or `gh`.
+Shape: `.seh/references/BLOCKED.md`. If a `.seh/scripts/` helper refuses, copy its `BLOCKED:` line, stop that path, and do not work around it with raw `git` or `gh`.
 
 Do not pause between stages when there is no question and no stop. Report once at the end or at the first stop.
 
-This skill does **not** start a brainstorm round by itself. If Architect (inside this skill) needs a round, stop and ask `/dhs-brainstorm`. Do not interview personae in-process.
+This skill does **not** start a brainstorm round by itself. If Architect (inside this skill) needs a round, stop and ask `/seh-brainstorm`. Do not interview personae in-process.
 
 ## Guard
 
-Before any work. Compare `.dhs/VERSION` and `dhs.generatedFrom` after trimming whitespace.
+Before any work. Compare `.seh/VERSION` and `seh.generatedFrom` after trimming whitespace.
 
-1. If `.dhs/` or `.dhs/VERSION` is missing:
+1. If `.seh/` or `.seh/VERSION` is missing:
 
 ```text
-BLOCKED: dhs install has not been run here — run dhs install (npx -p dev-harness-layer dhs install or npx -p github:nbmh/dev-harness-layer dhs install), then /dhs-setup
+BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /seh-setup
 ```
 
 2. If `harness.config.json` is missing:
 
 ```text
-BLOCKED: setup is incomplete — run /dhs-setup
+BLOCKED: setup is incomplete — run /seh-setup
 ```
 
-3. If `.dhs/VERSION` does not match `dhs.generatedFrom` in `harness.config.json`:
+3. If `.seh/VERSION` does not match `seh.generatedFrom` in `harness.config.json`:
 
 ```text
-BLOCKED: generated files do not match the installed templates — run /dhs-setup
+BLOCKED: generated files do not match the installed templates — run /seh-setup
 ```
 
-If a live agent this stage needs is missing from **this host’s** `agentsDir` in `.dhs/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`):
+If a live agent this stage needs is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`):
 
 ```text
-BLOCKED: live agents are missing — run /dhs-setup
+BLOCKED: live agents are missing — run /seh-setup
 ```
 
 ## Mode
@@ -67,20 +67,20 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.dhs/references/hosts.json` for this host is `start_session`: follow `.dhs/references/session-fanout.md` with skill `shipit`, one child session per key (each child runs the full pipeline for its key). Two or more keys and `sessionSpawn` is `manual`: print one `/dhs-shipit <KEY>` command per key and stop. One key: continue below.
+This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `shipit`, one child session per key (each child runs the full pipeline for its key). Two or more keys and `sessionSpawn` is `manual`: print one `/seh-shipit <KEY>` command per key and stop. One key: continue below.
 
 ## Resolve the task
 
 Active tracker only: files if `agents.tracker` is absent; Jira if present (artifact bodies per `agents.tracker.artifactsOnTrackerOnly`). Never mirror.
 
 - New work (a sentence, no key) → no spec yet.
-- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /dhs-shipit is one task` above).
+- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /seh-shipit is one task` above).
 - Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). Compare to those values; do not translate them.
 
 If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
 
 ```text
-BLOCKED: task is already done — the PR is opened; use /dhs-checkit update only if the branch needs it
+BLOCKED: task is already done — the PR is opened; use /seh-checkit update only if the branch needs it
 ```
 
 ## Pipeline
@@ -89,11 +89,11 @@ Start at the first missing stage. Skip stages that are already done.
 
 ### 1. No spec or prompt → Architect
 
-Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.dhs/references/hosts.json`). Do not duplicate it.
+Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.seh/references/hosts.json`). Do not duplicate it.
 
 Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a Polish message gives `Polish`).
 
-If Architect asks `/dhs-brainstorm`: stop and ask that skill; do not run the round here; do not continue the pipeline.
+If Architect asks `/seh-brainstorm`: stop and ask that skill; do not run the round here; do not continue the pipeline.
 
 If Architect stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
 
@@ -105,7 +105,7 @@ No implementation means status is still the configured `todo` string (Architect 
 
 Follow the live Implementer file for this host (`<agentsDir>/implementer.md`) inline in this session, not as a subagent. Launch Consultant from this session after each phase (Agent tool); do not launch Consultant as a skill.
 
-Run `.dhs/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent). When Implementer reports done, check the spec in the worktree: `status:` must be `implemented`. Otherwise stop with `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
+Run `.seh/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent). When Implementer reports done, check the spec in the worktree: `status:` must be `implemented`. Otherwise stop with `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
 
 If Implementer stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
 
@@ -149,4 +149,4 @@ The Reviewer opens the PR and sets `done`. The user merges it on GitHub; this sk
 - `Conversation language: <name>` always (a Polish message gives `Polish`)
 - Stage 4: the ❌ list only
 
-Live files are copies from `/dhs-setup` under every `agentsDir` in `.dhs/references/hosts.json`, not symlinks to `.dhs/agents/`. In this session use the copy this host loaded.
+Live files are copies from `/seh-setup` under every `agentsDir` in `.seh/references/hosts.json`, not symlinks to `.seh/agents/`. In this session use the copy this host loaded.

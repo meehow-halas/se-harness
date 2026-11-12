@@ -32,7 +32,7 @@ describe("return-to-base", () => {
     });
   });
 
-  test("removes the dhs worktree and keeps the task branch and primary checkout", () => {
+  test("removes the seh worktree and keeps the task branch and primary checkout", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd, { baseBranch: "trunk" });
       const wt = startWorktree(cwd, "ABC-12");

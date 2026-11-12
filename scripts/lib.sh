@@ -1,5 +1,5 @@
-# Shared helpers for dhs git/gh allowlist scripts. Sourced, not invoked.
-# Reads harness.config.json at the consuming project's git root, not inside the dhs package.
+# Shared helpers for seh git/gh allowlist scripts. Sourced, not invoked.
+# Reads harness.config.json at the consuming project's git root, not inside the seh package.
 
 set -eu
 
@@ -42,8 +42,8 @@ abs_git_common_dir() {
   CDPATH= cd -- "$_g" && pwd
 }
 
-dhs_worktree_path() {
-  printf '%s/dhs-worktrees/%s\n' "$(abs_git_common_dir)" "$1"
+seh_worktree_path() {
+  printf '%s/seh-worktrees/%s\n' "$(abs_git_common_dir)" "$1"
 }
 
 # Print the worktree directory that has $1 checked out, or empty.
@@ -57,9 +57,9 @@ worktree_path_for_branch() {
   '
 }
 
-is_dhs_worktree() {
+is_seh_worktree() {
   _root=$(repo_root)
-  _prefix="$(abs_git_common_dir)/dhs-worktrees/"
+  _prefix="$(abs_git_common_dir)/seh-worktrees/"
   case $_root in
     "$_prefix"*)
       return 0
@@ -110,7 +110,7 @@ sync_launch_files() {
       fi
     fi
   done
-  link_if_missing "$_launch/.dhs" "$_wt/.dhs"
+  link_if_missing "$_launch/.seh" "$_wt/.seh"
   link_if_missing "$_launch/harness.config.json" "$_wt/harness.config.json"
 }
 
@@ -118,11 +118,11 @@ current_branch() {
   git rev-parse --abbrev-ref HEAD
 }
 
-# Print the branch that holds task $1: the branch checked out in its dhs
+# Print the branch that holds task $1: the branch checked out in its seh
 # worktree when there is one (it may be <task>-N), else the task name.
 task_branch() {
   _t=$1
-  _wt=$(dhs_worktree_path "$_t")
+  _wt=$(seh_worktree_path "$_t")
   if [ -d "$_wt" ]; then
     _b=$(git -C "$_wt" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
     if [ -n "$_b" ] && [ "$_b" != "HEAD" ]; then
@@ -219,19 +219,19 @@ sys.stdout.write(b.strip())
   tr -d '\n' < "$_cfg" | sed -n 's/.*"baseBranch"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
 }
 
-# Sets DHS_BASE_BRANCH. Must not be called from command substitution
+# Sets SEH_BASE_BRANCH. Must not be called from command substitution
 # (BLOCKED: has to print on the script's stdout).
 read_base_branch() {
   _cfg=$(config_path)
   if [ ! -f "$_cfg" ]; then
-    blocked "harness.config.json is missing" "run /dhs-setup in this project"
+    blocked "harness.config.json is missing" "run /seh-setup in this project"
   fi
-  DHS_BASE_BRANCH=
-  if ! DHS_BASE_BRANCH=$(_extract_base_branch "$_cfg"); then
-    blocked "agents.baseBranch is missing from harness.config.json" "run /dhs-setup and set the base git branch"
+  SEH_BASE_BRANCH=
+  if ! SEH_BASE_BRANCH=$(_extract_base_branch "$_cfg"); then
+    blocked "agents.baseBranch is missing from harness.config.json" "run /seh-setup and set the base git branch"
   fi
-  if [ -z "$DHS_BASE_BRANCH" ]; then
-    blocked "agents.baseBranch is missing from harness.config.json" "run /dhs-setup and set the base git branch"
+  if [ -z "$SEH_BASE_BRANCH" ]; then
+    blocked "agents.baseBranch is missing from harness.config.json" "run /seh-setup and set the base git branch"
   fi
 }
 
@@ -273,16 +273,16 @@ require_on_task() {
   fi
 }
 
-# Sets DHS_REMOTE. Must not be called from command substitution.
+# Sets SEH_REMOTE. Must not be called from command substitution.
 push_remote() {
   if git remote | grep -qx origin; then
-    DHS_REMOTE=origin
+    SEH_REMOTE=origin
     return 0
   fi
   _n=$(git remote | wc -l)
   _n=$(printf '%s' "$_n" | tr -d ' ')
   if [ "$_n" = "1" ]; then
-    DHS_REMOTE=$(git remote)
+    SEH_REMOTE=$(git remote)
     return 0
   fi
   blocked "no git remote named origin" "add a remote and retry"

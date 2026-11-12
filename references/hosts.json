@@ -50,7 +50,7 @@
       "rulesExt": ".md",
       "brainstormDir": ".opencode/brainstorm",
       "projectAgentsFile": null,
-      "hooksFile": ".opencode/plugins/dhs-check-update.js",
+      "hooksFile": ".opencode/plugins/seh-check-update.js",
       "hooksShape": "opencode-plugin",
       "hooksHostArg": "opencode",
       "sessionSpawn": "manual",

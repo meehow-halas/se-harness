@@ -16,10 +16,10 @@ Decision: the child runs the same skill as a standalone run. Fan-out adds no sec
 
 ## 2. Host capability: `sessionSpawn`
 
-`.dhs/references/hosts.json` declares for each host how sessions are started:
+`.seh/references/hosts.json` declares for each host how sessions are started:
 
 - `start_session`: the host can open child sessions (Claude Code desktop). The skill starts them.
-- `manual`: the host cannot. The skill prints one `/dhs-<skill> <KEY>` command per key and stops.
+- `manual`: the host cannot. The skill prints one `/seh-<skill> <KEY>` command per key and stops.
 
 Decision: no host gets a fake fan-out. Without `start_session` the user runs the commands. A Cursor or OpenCode host starts as `manual` until someone verifies a session-start mechanism there.
 
@@ -32,7 +32,7 @@ Decision: no host gets a fake fan-out. Without `start_session` the user runs the
 - Who sets what: Architect leaves `todo`. Implementer sets `in progress` at start and `implemented` at the end. Reviewer sets `in review` before its review round, back to `in progress` after a ❌, and `done` after acceptance and the PR.
 - `done` ends the feature. Acceptance = commit, push, PR, `done`, return to base. The user merges the PR; the skill does not.
 
-Migration: an existing project gets the rename through `/dhs-setup` ("Status migration (later run, once)"): rename `code review` → `implemented` in the config, and in spec files that still carry `code review`. Only a version bump plus `/dhs-setup` reaches existing projects.
+Migration: an existing project gets the rename through `/seh-setup` ("Status migration (later run, once)"): rename `code review` → `implemented` in the config, and in spec files that still carry `code review`. Only a version bump plus `/seh-setup` reaches existing projects.
 
 ## 4. Acceptance and approval
 
@@ -48,7 +48,7 @@ Limitation seen in practice: a relayed acceptance was refused by a subagent once
 - Branch name = task key. If the branch exists and its PR is closed or merged with no open one, the branch becomes `<task>-N` (N ≥ 2, first free name). New work never joins an old PR.
 - `open-pr` looks up **open** PRs only. A closed PR must not block a new one.
 - `commit-task`, `push-task`, `open-pr`, `update-from-base` use the branch that is checked out in the task's worktree (`task_branch`), so they work for `<task>-N`.
-- Worktrees live under `$(git rev-parse --git-common-dir)/dhs-worktrees/<task>`. `return-to-base` removes them.
+- Worktrees live under `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`. `return-to-base` removes them.
 - Commit trailer `Co-Authored-By` is taken from config. Known gap: a commit made with a message that lacks the trailer stays without it. Accepted as not critical.
 
 ## 6. Language
@@ -60,20 +60,20 @@ Limitation seen in practice: a relayed acceptance was refused by a subagent once
 
 ## 7. Models
 
-Models per role come from `agents.roles.<role>.model[<host>]` in config. For Claude Code the live agent files are copies written by `/dhs-setup` under each `agentsDir` in `hosts.json`. Editing the source in `dhs/agents/` does not change a project until `dhs install` and `/dhs-setup` run there.
+Models per role come from `agents.roles.<role>.model[<host>]` in config. For Claude Code the live agent files are copies written by `/seh-setup` under each `agentsDir` in `hosts.json`. Editing the source in `seh/agents/` does not change a project until `seh install` and `/seh-setup` run there.
 
 Decision: config wins over live copies. Setup reports drift and asks.
 
 ## 8. Testing approach
 
-- Test project `dhs-fanout-test` (`docs/session-fanout-manual-test.md`) with tasks 01–11. Real PRs against it.
+- Test project `seh-fanout-test` (`docs/session-fanout-manual-test.md`) with tasks 01–11. Real PRs against it.
 - Check per run: branch name, PR state, commit contents, spec status on the branch and on `dev`, language of every reply, `BLOCKED:` lines.
 - Script tests: `node --test scripts/start-task.test.js scripts/open-pr.test.js` (29 pass at the last run). Run `src/cli.test.js` for CLI and agent-file changes (30 pass).
-- Lesson: after changing `dhs/scripts/` or `dhs/agents/`, re-run `dhs install` in the test project, or it keeps running the old copy. This caused a wrong run once.
+- Lesson: after changing `seh/scripts/` or `seh/agents/`, re-run `seh install` in the test project, or it keeps running the old copy. This caused a wrong run once.
 
 ## 9. Pitfalls found
 
-- `dhs install` run inside the `dhs` repo itself created host folders (`.claude/`, `.cursor/`, `.opencode/`) and a `.gitignore` line. Do not run it there; use it in a consuming project only.
+- `seh install` run inside the `seh` repo itself created host folders (`.claude/`, `.cursor/`, `.opencode/`) and a `.gitignore` line. Do not run it there; use it in a consuming project only.
 - Architect overwrote a spec without reading it back and logged the change. Rule added: read back after every write and log only what the file contains; else `BLOCKED: spec write did not persist`.
 - `start-task` once overwrote uncommitted worktree files. Rule: never overwrite uncommitted worktree content.
 - Stale local base: fixed by cutting from `origin/<base>`.
@@ -83,7 +83,7 @@ Decision: config wins over live copies. Setup reports drift and asks.
 
 - Cursor and OpenCode fan-out (they are `manual`).
 - Automatic merge of PRs.
-- Migration of existing projects without `/dhs-setup`.
+- Migration of existing projects without `/seh-setup`.
 
 Per `AGENTS.md`, these are scope boundaries, not tickets.
 
@@ -91,4 +91,4 @@ Per `AGENTS.md`, these are scope boundaries, not tickets.
 
 - Reviewer final report language (see section 6).
 - Commit trailer when `commit-task` is called without it (see section 5).
-- Existing projects migrate only via version bump and `/dhs-setup`.
+- Existing projects migrate only via version bump and `/seh-setup`.

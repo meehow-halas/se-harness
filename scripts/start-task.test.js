@@ -63,7 +63,7 @@ describe("start-task", () => {
       const wt = fields.worktree;
       assert.equal(
         fs.realpathSync(wt),
-        fs.realpathSync(path.join(cwd, ".git", "dhs-worktrees", "ABC-12"))
+        fs.realpathSync(path.join(cwd, ".git", "seh-worktrees", "ABC-12"))
       );
       assert.equal(currentBranch(wt), "ABC-12");
       assert.equal(revParse(wt, "HEAD"), baseSha);
@@ -145,7 +145,7 @@ describe("start-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
-      const wt = path.join(cwd, ".git", "dhs-worktrees", "001-feature");
+      const wt = path.join(cwd, ".git", "seh-worktrees", "001-feature");
       writeFile(wt, "old.txt", "old work\n");
       git(wt, ["add", "old.txt"]);
       git(wt, ["commit", "-m", "old work"]);
@@ -166,7 +166,7 @@ describe("start-task", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
       assertOk(startTask(cwd, "001-feature"));
-      const wt = path.join(cwd, ".git", "dhs-worktrees", "001-feature");
+      const wt = path.join(cwd, ".git", "seh-worktrees", "001-feature");
       assertOk(runScript("return-to-base", [], { cwd: wt }));
       const bin = path.join(cwd, ".bin");
       writeGhStub(bin, { prStates: "OPEN CLOSED" });
@@ -369,16 +369,16 @@ describe("start-task", () => {
     });
   });
 
-  test("symlinks .dhs when it is missing from the worktree", () => {
+  test("symlinks .seh when it is missing from the worktree", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
-      fs.mkdirSync(path.join(cwd, ".dhs", "scripts"), { recursive: true });
-      fs.writeFileSync(path.join(cwd, ".dhs", "scripts", "start-task"), "#!/bin/sh\n");
+      fs.mkdirSync(path.join(cwd, ".seh", "scripts"), { recursive: true });
+      fs.writeFileSync(path.join(cwd, ".seh", "scripts", "start-task"), "#!/bin/sh\n");
       const wt = startWorktree(cwd, "001-feature");
-      assert.equal(fs.lstatSync(path.join(wt, ".dhs")).isSymbolicLink(), true);
+      assert.equal(fs.lstatSync(path.join(wt, ".seh")).isSymbolicLink(), true);
       assert.equal(
-        fs.realpathSync(path.join(wt, ".dhs")),
-        fs.realpathSync(path.join(cwd, ".dhs"))
+        fs.realpathSync(path.join(wt, ".seh")),
+        fs.realpathSync(path.join(cwd, ".seh"))
       );
     });
   });

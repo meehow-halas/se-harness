@@ -1,8 +1,8 @@
 # Session fan-out
 
-Shared procedure for work skills (`/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, `/dhs-shipit`) when the user names **two or more** keys. One key = run the skill in this session as before.
+Shared procedure for work skills (`/seh-planit`, `/seh-doit`, `/seh-checkit`, `/seh-shipit`) when the user names **two or more** keys. One key = run the skill in this session as before.
 
-Planner: `.dhs/scripts/fanout-plan`. Host adapter: `sessionSpawn` in `.dhs/references/hosts.json` for this host.
+Planner: `.seh/scripts/fanout-plan`. Host adapter: `sessionSpawn` in `.seh/references/hosts.json` for this host.
 
 ## 1. Guard and resolve (parent, once)
 
@@ -14,7 +14,7 @@ Planner: `.dhs/scripts/fanout-plan`. Host adapter: `sessionSpawn` in `.dhs/refer
 Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in this invocation. A dependency on a key outside the invocation must already be `done` (pass it in `--done`), or that key stays blocked.
 
 ```text
-.dhs/scripts/fanout-plan --skill <name> --keys <K1,K2,...> [--variant review|update] [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
+.seh/scripts/fanout-plan --skill <name> --keys <K1,K2,...> [--variant review|update] [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
 ```
 
 Output: `OK`, then `mode`, `max`, `ready` (comma list, may be empty), and optional `waiting`, `blocked`, `queued`, `stuck` lines. `BLOCKED: ...` means fix the arguments and retry.
@@ -29,9 +29,9 @@ Only when `sessionSpawn` is `start_session`. For each key in `ready`, one `mcp__
 - `initiation`: `user_asked` (the user asked for the fan-out)
 - `context`: `fresh`
 - `use_worktree`: `false`
-- `cwd`: not passed. The app refuses a worktree path as `cwd` (observed: `cwd` under `.git/dhs-worktrees/` is not in `list_start_targets`). The child starts in the launch checkout and works in the worktree named by the `Worktree:` line.
+- `cwd`: not passed. The app refuses a worktree path as `cwd` (observed: `cwd` under `.git/seh-worktrees/` is not in `list_start_targets`). The child starts in the launch checkout and works in the worktree named by the `Worktree:` line.
 - `title`: `<skill> <KEY>` (under 60 chars)
-- `prompt`: exactly these lines, in this order, and nothing else: the skill invocation for one key, for example `/dhs-doit MT-01`; `Mode: <mode>`; `Conversation language: <language of the user's messages in this session, e.g. Polish>` (required: without it the child answers in a language of its own choice); `Fan-out child: yes` (marker, required); for a `doit` or `checkit` key only, `Worktree: <abs>`. Do not add folders, notes files, shared paths, or extra instructions to the prompt. Context for the child goes in `background` only.
+- `prompt`: exactly these lines, in this order, and nothing else: the skill invocation for one key, for example `/seh-doit MT-01`; `Mode: <mode>`; `Conversation language: <language of the user's messages in this session, e.g. Polish>` (required: without it the child answers in a language of its own choice); `Fan-out child: yes` (marker, required); for a `doit` or `checkit` key only, `Worktree: <abs>`. Do not add folders, notes files, shared paths, or extra instructions to the prompt. Context for the child goes in `background` only.
 - `Mode:` comes from the user's words, not a default. If the user asked for independent work (for example `samodzielnie`, `autonomous`, `bez pytań`), `autonomous`: no questions, a clean Reviewer run is acceptance and the feature ends with the PR. Otherwise `interactive`.
 - `background`: at least 80 characters: the parent's goal, that this session is one of N parallel keys, the sibling keys, and what done looks like for this key.
 - `model`: optional. The role model for this skill's main role from `harness.config.json` → `agents.roles.<role>.model["<host id>"]` (`architect` for planit, `implementer` for doit and shipit, `reviewer` for checkit). Pass it only when the app accepts it; if the app ignores it, the child runs on the session's model.
@@ -47,12 +47,12 @@ For `manual` (other hosts): print one block per ready key with the exact command
 
 | Skill | Placement | Notes |
 |---|---|---|
-| `/dhs-planit` | launch checkout, `use_worktree: false` | Architect is spec-only, no git. Parallel specs must write disjoint files. |
-| `/dhs-doit` | worktree from `.dhs/scripts/start-task <KEY>` run by the parent; child starts in the launch checkout | Parent runs `start-task` before spawning. Prompt carries `Worktree: <abs>`. The child cds there. |
-| `/dhs-checkit` review or update | as `/dhs-doit` | Safe in parallel. |
-| `/dhs-shipit` | Architect in launch checkout; Implementer and Reviewer in the worktree | One key per session by definition. |
+| `/seh-planit` | launch checkout, `use_worktree: false` | Architect is spec-only, no git. Parallel specs must write disjoint files. |
+| `/seh-doit` | worktree from `.seh/scripts/start-task <KEY>` run by the parent; child starts in the launch checkout | Parent runs `start-task` before spawning. Prompt carries `Worktree: <abs>`. The child cds there. |
+| `/seh-checkit` review or update | as `/seh-doit` | Safe in parallel. |
+| `/seh-shipit` | Architect in launch checkout; Implementer and Reviewer in the worktree | One key per session by definition. |
 
-Do not use app-created worktrees (`use_worktree: true`) for dhs tasks: they would sit outside `dhs-worktrees/<task>`.
+Do not use app-created worktrees (`use_worktree: true`) for seh tasks: they would sit outside `seh-worktrees/<task>`.
 
 ## 5. Between waves
 
@@ -68,7 +68,7 @@ One table: key, session link (`[title](#local_<id>)`), state (done, `BLOCKED: ..
 
 - Children never spawn children. A session whose prompt has the line `Fan-out child: yes` runs exactly its one key in place: it never runs this procedure and never calls `start_session`. Subagents (Architect, Implementer, Consultant, Reviewer, brainstorm personae launched with the Agent tool) are not sessions and are allowed inside a child, as in a normal single-key run.
 - The parent does not do the children's work and does not merge PRs.
-- Run only the skill the user named. The parent never starts another skill's session, for example `planit` for a missing spec. A missing spec or prompt is `BLOCKED` for that key, with the one-line fix (`run /dhs-planit <KEY> first`).
+- Run only the skill the user named. The parent never starts another skill's session, for example `planit` for a missing spec. A missing spec or prompt is `BLOCKED` for that key, with the one-line fix (`run /seh-planit <KEY> first`).
 - A child's `BLOCKED:` or `Q<n>` does not stop siblings.
 - Children share no notes folder and no side channel. The parent does not create one. Coordination goes through the user and the repo's own tracker files.
 - Shared files (tracker, log, status) written by parallel children need the skill's own locking or per-key files; a shared-file collision is a stop for that key, not a silent overwrite.

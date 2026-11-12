@@ -13,12 +13,12 @@ Publish Architect, Implementer, Consultant, and Reviewer under package `agents/`
 | `agents/consultant.md` | Quality on the phase diff. Structured report. Does not edit product code, does not talk to the user, does not judge spec compliance | haiku |
 | `agents/reviewer.md` | Spec compliance only. Git allowlist after acceptance. Update-from-base | sonnet |
 
-Bodies must instruct: **read** `harness.config.json` for base branch, statuses, tracker maps, `fetchFields`, content language, product line; **call** `.dhs/scripts/` for git and for Jira.
+Bodies must instruct: **read** `harness.config.json` for base branch, statuses, tracker maps, `fetchFields`, content language, product line; **call** `.seh/scripts/` for git and for Jira.
 
 ## Out of scope
 
 - Putting facilitator templates into `agents/`. Facilitator templates belong in `brainstorm/` (phase 7).
-- Generating live copies into `.claude/agents/` (phase 5 `/dhs-setup`).
+- Generating live copies into `.claude/agents/` (phase 5 `/seh-setup`).
 - Interpolating `agents.baseBranch`, status strings, Jira maps, `fetchFields`, content language, or product line into the template body as the project’s values.
 - Worktrees, merging PRs, a fifth role.
 - Architect writing file-by-file / line-level implementation recipes.
@@ -41,9 +41,9 @@ Bodies must instruct: **read** `harness.config.json` for base branch, statuses, 
 - Stops use PRD `BLOCKED:` line.
 - Tracker: write spec, prompt, log, and status **only** on the active tracker (files or Jira). Never both. Never mirror.
 - File tracker paths and basename rules: PRD Feature tracking + Artifact contract.
-- Jira: call `.dhs/scripts/jira` (not MCP, not raw `curl`); create/transition/comment only using `agents.tracker` maps; `null` means skip that transition; do not invent status names; Consultant pass is not written on the ticket.
+- Jira: call `.seh/scripts/jira` (not MCP, not raw `curl`); create/transition/comment only using `agents.tracker` maps; `null` means skip that transition; do not invent status names; Consultant pass is not written on the ticket.
 - Languages: conversation language vs `agents.contentLanguage` from config (read at run time). Status keys stay configured English strings; do not translate them from the conversation.
-- Follow generated rules that load on Read/Write/Edit. Run the **project’s** test/lint/typecheck, not a dhs command.
+- Follow generated rules that load on Read/Write/Edit. Run the **project’s** test/lint/typecheck, not a seh command.
 
 ### Architect
 
@@ -53,13 +53,13 @@ Bodies must instruct: **read** `harness.config.json` for base branch, statuses, 
 - Interactive: confirm title, then spec+prompt, before write. Critical/autonomous: write once Questions is satisfied.
 - May split tasks; `depends` / `relates`. A basename in `depends` must be `done` before implementation starts.
 - Paths in the spec are constraints, never a step list.
-- If a brainstorm round is needed: stop and ask `/dhs-brainstorm` (do not interview personae in-process). Details: PRD Brainstorm; full skill in phase 7.
+- If a brainstorm round is needed: stop and ask `/seh-brainstorm` (do not interview personae in-process). Details: PRD Brainstorm; full skill in phase 7.
 - Read-only on application code.
 
 ### Implementer
 
 - Same agent for `type: feature` and `type: bug`.
-- Before work: `.dhs/scripts/start-task` with the task basename/key. Then set status `in progress` (files string or Jira `inProgress` map).
+- Before work: `.seh/scripts/start-task` with the task basename/key. Then set status `in progress` (files string or Jira `inProgress` map).
 - Plan 2–6 phases (coherent slices, not one file). More than 6: merge remaining work into the last phase.
 - After **each** phase: launch Consultant. Do not start the next phase until the Consultant protocol says `continue`.
 - Do not edit `CHANGELOG.md`.
@@ -92,7 +92,7 @@ Loop, hard caps, anti-thrash, and debt protocol: copy the rules from PRD Consult
 - Max three Reviewer rounds. Same ❌ with no code change ends the loop.
 - An ❌ that contradicts the spec goes to the user; changing the spec is Architect work.
 - Acceptance only with no open ❌. Interactive: wait for explicit user acceptance (no changelog/commit/push/PR until then). Critical/autonomous: this run is acceptance; then git steps; do not merge.
-- After acceptance, in order: final review in the log → status `done` → `CHANGELOG.md` entry → `.dhs/scripts/commit-task` → `push-task` → `open-pr` → `return-to-base`.
+- After acceptance, in order: final review in the log → status `done` → `CHANGELOG.md` entry → `.seh/scripts/commit-task` → `push-task` → `open-pr` → `return-to-base`.
 - **Update** only when asked: `update-from-base`; stop on conflicts.
 - If the task branch is missing, Reviewer may call `start-task`. Architect and Consultant never call git scripts.
 

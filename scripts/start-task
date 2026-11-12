@@ -4,7 +4,7 @@
 # Reads project-root harness.config.json. Copies this task's file-tracker files
 # into the worktree, then removes uncommitted copies of those paths from launch.
 # No commit, no push, no uncommit.
-# Invoked as .dhs/scripts/start-task after dhs install.
+# Invoked as .seh/scripts/start-task after seh install.
 
 . "$(dirname "$0")/lib.sh"
 
@@ -16,11 +16,11 @@ if [ $# -ne 1 ]; then
 fi
 
 read_base_branch
-base=$DHS_BASE_BRANCH
+base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
 
 launch=$(repo_root)
-wt=$(dhs_worktree_path "$task")
+wt=$(seh_worktree_path "$task")
 
 finish() {
   _status=$1
@@ -79,11 +79,11 @@ if git remote | grep -qx origin; then
 fi
 
 if [ "$base_ref" = "$base" ] && ! local_branch_exists "$base"; then
-  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /dhs-setup"
+  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /seh-setup"
 fi
 
 if ! out=$(git worktree add -b "$branch" "$wt" "$base_ref" 2>&1); then
-  blocked "could not create $branch from $base_ref ($out)" "remove a stale path under .git/dhs-worktrees, then retry start-task"
+  blocked "could not create $branch from $base_ref ($out)" "remove a stale path under .git/seh-worktrees, then retry start-task"
 fi
 
 finish ok "branch: $branch" "base: $base" "created: yes" "worktree: $wt"

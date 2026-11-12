@@ -2,36 +2,36 @@
 
 ## Goal
 
-Publish `/dhs-planit`, `/dhs-doit`, `/dhs-checkit`, and `/dhs-shipit`. `/dhs-setup` generates them into the consuming project from `.dhs/skills/`. Single-stage skills do not chain. Only `/dhs-shipit` runs the full path.
+Publish `/seh-planit`, `/seh-doit`, `/seh-checkit`, and `/seh-shipit`. `/seh-setup` generates them into the consuming project from `.seh/skills/`. Single-stage skills do not chain. Only `/seh-shipit` runs the full path.
 
 ## In scope
 
 | Skill | Does |
 |-------|------|
-| `/dhs-planit` | Architect once. Offer next step; do not start it |
-| `/dhs-doit` | Implementer, including the Consultant loop. Feature or bug: same agent |
-| `/dhs-checkit` | One Reviewer round. Variants: review, update |
-| `/dhs-shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. Starts at the first missing stage. Stops if already `done` |
+| `/seh-planit` | Architect once. Offer next step; do not start it |
+| `/seh-doit` | Implementer, including the Consultant loop. Feature or bug: same agent |
+| `/seh-checkit` | One Reviewer round. Variants: review, update |
+| `/seh-shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. Starts at the first missing stage. Stops if already `done` |
 
-Shared guard: stop before work when `harness.config.json` is missing **or** `.dhs/VERSION` ≠ `dhs.generatedFrom`. Message: run `/dhs-setup` (and `dhs install` first if `.dhs/` or `.dhs/VERSION` is missing).
+Shared guard: stop before work when `harness.config.json` is missing **or** `.seh/VERSION` ≠ `seh.generatedFrom`. Message: run `/seh-setup` (and `seh install` first if `.seh/` or `.seh/VERSION` is missing).
 
 ## Out of scope
 
-- `/dhs-setup` behaviour (phase 5) except calling it in the guard message.
-- `/dhs-brainstorm` (phase 7). `/dhs-planit` / Architect may **stop and ask** that skill; they do not implement the round.
+- `/seh-setup` behaviour (phase 5) except calling it in the guard message.
+- `/seh-brainstorm` (phase 7). `/seh-planit` / Architect may **stop and ask** that skill; they do not implement the round.
 - A user-facing Consultant skill.
 - Merging the PR.
 - Extra CLI.
 
 ## Inputs
 
-- PRD: Skills table; `/dhs-shipit` pipeline; Binding flow Work; Agents; Modes; Statuses; Stops; Decision 11.
+- PRD: Skills table; `/seh-shipit` pipeline; Binding flow Work; Agents; Modes; Statuses; Stops; Decision 11.
 - Phase 4 agent files (skills launch those agents; they do not duplicate agent procedure).
-- Phase 5 generation of work skills from `.dhs/skills/`.
+- Phase 5 generation of work skills from `.seh/skills/`.
 
 ## Outputs
 
-Skill templates under `skills/` for the four names above (host-shaped, e.g. `skills/dhs-planit/…`). After setup in a consuming project they appear next to `/dhs-setup`, not as machine-wide skills.
+Skill templates under `skills/` for the four names above (host-shaped, e.g. `skills/seh-planit/…`). After setup in a consuming project they appear next to `/seh-setup`, not as machine-wide skills.
 
 ## Behaviour
 
@@ -39,29 +39,29 @@ Skill templates under `skills/` for the four names above (host-shaped, e.g. `ski
 
 Before doing work:
 
-1. If `.dhs/` or `.dhs/VERSION` missing → `BLOCKED:` run `dhs install` here, then `/dhs-setup`.
-2. If `harness.config.json` missing → `BLOCKED:` run `/dhs-setup`.
-3. If `.dhs/VERSION` ≠ `dhs.generatedFrom` → `BLOCKED:` run `/dhs-setup` so generated files match installed templates.
+1. If `.seh/` or `.seh/VERSION` missing → `BLOCKED:` run `seh install` here, then `/seh-setup`.
+2. If `harness.config.json` missing → `BLOCKED:` run `/seh-setup`.
+3. If `.seh/VERSION` ≠ `seh.generatedFrom` → `BLOCKED:` run `/seh-setup` so generated files match installed templates.
 
-### `/dhs-planit`
+### `/seh-planit`
 
 - Launch Architect once for the request.
-- When Architect finishes, offer the next step (`/dhs-doit` or `/dhs-shipit`); do not start it.
-- If Architect needs a brainstorm round: stop and ask `/dhs-brainstorm` (or the launching skill runs the round first). Architect does not interview personae in-process.
+- When Architect finishes, offer the next step (`/seh-doit` or `/seh-shipit`); do not start it.
+- If Architect needs a brainstorm round: stop and ask `/seh-brainstorm` (or the launching skill runs the round first). Architect does not interview personae in-process.
 
-### `/dhs-doit`
+### `/seh-doit`
 
 - Launch Implementer (Consultant inside each phase) for an existing spec+prompt.
 - Same skill for bugs and features.
 - Do not start Architect or Reviewer.
 
-### `/dhs-checkit`
+### `/seh-checkit`
 
 - One Reviewer round. Parse intent: review (default) or **update** from base.
 - Update rules: PRD Reviewer (script `update-from-base`).
-- Do not chain into Implementer unless this is a review ❌ handoff the user asked to fix in this invocation — prefer reporting ❌ and offering `/dhs-doit`. `/dhs-shipit` owns the fix-round loop.
+- Do not chain into Implementer unless this is a review ❌ handoff the user asked to fix in this invocation — prefer reporting ❌ and offering `/seh-doit`. `/seh-shipit` owns the fix-round loop.
 
-### `/dhs-shipit`
+### `/seh-shipit`
 
 Pipeline (PRD):
 
@@ -75,17 +75,17 @@ Starts at the first missing stage. Stops if status is already `done`.
 
 Do not pause between stages when there is no question and no stop. Report once at the end or at the first stop.
 
-Does not start a brainstorm round by itself. Architect inside this skill still stops and asks `/dhs-brainstorm` when the consult threshold says so.
+Does not start a brainstorm round by itself. Architect inside this skill still stops and asks `/seh-brainstorm` when the consult threshold says so.
 
-Mode: from intent; a launch may name the mode so every agent in `/dhs-shipit` shares it. Default `interactive`.
+Mode: from intent; a launch may name the mode so every agent in `/seh-shipit` shares it. Default `interactive`.
 
 ## Done when
 
-- Four work-skill templates exist under `skills/` and are generated by `/dhs-setup`, not by `dhs install`.
+- Four work-skill templates exist under `skills/` and are generated by `/seh-setup`, not by `seh install`.
 - All four implement the guard.
-- `/dhs-planit` does not start implementation or review. `/dhs-doit` does not spec. `/dhs-checkit` is one Reviewer round (plus the update variant). `/dhs-shipit` matches the five-step pipeline and does not merge.
+- `/seh-planit` does not start implementation or review. `/seh-doit` does not spec. `/seh-checkit` is one Reviewer round (plus the update variant). `/seh-shipit` matches the five-step pipeline and does not merge.
 - No Consultant user skill.
 
 ## Handoff
 
-Phase 7 adds `/dhs-brainstorm` and the round templates. Planit/feature already know to stop and ask for that skill; they become complete when phase 7 lands.
+Phase 7 adds `/seh-brainstorm` and the round templates. Planit/feature already know to stop and ask for that skill; they become complete when phase 7 lands.

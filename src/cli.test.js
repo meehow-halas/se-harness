@@ -13,7 +13,7 @@ const {
   withTempDir,
 } = require("../test/helpers");
 
-const USAGE = "Usage: dhs <install|uninstall>";
+const USAGE = "Usage: seh <install|uninstall>";
 
 function read(p) {
   return fs.readFileSync(p, "utf8");
@@ -47,7 +47,7 @@ describe("cli dispatch", () => {
       const result = runCli(["install", "extra"], { cwd });
       assert.equal(result.status, 1);
       assert.equal(result.stderr.trim(), USAGE);
-      assert.equal(exists(path.join(cwd, ".dhs")), false);
+      assert.equal(exists(path.join(cwd, ".seh")), false);
     });
   });
 
@@ -57,12 +57,12 @@ describe("cli dispatch", () => {
       assert.equal(result.status, 1);
       assert.match(result.stderr, /Unknown command: status/);
       assert.match(result.stderr, new RegExp(USAGE));
-      assert.equal(exists(path.join(cwd, ".dhs")), false);
+      assert.equal(exists(path.join(cwd, ".seh")), false);
     });
   });
 });
 
-describe("dhs install", () => {
+describe("seh install", () => {
   test("copies payload dirs under the same names, VERSION, and project skill", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
@@ -78,41 +78,41 @@ describe("dhs install", () => {
 
       for (const name of PAYLOAD_DIRS) {
         assert.equal(
-          read(path.join(project, ".dhs", name, "marker.txt")),
+          read(path.join(project, ".seh", name, "marker.txt")),
           `${name}\n`
         );
       }
       assert.equal(
-        read(path.join(project, ".dhs", "agents", "nested", "deep.txt")),
+        read(path.join(project, ".seh", "agents", "nested", "deep.txt")),
         "nested\n"
       );
-      assert.equal(read(path.join(project, ".dhs", "VERSION")), "9.8.7\n");
+      assert.equal(read(path.join(project, ".seh", "VERSION")), "9.8.7\n");
       assert.equal(
-        read(path.join(project, ".claude", "skills", "dhs-setup", "SKILL.md")),
+        read(path.join(project, ".claude", "skills", "seh-setup", "SKILL.md")),
         "# setup\n"
       );
       assert.equal(
-        read(path.join(project, ".cursor", "skills", "dhs-setup", "SKILL.md")),
+        read(path.join(project, ".cursor", "skills", "seh-setup", "SKILL.md")),
         "# setup\n"
       );
       assert.equal(
-        read(path.join(project, ".opencode", "skills", "dhs-setup", "SKILL.md")),
+        read(path.join(project, ".opencode", "skills", "seh-setup", "SKILL.md")),
         "# setup\n"
       );
       assert.equal(
-        exists(path.join(project, ".dhs", "references", "hosts.json")),
+        exists(path.join(project, ".seh", "references", "hosts.json")),
         true
       );
       assert.equal(
         exists(
-          path.join(project, ".dhs", "references", "opencode-check-update.js")
+          path.join(project, ".seh", "references", "opencode-check-update.js")
         ),
         true
       );
     });
   });
 
-  test("does not copy colocated *.test.js files into .dhs", () => {
+  test("does not copy colocated *.test.js files into .seh", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -126,21 +126,21 @@ describe("dhs install", () => {
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
-      assert.equal(exists(path.join(project, ".dhs", "scripts", "marker.txt")), true);
+      assert.equal(exists(path.join(project, ".seh", "scripts", "marker.txt")), true);
       assert.equal(
-        exists(path.join(project, ".dhs", "scripts", "start-task.test.js")),
+        exists(path.join(project, ".seh", "scripts", "start-task.test.js")),
         false
       );
       assert.equal(
-        exists(path.join(project, ".dhs", "scripts", "start-task.test.mjs")),
+        exists(path.join(project, ".seh", "scripts", "start-task.test.mjs")),
         false
       );
       assert.equal(
-        exists(path.join(project, ".dhs", "scripts", "start-task.test.cjs")),
+        exists(path.join(project, ".seh", "scripts", "start-task.test.cjs")),
         false
       );
       assert.equal(
-        exists(path.join(project, ".dhs", "agents", "architect.test.js")),
+        exists(path.join(project, ".seh", "agents", "architect.test.js")),
         false
       );
     });
@@ -158,8 +158,8 @@ describe("dhs install", () => {
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
-      assert.equal(exists(path.join(project, ".dhs", "packs")), false);
-      assert.equal(exists(path.join(project, ".dhs", "agents", "marker.txt")), true);
+      assert.equal(exists(path.join(project, ".seh", "packs")), false);
+      assert.equal(exists(path.join(project, ".seh", "agents", "marker.txt")), true);
     });
   });
 
@@ -196,7 +196,7 @@ describe("dhs install", () => {
     });
   });
 
-  test("fails when skills/dhs-setup is missing", () => {
+  test("fails when skills/seh-setup is missing", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -206,7 +206,7 @@ describe("dhs install", () => {
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 1);
-      assert.match(result.stderr, /missing package skill at skills\/dhs-setup/);
+      assert.match(result.stderr, /missing package skill at skills\/seh-setup/);
     });
   });
 
@@ -219,17 +219,17 @@ describe("dhs install", () => {
       makePackageRoot(pkg);
 
       assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
-      fs.writeFileSync(path.join(project, ".dhs", "agents", "stale.txt"), "old\n");
+      fs.writeFileSync(path.join(project, ".seh", "agents", "stale.txt"), "old\n");
       fs.writeFileSync(path.join(pkg, "agents", "marker.txt"), "new\n");
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
-      assert.equal(read(path.join(project, ".dhs", "agents", "marker.txt")), "new\n");
-      assert.equal(exists(path.join(project, ".dhs", "agents", "stale.txt")), false);
+      assert.equal(read(path.join(project, ".seh", "agents", "marker.txt")), "new\n");
+      assert.equal(exists(path.join(project, ".seh", "agents", "stale.txt")), false);
     });
   });
 
-  test("prints a /dhs-setup reminder when harness.config.json exists and does not generate live files", () => {
+  test("prints a /seh-setup reminder when harness.config.json exists and does not generate live files", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -243,9 +243,9 @@ describe("dhs install", () => {
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
-      assert.match(result.stdout, /Run \/dhs-setup to apply the new templates/);
-      assert.equal(read(path.join(project, ".dhs", "VERSION")), "1.2.3\n");
-      assert.equal(exists(path.join(project, ".dhs", "agents", "marker.txt")), true);
+      assert.match(result.stdout, /Run \/seh-setup to apply the new templates/);
+      assert.equal(read(path.join(project, ".seh", "VERSION")), "1.2.3\n");
+      assert.equal(exists(path.join(project, ".seh", "agents", "marker.txt")), true);
       assert.equal(exists(path.join(project, ".claude", "agents")), false);
       assert.equal(exists(path.join(project, ".cursor", "agents")), false);
       assert.equal(exists(path.join(project, ".opencode", "agents")), false);
@@ -260,7 +260,7 @@ describe("dhs install", () => {
     withTempDir((project) => {
       const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
       assert.equal(result.status, 0, result.stderr);
-      const refDir = path.join(project, ".dhs", "references");
+      const refDir = path.join(project, ".seh", "references");
       assert.equal(exists(path.join(refDir, "session-fanout.md")), true);
       const copied = fs.readFileSync(path.join(refDir, "hosts.json"), "utf8");
       const source = fs.readFileSync(path.join(REPO_ROOT, "references", "hosts.json"), "utf8");
@@ -280,17 +280,17 @@ describe("dhs install", () => {
     withTempDir((project) => {
       const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
       assert.equal(result.status, 0, result.stderr);
-      assert.match(result.stdout, /dhs install: OK \S+ in .*/);
+      assert.match(result.stdout, /seh install: OK \S+ in .*/);
       assert.ok(result.stdout.includes(path.basename(project)), result.stdout);
-      assert.match(result.stdout, /\/dhs-setup/);
+      assert.match(result.stdout, /\/seh-setup/);
     });
   });
 
-  test("installed fanout-plan runs from .dhs/scripts and plans a fan-out", () => {
+  test("installed fanout-plan runs from .seh/scripts and plans a fan-out", () => {
     withTempDir((project) => {
       const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
       assert.equal(result.status, 0, result.stderr);
-      const planner = path.join(project, ".dhs", "scripts", "fanout-plan");
+      const planner = path.join(project, ".seh", "scripts", "fanout-plan");
       const run = require("child_process").spawnSync(
         "sh",
         [planner, "--skill", "doit", "--keys", "IN-7,IN-9", "--depends", "IN-9:IN-7"],
@@ -315,21 +315,21 @@ describe("dhs install", () => {
         "check-update",
         "fanout-plan",
       ]) {
-        const mode = fs.statSync(path.join(project, ".dhs", "scripts", name)).mode;
+        const mode = fs.statSync(path.join(project, ".seh", "scripts", name)).mode;
         assert.notEqual(mode & 0o111, 0, name);
       }
       assert.equal(
-        exists(path.join(project, ".dhs", "scripts", "start-task.test.js")),
+        exists(path.join(project, ".seh", "scripts", "start-task.test.js")),
         false
       );
       assert.equal(
-        exists(path.join(project, ".dhs", "scripts", "lib.test.js")),
+        exists(path.join(project, ".seh", "scripts", "lib.test.js")),
         false
       );
     });
   });
 
-  test("creates .gitignore with .dhs/ and credentials when the file is missing", () => {
+  test("creates .gitignore with .seh/ and credentials when the file is missing", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -341,7 +341,7 @@ describe("dhs install", () => {
       assert.equal(result.status, 0, result.stderr);
       assert.equal(
         read(path.join(project, ".gitignore")),
-        ".dhs/\nharness.credentials.local.json\n"
+        ".seh/\nharness.credentials.local.json\n"
       );
     });
   });
@@ -359,12 +359,12 @@ describe("dhs install", () => {
       assert.equal(result.status, 0, result.stderr);
       assert.equal(
         read(path.join(project, ".gitignore")),
-        "node_modules/\n*.log\n.dhs/\nharness.credentials.local.json\n"
+        "node_modules/\n*.log\n.seh/\nharness.credentials.local.json\n"
       );
     });
   });
 
-  test("appends credentials when .gitignore already ignores .dhs", () => {
+  test("appends credentials when .gitignore already ignores .seh", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -372,7 +372,7 @@ describe("dhs install", () => {
       fs.mkdirSync(project);
       makePackageRoot(pkg);
 
-      for (const existing of [".dhs", ".dhs/", "/.dhs", "/.dhs/"]) {
+      for (const existing of [".seh", ".seh/", "/.seh", "/.seh/"]) {
         const body = `node_modules/\n${existing}\n`;
         fs.writeFileSync(path.join(project, ".gitignore"), body);
         const result = runCli(["install"], { cwd: project, packageRoot: pkg });
@@ -386,7 +386,7 @@ describe("dhs install", () => {
     });
   });
 
-  test("appends .dhs/ when .gitignore already ignores credentials", () => {
+  test("appends .seh/ when .gitignore already ignores credentials", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -398,7 +398,7 @@ describe("dhs install", () => {
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
-      assert.equal(read(path.join(project, ".gitignore")), `${body}.dhs/\n`);
+      assert.equal(read(path.join(project, ".gitignore")), `${body}.seh/\n`);
     });
   });
 
@@ -414,7 +414,7 @@ describe("dhs install", () => {
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
-      assert.equal(read(path.join(project, ".gitignore")), `${body}.dhs/\n`);
+      assert.equal(read(path.join(project, ".gitignore")), `${body}.seh/\n`);
     });
   });
 
@@ -425,7 +425,7 @@ describe("dhs install", () => {
       fs.mkdirSync(pkg);
       fs.mkdirSync(project);
       makePackageRoot(pkg);
-      const body = "/.dhs/\n/harness.credentials.local.json\nnode_modules/\n";
+      const body = "/.seh/\n/harness.credentials.local.json\nnode_modules/\n";
       fs.writeFileSync(path.join(project, ".gitignore"), body);
 
       const result = runCli(["install"], { cwd: project, packageRoot: pkg });
@@ -450,7 +450,7 @@ describe("dhs install", () => {
       assert.equal(claude.hooks.SessionStart[0].matcher, "startup");
       assert.equal(
         claude.hooks.SessionStart[0].hooks[0].command,
-        ".dhs/scripts/check-update --host claude-code"
+        ".seh/scripts/check-update --host claude-code"
       );
 
       const cursor = JSON.parse(read(path.join(project, ".cursor", "hooks.json")));
@@ -458,12 +458,12 @@ describe("dhs install", () => {
       assert.equal(cursor.hooks.sessionStart.length, 1);
       assert.equal(
         cursor.hooks.sessionStart[0].command,
-        ".dhs/scripts/check-update --host cursor"
+        ".seh/scripts/check-update --host cursor"
       );
       assert.equal(cursor.hooks.sessionStart[0].timeout, 5);
 
       const plugin = read(
-        path.join(project, ".opencode", "plugins", "dhs-check-update.js")
+        path.join(project, ".opencode", "plugins", "seh-check-update.js")
       );
       assert.match(plugin, /check-update/);
       assert.match(plugin, /"--host", "opencode"/);
@@ -486,11 +486,11 @@ describe("dhs install", () => {
       const cursor = JSON.parse(read(path.join(project, ".cursor", "hooks.json")));
       assert.equal(cursor.hooks.sessionStart.length, 1);
       assert.equal(
-        exists(path.join(project, ".opencode", "plugins", "dhs-check-update.js")),
+        exists(path.join(project, ".opencode", "plugins", "seh-check-update.js")),
         true
       );
       const pluginDir = path.join(project, ".opencode", "plugins");
-      assert.deepEqual(fs.readdirSync(pluginDir), ["dhs-check-update.js"]);
+      assert.deepEqual(fs.readdirSync(pluginDir), ["seh-check-update.js"]);
     });
   });
 
@@ -536,20 +536,20 @@ describe("dhs install", () => {
       );
       assert.ok(claudeCmds.includes("echo keep-claude"));
       assert.ok(
-        claudeCmds.includes(".dhs/scripts/check-update --host claude-code")
+        claudeCmds.includes(".seh/scripts/check-update --host claude-code")
       );
 
       const cursor = JSON.parse(read(path.join(project, ".cursor", "hooks.json")));
       assert.equal(cursor.version, 1);
       const cursorCmds = cursor.hooks.sessionStart.map((entry) => entry.command);
       assert.ok(cursorCmds.includes("echo keep-cursor"));
-      assert.ok(cursorCmds.includes(".dhs/scripts/check-update --host cursor"));
+      assert.ok(cursorCmds.includes(".seh/scripts/check-update --host cursor"));
     });
   });
 });
 
-describe("dhs uninstall", () => {
-  test("removes .dhs and the setup skill, keeps config and other host files, prunes empty dirs", () => {
+describe("seh uninstall", () => {
+  test("removes .seh and the setup skill, keeps config and other host files, prunes empty dirs", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
       const project = path.join(root, "project");
@@ -596,21 +596,21 @@ describe("dhs uninstall", () => {
 
       const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
-      assert.equal(exists(path.join(project, ".dhs")), false);
+      assert.equal(exists(path.join(project, ".seh")), false);
       assert.equal(
-        exists(path.join(project, ".claude", "skills", "dhs-setup")),
+        exists(path.join(project, ".claude", "skills", "seh-setup")),
         false
       );
       assert.equal(
-        exists(path.join(project, ".cursor", "skills", "dhs-setup")),
+        exists(path.join(project, ".cursor", "skills", "seh-setup")),
         false
       );
       assert.equal(
-        exists(path.join(project, ".opencode", "skills", "dhs-setup")),
+        exists(path.join(project, ".opencode", "skills", "seh-setup")),
         false
       );
       assert.equal(
-        exists(path.join(project, ".opencode", "plugins", "dhs-check-update.js")),
+        exists(path.join(project, ".opencode", "plugins", "seh-check-update.js")),
         false
       );
       assert.equal(
@@ -638,7 +638,7 @@ describe("dhs uninstall", () => {
       );
       assert.equal(
         read(path.join(project, ".gitignore")),
-        ".dhs/\nharness.credentials.local.json\n"
+        ".seh/\nharness.credentials.local.json\n"
       );
     });
   });
@@ -710,7 +710,7 @@ describe("dhs uninstall", () => {
       assert.equal(cursor.hooks.sessionStart[0].command, "echo keep-cursor");
       assert.equal(JSON.stringify(cursor).includes("check-update"), false);
       assert.equal(
-        exists(path.join(project, ".opencode", "plugins", "dhs-check-update.js")),
+        exists(path.join(project, ".opencode", "plugins", "seh-check-update.js")),
         false
       );
     });
@@ -727,7 +727,7 @@ describe("dhs uninstall", () => {
       assert.equal(runCli(["uninstall"], { cwd: project, packageRoot: pkg }).status, 0);
       const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
       assert.equal(result.status, 0, result.stderr);
-      assert.equal(exists(path.join(project, ".dhs")), false);
+      assert.equal(exists(path.join(project, ".seh")), false);
       assert.equal(exists(path.join(project, ".claude")), false);
       assert.equal(exists(path.join(project, ".cursor")), false);
       assert.equal(exists(path.join(project, ".opencode")), false);

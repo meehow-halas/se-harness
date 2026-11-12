@@ -3,7 +3,7 @@
   "version": "1.0.2",
   "description": "SE harness layer",
   "bin": {
-    "dhs": "./src/cli.js"
+    "seh": "./src/cli.js"
   },
   "files": [
     "src",

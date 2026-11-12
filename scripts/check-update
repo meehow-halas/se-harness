@@ -1,5 +1,5 @@
 #!/bin/sh
-# Compare .dhs/VERSION to the highest semver tag on GitHub. Notify only.
+# Compare .seh/VERSION to the highest semver tag on GitHub. Notify only.
 # Fail-open: empty stdout and exit 0 on any problem.
 
 set -eu
@@ -28,11 +28,11 @@ if [ ! -t 0 ]; then
   cat >/dev/null || true
 fi
 
-ROOT=${DHS_CHECK_ROOT:-$(pwd)}
-VERSION_FILE=$ROOT/.dhs/VERSION
-CACHE_FILE=$ROOT/.dhs/update-check.json
-REMOTE=${DHS_CHECK_REMOTE:-https://github.com/nbmh/dev-harness-layer.git}
-TTL=${DHS_CHECK_TTL:-86400}
+ROOT=${SEH_CHECK_ROOT:-$(pwd)}
+VERSION_FILE=$ROOT/.seh/VERSION
+CACHE_FILE=$ROOT/.seh/update-check.json
+REMOTE=${SEH_CHECK_REMOTE:-https://github.com/nbmh/dev-harness-layer.git}
+TTL=${SEH_CHECK_TTL:-86400}
 
 if [ ! -f "$VERSION_FILE" ]; then
   quiet_exit
@@ -45,7 +45,7 @@ case $INSTALLED in
     ;;
 esac
 
-now=${DHS_CHECK_NOW:-$(date +%s)}
+now=${SEH_CHECK_NOW:-$(date +%s)}
 case $now in
   '' | *[!0-9]*)
     quiet_exit
@@ -156,8 +156,8 @@ write_cache() {
 }
 
 fetch_latest() {
-  if [ -n "${DHS_GIT_LS_REMOTE:-}" ]; then
-    out=$(sh -c "$DHS_GIT_LS_REMOTE" 2>/dev/null) || return 1
+  if [ -n "${SEH_GIT_LS_REMOTE:-}" ]; then
+    out=$(sh -c "$SEH_GIT_LS_REMOTE" 2>/dev/null) || return 1
   else
     out=$(
       GIT_TERMINAL_PROMPT=0 git \
@@ -189,7 +189,7 @@ fi
 
 msg=$(
   printf \
-    'dhs %s is installed; %s is available (GitHub tag). Run npx -p dev-harness-layer dhs install or npx -p github:nbmh/dev-harness-layer dhs install, then /dhs-setup.' \
+    'seh %s is installed; %s is available (GitHub tag). Run npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install, then /seh-setup.' \
     "$INSTALLED" "$LATEST"
 )
 

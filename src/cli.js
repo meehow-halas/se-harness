@@ -13,14 +13,14 @@ const PAYLOAD_DIRS = [
   "references",
   "scripts",
 ];
-const SETUP_SKILL = "dhs-setup";
+const SETUP_SKILL = "seh-setup";
 const HOSTS_FILE = "hosts.json";
-const CHECK_UPDATE_SCRIPT = ".dhs/scripts/check-update";
+const CHECK_UPDATE_SCRIPT = ".seh/scripts/check-update";
 const OPENCODE_PLUGIN_SRC = path.join("references", "opencode-check-update.js");
 const GITIGNORE_ENTRIES = [
   {
-    line: ".dhs/",
-    alreadyPresent: new Set([".dhs", ".dhs/", "/.dhs", "/.dhs/"]),
+    line: ".seh/",
+    alreadyPresent: new Set([".seh", ".seh/", "/.seh", "/.seh/"]),
   },
   {
     line: "harness.credentials.local.json",
@@ -32,7 +32,7 @@ const GITIGNORE_ENTRIES = [
 ];
 
 function usage() {
-  return "Usage: dhs <install|uninstall>";
+  return "Usage: seh <install|uninstall>";
 }
 
 function resolveCtx(ctx) {
@@ -55,23 +55,23 @@ function posixJoin(rel) {
 function loadHosts(packageRoot) {
   const hostsPath = path.join(packageRoot, "references", HOSTS_FILE);
   if (!fs.existsSync(hostsPath)) {
-    console.error("dhs: missing package file at references/hosts.json");
+    console.error("seh: missing package file at references/hosts.json");
     process.exit(1);
   }
   let data;
   try {
     data = JSON.parse(fs.readFileSync(hostsPath, "utf8"));
   } catch {
-    console.error("dhs: invalid JSON at references/hosts.json");
+    console.error("seh: invalid JSON at references/hosts.json");
     process.exit(1);
   }
   if (!Array.isArray(data.hosts) || data.hosts.length === 0) {
-    console.error("dhs: references/hosts.json has no hosts");
+    console.error("seh: references/hosts.json has no hosts");
     process.exit(1);
   }
   for (const host of data.hosts) {
     if (!host || typeof host.skillsDir !== "string" || host.skillsDir === "") {
-      console.error("dhs: references/hosts.json host is missing skillsDir");
+      console.error("seh: references/hosts.json host is missing skillsDir");
       process.exit(1);
     }
     if (host.hooksFile) {
@@ -82,7 +82,7 @@ function loadHosts(packageRoot) {
         host.hooksShape === ""
       ) {
         console.error(
-          "dhs: references/hosts.json host hooksFile needs hooksShape"
+          "seh: references/hosts.json host hooksFile needs hooksShape"
         );
         process.exit(1);
       }
@@ -91,7 +91,7 @@ function loadHosts(packageRoot) {
         (typeof host.hooksEvent !== "string" || host.hooksEvent === "")
       ) {
         console.error(
-          "dhs: references/hosts.json host hooksFile needs hooksEvent and hooksShape"
+          "seh: references/hosts.json host hooksFile needs hooksEvent and hooksShape"
         );
         process.exit(1);
       }
@@ -306,7 +306,7 @@ function ensureOpencodePlugin(cwd, host, packageRoot) {
   const src = opencodePluginSource(packageRoot);
   if (!fs.existsSync(src)) {
     console.error(
-      "dhs install: missing package file at references/opencode-check-update.js"
+      "seh install: missing package file at references/opencode-check-update.js"
     );
     process.exit(1);
   }
@@ -328,7 +328,7 @@ function ensureHostHook(cwd, host, packageRoot) {
   try {
     data = readJsonFile(filePath) || {};
   } catch {
-    console.error(`dhs install: invalid JSON at ${host.hooksFile}`);
+    console.error(`seh install: invalid JSON at ${host.hooksFile}`);
     process.exit(1);
   }
   const command = checkUpdateCommand(host);
@@ -338,7 +338,7 @@ function ensureHostHook(cwd, host, packageRoot) {
     ensureClaudeHook(data, host.hooksEvent, command);
   } else {
     console.error(
-      `dhs: references/hosts.json unknown hooksShape ${host.hooksShape}`
+      `seh: references/hosts.json unknown hooksShape ${host.hooksShape}`
     );
     process.exit(1);
   }
@@ -398,24 +398,24 @@ function pruneEmptyAncestors(startDir, cwd) {
 function install(ctx) {
   const { cwd, packageRoot } = resolveCtx(ctx);
   const hosts = loadHosts(packageRoot);
-  const dhsDir = path.join(cwd, ".dhs");
-  fs.mkdirSync(dhsDir, { recursive: true });
+  const sehDir = path.join(cwd, ".seh");
+  fs.mkdirSync(sehDir, { recursive: true });
 
   for (const name of PAYLOAD_DIRS) {
     const src = path.join(packageRoot, name);
     if (!fs.existsSync(src)) {
       continue;
     }
-    copyTree(src, path.join(dhsDir, name));
+    copyTree(src, path.join(sehDir, name));
   }
 
   const version = packageVersion(packageRoot);
-  fs.writeFileSync(path.join(dhsDir, "VERSION"), `${version}\n`);
+  fs.writeFileSync(path.join(sehDir, "VERSION"), `${version}\n`);
 
   const skillSrc = path.join(packageRoot, "skills", SETUP_SKILL);
   if (!fs.existsSync(skillSrc)) {
     console.error(
-      `dhs install: missing package skill at skills/${SETUP_SKILL}`
+      `seh install: missing package skill at skills/${SETUP_SKILL}`
     );
     process.exit(1);
   }
@@ -426,12 +426,12 @@ function install(ctx) {
 
   ensureGitignore(cwd);
 
-  console.log(`dhs install: OK ${version} in ${cwd}`);
-  console.log("Next: run /dhs-setup in the project.");
+  console.log(`seh install: OK ${version} in ${cwd}`);
+  console.log("Next: run /seh-setup in the project.");
 
   if (fs.existsSync(path.join(cwd, "harness.config.json"))) {
     console.log(
-      "harness.config.json is present. Run /dhs-setup to apply the new templates."
+      "harness.config.json is present. Run /seh-setup to apply the new templates."
     );
   }
 }
@@ -439,7 +439,7 @@ function install(ctx) {
 function uninstall(ctx) {
   const { cwd, packageRoot } = resolveCtx(ctx);
   const hosts = loadHosts(packageRoot);
-  fs.rmSync(path.join(cwd, ".dhs"), { recursive: true, force: true });
+  fs.rmSync(path.join(cwd, ".seh"), { recursive: true, force: true });
   for (const host of hosts) {
     const skillDir = setupSkillDir(cwd, host);
     fs.rmSync(skillDir, { recursive: true, force: true });

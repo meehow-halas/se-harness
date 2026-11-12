@@ -12,7 +12,7 @@ if [ $# -ne 1 ]; then
 fi
 
 read_base_branch
-base=$DHS_BASE_BRANCH
+base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
 
 branch=$(task_branch "$task")
@@ -21,7 +21,7 @@ if ! local_branch_exists "$branch"; then
 fi
 
 push_remote
-remote=$DHS_REMOTE
+remote=$SEH_REMOTE
 
 if ! out=$(git push --porcelain "$remote" "$branch" 2>&1); then
   blocked "push of $branch to $remote failed ($out)" "fix the remote rejection without force, then retry push-task"

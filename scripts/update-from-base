@@ -13,13 +13,13 @@ if [ $# -ne 1 ]; then
 fi
 
 read_base_branch
-base=$DHS_BASE_BRANCH
+base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
 branch=$(task_branch "$task")
 require_on_task "$branch"
 
 if ! local_branch_exists "$base"; then
-  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /dhs-setup"
+  blocked "base branch $base does not exist locally" "check out or fetch that branch, or set agents.baseBranch in /seh-setup"
 fi
 
 if git merge-base --is-ancestor "$base" HEAD 2>/dev/null; then
