@@ -53,7 +53,7 @@ Open point: whether the app accepts `cwd` on a dhs worktree. If refused, the par
 
 ## 5. Manual host
 
-Use a project with `sessionSpawn: manual` (Cursor or OpenCode). `/dhs-planit TST-1 TST-2` must print two commands and stop; it must not create any session.
+Use a project with `sessionSpawn: manual` (OpenCode), or Cursor without a request for independent work. `/dhs-planit TST-1 TST-2` must print two commands and stop; it must not create any session.
 
 ## 6. Failure cases to try
 
@@ -68,3 +68,11 @@ Result (pass/fail), the `fanout-plan` output, the session titles, and any `BLOCK
 ## Known issues (not blocking)
 
 - **Reviewer report language.** In `/dhs-shipit` runs on the test project, the parent replies in the user's language, but the Reviewer subagent's final report comes back in English, although `agents/reviewer.md` and the shipit skill ask for the launch to pass `Conversation language: Polish` (not verified in the transcript). Seen on 03-multiply and 011-feature-negate. Open TODO, non-critical. Next step when picked up: export the session transcript and check the exact Agent call input to see whether the launch line reached the Reviewer.
+
+## Cursor Agent (`cli_headless`)
+
+Requires the Cursor CLI (`agent` or `cursor-agent`) on `PATH` and `CURSOR_API_KEY`. In Cursor Agent run `/dhs-planit samodzielnie TST-1 TST-2`.
+
+Expected: two background `agent -p --trust --force --workspace ... "<prompt>"` commands, each writing one spec. Without `samodzielnie` it must print two commands and start nothing.
+
+Open point: whether a slash skill line (`/dhs-planit TST-1`) is expanded in `-p` mode. If not, the child ignores the skill; record it and report.
