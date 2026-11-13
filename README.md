@@ -4,7 +4,7 @@ A layer for software engineering work in an AI coding assistant. Supported hosts
 
 One path: request → spec → implementation with quality feedback → review against the spec.
 
-The product and CLI binary are **`seh`**. The npm package is **`dev-harness-layer`**. Contracts in full: [`docs/prd.md`](docs/prd.md).
+The product and CLI binary are **`seh`**. The npm package is **`se-harness`**. Contracts in full: [`docs/prd.md`](docs/prd.md).
 
 ## Requirements
 
@@ -44,10 +44,10 @@ Brainstorm uses the same map shape on `agents.brainstorm.model`. `/_grillit` ask
 From the project directory, pick one source and reuse it later for uninstall:
 
 ```text
-npx -p dev-harness-layer seh install
-npx -p github:nbmh/dev-harness-layer seh install
-npx -p github:nbmh/dev-harness-layer#<ref> seh install
-npx -p https://github.com/nbmh/dev-harness-layer seh install
+npx -p se-harness seh install
+npx -p github:meehow-halas/se-harness seh install
+npx -p github:meehow-halas/se-harness#<ref> seh install
+npx -p https://github.com/meehow-halas/se-harness seh install
 ```
 
 npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
@@ -57,7 +57,7 @@ npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_doit`, `/_checkit`, `/_shipit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. This README shows the default `_` names.
 
 ```text
-npx -p dev-harness-layer seh install --prefix my-
+npx -p se-harness seh install --prefix my-
 ```
 
 Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag. Installing again with another prefix removes the old `/_setit-se` skill; the next `/_setit-se` run regenerates the work skills under the new prefix and removes the old ones.
@@ -105,8 +105,8 @@ After you accept a clean review, the Reviewer commits, opens the PR and sets `do
 Same source as install:
 
 ```text
-npx -p dev-harness-layer seh uninstall
-npx -p github:nbmh/dev-harness-layer seh uninstall
+npx -p se-harness seh uninstall
+npx -p github:meehow-halas/se-harness seh uninstall
 ```
 
 Removes `.seh/` and the install-owned `/_setit-se` skill from every `skillsDir`. Leaves `harness.config.json` and files `/_setit-se` already generated (live agents, work skills, rules).
