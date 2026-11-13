@@ -40,7 +40,7 @@ A phase is `done` when its checklist is true **and**:
 | 5 | `/<prefix>setit-se` ADO add/change/remove | 2, 4 | done |
 | 6 | Agents, work skills, consumer `AGENTS.md` | 4, 5 | done |
 | 7 | HTML ↔ plain text for mapped fields | 3 | done |
-| 8 | Status key semantics in spec (docs only) | 6 | todo |
+| 8 | Status key semantics in spec (docs only) | 6 | done |
 
 Phase 7 may run after phase 3; it must complete before calling the initiative done. Phase 6 should not ship user-facing setup until phases 4–5 are `done`.
 
