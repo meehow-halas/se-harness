@@ -62,8 +62,12 @@ function fieldRef(loc) {
   return loc;
 }
 
+function readOnly(t) {
+  return t.readOnly === true;
+}
+
 function artifactsOnTrackerOnly(t) {
-  return t.artifactsOnTrackerOnly !== false;
+  return !readOnly(t) && t.artifactsOnTrackerOnly !== false;
 }
 
 function escapeHtml(s) {
@@ -298,6 +302,17 @@ if (cmd === "patch-content-type") {
 if (cmd === "mapped-field") {
   const t = trackerFrom(readJson(process.argv[3]));
   process.stdout.write(`${mapped(t, process.argv[4])}\n`);
+  process.exit(0);
+}
+
+if (cmd === "read-only") {
+  let on = false;
+  try {
+    on = readOnly(trackerFrom(JSON.parse(fs.readFileSync(process.argv[3], "utf8"))));
+  } catch {
+    on = false;
+  }
+  process.stdout.write(on ? "true\n" : "false\n");
   process.exit(0);
 }
 

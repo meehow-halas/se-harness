@@ -109,3 +109,15 @@ read_body_file() {
   cat > "$_tmp"
   printf '%s\n' "$_tmp"
 }
+
+# Hard guard: agents.tracker.readOnly true means no write verb reaches the
+# tracker. Runs before credentials are read and before any curl.
+guard_read_only() {
+  _ro_cfg=$(config_path)
+  if [ ! -f "$_ro_cfg" ] || ! command -v node >/dev/null 2>&1; then
+    return 0
+  fi
+  if [ "$(jira_json read-only "$_ro_cfg" 2>/dev/null)" = "true" ]; then
+    blocked "tracker is read-only" "edit repo files (agents.tracker.readOnly)"
+  fi
+}

@@ -1,5 +1,6 @@
 {
   "kind": "jira",
+  "readOnly": false,
   "artifactsOnTrackerOnly": true,
   "url": "",
   "user": "",

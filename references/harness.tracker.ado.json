@@ -1,5 +1,6 @@
 {
   "kind": "ado",
+  "readOnly": false,
   "artifactsOnTrackerOnly": true,
   "organizationUrl": "",
   "project": "",

@@ -44,11 +44,14 @@ Credentials in `harness.credentials.local.json`: `jiraToken` for Jira; `adoPat` 
 
 `artifactsOnTrackerOnly` (boolean, default `true` when missing): when `true`, spec, prompt, and log live on the work item / issue (map `fields.spec` / `prompt` / `log` in `/{{prefix}}setit-se`). When `false`, those three artifacts live in `docs/features/`, `docs/prompt/`, `docs/feature-log/` named by task id (Jira issue key or ADO work item id); the external tracker holds the id, metadata reads, workflow moves, and allowed script calls — not `jira set` / `ado set` on spec/prompt/log. Status in spec frontmatter uses `agents.statuses` while transitions use `agents.tracker.statuses`.
 
+`readOnly` (boolean, default `false` when missing): when `true`, seh only reads the tracker (`meta`, `get`); `create` / `set` / `comment` / `transition` / `link` are `BLOCKED:` with no HTTP. Spec, prompt, log, and status live in repo files (`agents.statuses`). Ignores `artifactsOnTrackerOnly` (treated as `false`), `fields`, `issueTypes` / `workItemTypes`, and status keys other than `blocker`. `statuses.blocker` is required when a `depends` entry is a tracker key with no local spec (`null` = no such dependencies). `fetchFields` still applies to `get`. Same for Jira and ADO.
+
 Jira skeleton:
 
 ```json
 {
   "kind": "jira",
+  "readOnly": false,
   "artifactsOnTrackerOnly": true,
   "url": "",
   "user": "",
@@ -74,6 +77,7 @@ ADO skeleton (`harness.tracker.ado.json`):
 ```json
 {
   "kind": "ado",
+  "readOnly": false,
   "artifactsOnTrackerOnly": true,
   "organizationUrl": "",
   "project": "",
