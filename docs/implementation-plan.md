@@ -27,12 +27,13 @@ When that phase’s “Done when” checklist and the shared done rules are true
 | Phase 12 | [12-jira-rest-scripts.md](implementation-plan/12-jira-rest-scripts.md) | [12-jira-rest-scripts.prompt.md](implementation-plan/12-jira-rest-scripts.prompt.md) |
 | Phase 13 | [13-opencode-host.md](implementation-plan/13-opencode-host.md) | — |
 | Phase 14 | [14-artifacts-on-tracker-only.md](implementation-plan/14-artifacts-on-tracker-only.md) | — |
+| Phase 15 | [optional-git/plan.md](optional-git/plan.md) | — |
 
 Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longest because `/<prefix>setit-se` and the work-skill pipeline are large; they still point at the PRD rather than restating it.
 
 ## Product invariants
 
-- The product and CLI binary are **`seh`**. The npm package is **`dev-harness-layer`**.
+- The product and CLI binary are **`seh`**. The npm package is **`se-harness`**.
 - CLI in v1: `seh install` and `seh uninstall` only. No `seh agent`, `seh git`, `seh check`, status, or Jira subcommand. Never `npm install -g`.
 - Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, or any other machine-wide path. Run only in the target project.
 - Setup is `/<prefix>setit-se`.
@@ -65,7 +66,7 @@ Published sources live at the package root. Do not invent a wrapping `templates/
 
 The only supported adoption path:
 
-1. **Bootstrap** — `npx -p dev-harness-layer seh install` (npm or GitHub). Result: `.seh/` plus the install-owned `/<prefix>setit-se` skill in every `skillsDir` from `references/hosts.json`, plus a merged session-start hook in each host `hooksFile`. Setup is not done. Work skills must not exist yet and must not be offered.
+1. **Bootstrap** — `npx -p se-harness seh install` (npm or GitHub). Result: `.seh/` plus the install-owned `/<prefix>setit-se` skill in every `skillsDir` from `references/hosts.json`, plus a merged session-start hook in each host `hooksFile`. Setup is not done. Work skills must not exist yet and must not be offered.
 2. **Finish setup** — `/<prefix>setit-se` only. CLI does not configure the project.
 3. **Work** — `/<prefix>shipit`, `/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>grillit`, or later `/<prefix>setit-se`.
 4. **Remove bootstrap (optional)** — `seh uninstall` with the **same source** as install. Removes `.seh/`, the install-owned `/<prefix>setit-se` skill, and the install-owned hook command. Leaves `harness.config.json` and files `/<prefix>setit-se` generated.
@@ -118,6 +119,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 12 | Jira Cloud REST scripts (no MCP) | 2, 3, 4, 5 | done |
 | 13 | OpenCode host | 8, 9, 11 | done |
 | 14 | `artifactsOnTrackerOnly` | 12, 5 | done |
+| 15 | Optional git (empty `agents.baseBranch` disables git) | 2, 4, 5, 6, 10 | done |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.seh/VERSION`.
 
@@ -132,6 +134,8 @@ Then set that phase’s **Status** to `done` in the Phase index. That write is p
 
 ## Out of this v1 plan (PRD Deferred)
 
-Full Codex adapter (TOML agents, `.codex/` / `.agents/skills`); trackers beyond Jira; auto-merge; auto-install when a newer GitHub tag exists; a user-facing Consultant skill; changing `agents.contentLanguage` mid-task; file-tracker status/log helpers in `.seh/scripts/`; Jira Server/DC; Windows `sh` hosts; symlinking live agents to `.seh/agents/`.
+Azure DevOps Boards tracker work is tracked separately in [azure-dev-ops/plan.md](azure-dev-ops/plan.md) (post–core v1 slices; not part of the phase index above).
+
+Full Codex adapter (TOML agents, `.codex/` / `.agents/skills`); trackers beyond files, Jira, and Azure DevOps; auto-merge; auto-install when a newer GitHub tag exists; a user-facing Consultant skill; changing `agents.contentLanguage` mid-task; file-tracker status/log helpers in `.seh/scripts/`; Jira Server/DC; Windows `sh` hosts; symlinking live agents to `.seh/agents/`.
 
 This list is a **scope boundary**, not a backlog. Do not open tickets from it. Do not implement these items in a v1 phase. A later version may pick items up only after an explicit new scope.

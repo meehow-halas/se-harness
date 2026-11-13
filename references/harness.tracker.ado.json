@@ -1,0 +1,24 @@
+{
+  "kind": "ado",
+  "artifactsOnTrackerOnly": true,
+  "organizationUrl": "",
+  "project": "",
+  "workItemTypes": {
+    "feature": "",
+    "bug": ""
+  },
+  "fields": {
+    "spec": "",
+    "prompt": "",
+    "log": ""
+  },
+  "fetchFields": [],
+  "statuses": {
+    "todo": null,
+    "inProgress": null,
+    "codeReview": null,
+    "inReview": null,
+    "done": null,
+    "blocker": null
+  }
+}

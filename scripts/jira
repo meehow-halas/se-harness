@@ -197,7 +197,6 @@ case $verb in
         blocked "invalid status key $_step" "usage: jira transition <issue-key> todo|inProgress|codeReview|inReview|done"
         ;;
     esac
-    require_git
     require_node
     require_tracker_config
     SEH_JIRA_CFG=$(config_path)

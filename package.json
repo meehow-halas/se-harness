@@ -1,5 +1,5 @@
 {
-  "name": "dev-harness-layer",
+  "name": "se-harness",
   "version": "2.0.0",
   "description": "SE harness layer",
   "bin": {
@@ -20,11 +20,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nbmh/dev-harness-layer.git"
+    "url": "https://github.com/meehow-halas/se-harness.git"
   },
-  "homepage": "https://github.com/nbmh/dev-harness-layer",
+  "homepage": "https://github.com/meehow-halas/se-harness",
   "bugs": {
-    "url": "https://github.com/nbmh/dev-harness-layer/issues"
+    "url": "https://github.com/meehow-halas/se-harness/issues"
   },
   "engines": {
     "node": ">=18"

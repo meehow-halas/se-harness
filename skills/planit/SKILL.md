@@ -24,7 +24,7 @@ Before any work. Compare `.seh/VERSION` and `seh.generatedFrom` after trimming w
 1. If `.seh/` or `.seh/VERSION` is missing:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se
+BLOCKED: seh install has not been run here — run seh install (npx -p se-harness seh install or npx -p github:meehow-halas/se-harness seh install), then /{{prefix}}setit-se
 ```
 
 2. If `harness.config.json` is missing:
@@ -53,11 +53,11 @@ Reply in the language of the user’s latest message, whatever that language is,
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `planit`, one child session per key. Before each spawn, run the **Prompt check** in that file: the child prompt has only the allowed lines; no shared folder, notes file, or extra instruction. Do not launch Architect here. Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}planit <KEY>` command per key and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `planit`, one child session per key. Before each spawn, run the **Prompt check** in that file: the child prompt has only the allowed lines; no shared folder, notes file, or extra instruction. Do not launch Architect here. Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}planit <KEY>` command per key and stop. One key: continue below.
 
 ## Resolve the request
 
-The user may give a sentence, an existing basename, or a Jira key. Pass that to the Architect. Do not write spec, prompt, or log yourself. The Architect uses the **active tracker only** (files if `agents.tracker` is absent; Jira if it is present). Read `agents.tracker.artifactsOnTrackerOnly`: when `false`, artifact bodies are repo files only. Never mirror.
+The user may give a sentence, an existing basename, a Jira key, or an ADO work item id. Pass that to the Architect. Do not write spec, prompt, or log yourself. The Architect uses the **active tracker only** (files if `agents.tracker` is absent; the connected tracker (`agents.tracker.kind`: Jira or ADO) if it is present). Read `agents.tracker.artifactsOnTrackerOnly` (same for Jira and ADO): when `false`, artifact bodies are repo files only. Never mirror.
 
 ## Launch Architect once
 
@@ -83,4 +83,4 @@ Offer the next step. Do **not** start it:
 - `/{{prefix}}doit` — implement this spec (Consultant loop inside Implementer)
 - `/{{prefix}}shipit` — full path from here
 
-Do not start Reviewer. Do not call git scripts. When Jira is the active tracker, the Architect calls `.seh/scripts/jira`; this skill does not. Do not write spec, prompt, or log yourself.
+Do not start Reviewer. Do not call git scripts. When Jira or ADO is the active tracker, the Architect calls `.seh/scripts/jira` or `.seh/scripts/ado` by `kind`; this skill does not. Do not write spec, prompt, or log yourself.

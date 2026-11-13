@@ -2,13 +2,13 @@
 
 ## Goal
 
-Make `dev-harness-layer` an npx-runnable package whose CLI binary is `seh`, whose only commands are `install` and `uninstall`, and whose install writes the project-local bootstrap the PRD requires.
+Make `se-harness` an npx-runnable package whose CLI binary is `seh`, whose only commands are `install` and `uninstall`, and whose install writes the project-local bootstrap the PRD requires.
 
 Without this, nothing else is a product: there is no binary, no `.seh/`, no install-owned `/<prefix>setit-se`.
 
 ## In scope
 
-- `package.json`: name `dev-harness-layer`, `bin.seh` pointing at the CLI, version used as `.seh/VERSION`, `files` (or equivalent) so npm/GitHub installs include payload dirs + `src/` entry.
+- `package.json`: name `se-harness`, `bin.seh` pointing at the CLI, version used as `.seh/VERSION`, `files` (or equivalent) so npm/GitHub installs include payload dirs + `src/` entry.
 - `src/`: implement `seh install` and `seh uninstall` only.
 - Create payload directories if they do not exist so the copy contract is real: `agents/`, `skills/`, `brainstorm/`, `references/`, `scripts/` (`packs/` already exists).
 - A **thin** `skills/` stub for `/<prefix>setit-se` if install requires a source file (placeholder is allowed; the real skill is phase 5).
@@ -33,7 +33,7 @@ Without this, nothing else is a product: there is no binary, no `.seh/`, no inst
 
 | Path | What |
 |------|------|
-| `package.json` | `name`: `dev-harness-layer`; `bin.seh` → CLI entry; version is the stamp written to `.seh/VERSION`; include payload dirs in the published package |
+| `package.json` | `name`: `se-harness`; `bin.seh` → CLI entry; version is the stamp written to `.seh/VERSION`; include payload dirs in the published package |
 | `src/` | CLI implementation (`install` / `uninstall`) |
 | Payload dirs | Exist at package root with the six names install copies (may be empty or stubbed except existing `packs/`) |
 | `skills/…` | Enough that install can write the live `/<prefix>setit-se` skill (stub OK) |
@@ -47,10 +47,10 @@ Exact CLI file names inside `src/` are the implementer’s choice. The binary na
 Both sources are first-class:
 
 ```text
-npx -p dev-harness-layer seh install
-npx -p github:nbmh/dev-harness-layer seh install
-npx -p github:nbmh/dev-harness-layer#<ref> seh install
-npx -p https://github.com/nbmh/dev-harness-layer seh install
+npx -p se-harness seh install
+npx -p github:meehow-halas/se-harness seh install
+npx -p github:meehow-halas/se-harness#<ref> seh install
+npx -p https://github.com/meehow-halas/se-harness seh install
 ```
 
 Uninstall uses the **same source** as install. The CLI runs only in the target project directory.

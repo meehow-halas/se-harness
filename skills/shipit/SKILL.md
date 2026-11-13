@@ -32,7 +32,7 @@ Before any work. Compare `.seh/VERSION` and `seh.generatedFrom` after trimming w
 1. If `.seh/` or `.seh/VERSION` is missing:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se
+BLOCKED: seh install has not been run here — run seh install (npx -p se-harness seh install or npx -p github:meehow-halas/se-harness seh install), then /{{prefix}}setit-se
 ```
 
 2. If `harness.config.json` is missing:
@@ -67,15 +67,15 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `shipit`, one child session per key (each child runs the full pipeline for its key). Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}shipit <KEY>` command per key and stop. One key: continue below.
+This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `shipit`, one child session per key (each child runs the full pipeline for its key). Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}shipit <KEY>` command per key and stop. One key: continue below.
 
 ## Resolve the task
 
-Active tracker only: files if `agents.tracker` is absent; Jira if present (artifact bodies per `agents.tracker.artifactsOnTrackerOnly`). Never mirror.
+Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present (artifact bodies per `agents.tracker.artifactsOnTrackerOnly`, same for Jira and ADO). Never mirror.
 
 - New work (a sentence, no key) → no spec yet.
 - Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /{{prefix}}shipit is one task` above).
-- Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). Compare to those values; do not translate them.
+- Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
 
 If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
 
@@ -104,6 +104,8 @@ On success, status stays `todo`. Continue to stage 2 without pausing.
 No implementation means status is still the configured `todo` string (Architect does not advance past `todo`).
 
 Follow the live Implementer file for this host (`<agentsDir>/implementer.md`) inline in this session, not as a subagent. Launch Consultant from this session after each phase (Agent tool); do not launch Consultant as a skill.
+
+**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout. Skip the next step's `start-task` and omit `Worktree:` below.
 
 Run `.seh/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent). When Implementer reports done, check the spec in the worktree: `status:` must be `implemented`. Otherwise stop with `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
 

@@ -4,7 +4,7 @@ A layer for software engineering work in an AI coding assistant. Supported hosts
 
 One path: request → spec → implementation with quality feedback → review against the spec.
 
-The product and CLI binary are **`seh`**. The npm package is **`dev-harness-layer`**. Contracts in full: [`docs/prd.md`](docs/prd.md).
+The product and CLI binary are **`seh`**. The npm package is **`se-harness`**. Contracts in full: [`docs/prd.md`](docs/prd.md).
 
 ## Requirements
 
@@ -18,7 +18,7 @@ The product and CLI binary are **`seh`**. The npm package is **`dev-harness-laye
 
 A **host** is the coding assistant (harness) you run seh in. This version: **Claude Code** and **Cursor Agent**. A later host is a row in `hosts.json` plus a format adapter, not a second product.
 
-`seh install` and `/seh-setup` always write **every** row in `.seh/references/hosts.json`. They do not ask which hosts to use. Live skills, agents, rules, and brainstorm files are **copies** (not symlinks to `.seh/agents/`) under `.claude/` and `.cursor/` (rules as `.md` vs `.mdc`). In a session, use the copy that host loaded. Skill bodies match; live agent `model:` is that host’s string only.
+`seh install` and `/_setit-se` always write **every** row in `.seh/references/hosts.json`. They do not ask which hosts to use. Live skills, agents, rules, and brainstorm files are **copies** (not symlinks to `.seh/agents/`) under `.claude/` and `.cursor/` (rules as `.md` vs `.mdc`). In a session, use the copy that host loaded. Skill bodies match; live agent `model:` is that host’s string only.
 
 ### Models per host
 
@@ -35,49 +35,68 @@ First-run suggestions come from that host row’s `modelSuggest`. seh does not t
 | Claude Code | `opus` | `sonnet` | `haiku` | `sonnet` |
 | Cursor | `inherit` | `inherit` | `inherit` | `inherit` |
 
-A later `/seh-setup` model change is one cell `(role, host)` and rewrites `model:` only in that host’s `agentsDir`. If `model` is still a string, or a host `id` is missing, setup finishes the map first (prefill a legacy string on every host, then confirm per host) before it stamps live files.
+A later `/_setit-se` model change is one cell `(role, host)` and rewrites `model:` only in that host’s `agentsDir`. If `model` is still a string, or a host `id` is missing, setup finishes the map first (prefill a legacy string on every host, then confirm per host) before it stamps live files.
 
-Brainstorm uses the same map shape on `agents.brainstorm.model`. `/seh-brainstorm` asks one model per host on the first member (not `/seh-setup`): that string is for every persona turn **and** the facilitator. No per-persona model.
+Brainstorm uses the same map shape on `agents.brainstorm.model`. `/_grillit` asks one model per host on the first member (not `/_setit-se`): that string is for every persona turn **and** the facilitator. No per-persona model.
 
 ## 1. Install
 
 From the project directory, pick one source and reuse it later for uninstall:
 
 ```text
-npx -p dev-harness-layer seh install
-npx -p github:nbmh/dev-harness-layer seh install
-npx -p github:nbmh/dev-harness-layer#<ref> seh install
-npx -p https://github.com/nbmh/dev-harness-layer seh install
+npx -p se-harness seh install
+npx -p github:meehow-halas/se-harness seh install
+npx -p github:meehow-halas/se-harness#<ref> seh install
+npx -p https://github.com/meehow-halas/se-harness seh install
 ```
 
 npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 
-**Result:** `.seh/` and the project skill `/seh-setup` in every host `skillsDir` (today `.claude/skills/seh-setup` and `.cursor/skills/seh-setup`). Setup is **not** done. Work skills (`/seh-shipit`, `/seh-planit`, `/seh-doit`, `/seh-checkit`, `/seh-brainstorm`) do not exist yet.
+### Skill names and `--prefix`
+
+Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_doit`, `/_checkit`, `/_shipit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. This README shows the default `_` names.
+
+```text
+npx -p se-harness seh install --prefix my-
+```
+
+Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag. Installing again with another prefix removes the old `/_setit-se` skill; the next `/_setit-se` run regenerates the work skills under the new prefix and removes the old ones.
+
+| Skill | Was (1.x) |
+|---|---|
+| `/_setit-se` | `/seh-setup` |
+| `/_grillit` | `/seh-brainstorm` |
+| `/_planit` | `/seh-planit` |
+| `/_doit` | `/seh-doit` |
+| `/_checkit` | `/seh-checkit` |
+| `/_shipit` | `/seh-shipit` |
+
+**Result:** `.seh/` and the project skill `/_setit-se` in every host `skillsDir` (today `.claude/skills/_setit-se` and `.cursor/skills/_setit-se`). Setup is **not** done. Work skills (`/_shipit`, `/_planit`, `/_doit`, `/_checkit`, `/_grillit`) do not exist yet.
 
 ## 2. Setup
 
-In the assistant, run **`/seh-setup`**. That is the only way to finish first-time setup. The CLI does not configure the project.
+In the assistant, run **`/_setit-se`**. That is the only way to finish first-time setup. The CLI does not configure the project.
 
-First run asks one question at a time (role models **per host**, content language, base git branch, optional project rule, Jira). It does not commit.
+First run asks one question at a time (role models **per host**, content language, base git branch, optional project rule, Jira or Azure DevOps). It does not commit.
 
 **Required result:** a project PRD, `harness.config.json`, live agents, remaining skills, and rule packs in **every** host tree, plus a project-root `AGENTS.md`.
 
-Until `harness.config.json` exists, and whenever `.seh/VERSION` does not match `seh.generatedFrom`, work skills stop and tell you to run `/seh-setup`.
+Until `harness.config.json` exists, and whenever `.seh/VERSION` does not match `seh.generatedFrom`, work skills stop and tell you to run `/_setit-se`.
 
-First run, later changes, and what you can set: [`/seh-setup`](#seh-setup).
+First run, later changes, and what you can set: [`/_setit-se`](#_setit-se).
 
 ## 3. Work
 
-Say what you want in ordinary language. The assistant matches **intent** to a skill; slash names (`/seh-shipit`, and so on) label the skill in the host, they are not a command line to assemble.
+Say what you want in ordinary language. The assistant matches **intent** to a skill; slash names (`/_shipit`, and so on) label the skill in the host, they are not a command line to assemble.
 
 | Intent | Skill |
 |--------|---------|
-| Full path | `/seh-shipit` |
-| Spec only | `/seh-planit` |
-| Implementation only | `/seh-doit` (one task or a list) |
-| One review or update from base | `/seh-checkit` (one task or a list; one variant) |
-| Change parameters or Jira | `/seh-setup` |
-| Personae | `/seh-brainstorm` |
+| Full path | `/_shipit` |
+| Spec only | `/_planit` |
+| Implementation only | `/_doit` (one task or a list) |
+| One review or update from base | `/_checkit` (one task or a list; one variant) |
+| Change parameters or tracker (Jira / Azure DevOps) | `/_setit-se` |
+| Personae | `/_grillit` |
 
 After you accept a clean review, the Reviewer commits, opens the PR and sets `done`. That ends the feature. You merge the PR on GitHub; nothing else is needed from seh.
 
@@ -86,52 +105,52 @@ After you accept a clean review, the Reviewer commits, opens the PR and sets `do
 Same source as install:
 
 ```text
-npx -p dev-harness-layer seh uninstall
-npx -p github:nbmh/dev-harness-layer seh uninstall
+npx -p se-harness seh uninstall
+npx -p github:meehow-halas/se-harness seh uninstall
 ```
 
-Removes `.seh/` and the install-owned `/seh-setup` skill from every `skillsDir`. Leaves `harness.config.json` and files `/seh-setup` already generated (live agents, work skills, rules).
+Removes `.seh/` and the install-owned `/_setit-se` skill from every `skillsDir`. Leaves `harness.config.json` and files `/_setit-se` already generated (live agents, work skills, rules).
 
 ## After a package update
 
-Run install again from the same source, then `/seh-setup`, so generated files match the installed templates (`.seh/VERSION` vs `seh.generatedFrom`). That regeneration copies `/seh-shipit` and deletes leftover live `/seh-feature`. It does not rewrite project `AGENTS.md`.
+Run install again from the same source, then `/_setit-se`, so generated files match the installed templates (`.seh/VERSION` vs `seh.generatedFrom`). That regeneration copies `/_shipit` and deletes leftover live `seh-feature` and the old `seh-*` skills. It does not rewrite project `AGENTS.md`.
 
 ## Skills
 
-Consultant is **not** a slash skill. The Implementer launches it. Single-stage skills do not chain; only `/seh-shipit` runs the full path, and it is **one task**.
+Consultant is **not** a slash skill. The Implementer launches it. Single-stage skills do not chain; only `/_shipit` runs the full path, and it is **one task**.
 
-If Architect needs a persona round, work skills **stop and ask** `/seh-brainstorm`. `/seh-shipit` does not run that round itself.
+If Architect needs a persona round, work skills **stop and ask** `/_grillit`. `/_shipit` does not run that round itself.
 
 | Skill | When | What happens | Example |
 |-------|------|----------------|---------|
-| `/seh-setup` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit. See [`/seh-setup`](#seh-setup). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" |
-| `/seh-planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
-| `/seh-doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. Ends with status `implemented` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
-| `/seh-checkit` | One Reviewer round per named task | Variants: review (default), update from base. One variant for the whole invocation; same worktree / parallel rules as `/seh-doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" |
-| `/seh-shipit` | Full path, **one task** | Starts at the first missing stage; does not merge. A list of keys is a stop — spec with `/seh-planit`, then `/seh-doit`. Implementer and Reviewer still use a worktree | "add password reset from spec through PR" |
-| `/seh-brainstorm` | Personae | CRUD members, app context, consult round; does not role-play. See [Brainstorm](#brainstorm). | "consult this spec with the personae" · "build the app context" |
+| `/_setit-se` | First config; later models, packs, base branch, tracker | One question at a time; generate live files; does not commit. See [`/_setit-se`](#_setit-se). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" · "connect Azure DevOps" |
+| `/_planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
+| `/_doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. Ends with status `implemented` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
+| `/_checkit` | One Reviewer round per named task | Variants: review (default), update from base. One variant for the whole invocation; same worktree / parallel rules as `/_doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" |
+| `/_shipit` | Full path, **one task** | Starts at the first missing stage; does not merge. A list of keys is a stop — spec with `/_planit`, then `/_doit`. Implementer and Reviewer still use a worktree | "add password reset from spec through PR" |
+| `/_grillit` | Personae | CRUD members, app context, consult round; does not role-play. See [Brainstorm](#brainstorm). | "consult this spec with the personae" · "build the app context" |
 
 ```mermaid
 flowchart LR
-  planit["/seh-planit"] --> architect[Architect]
-  doit["/seh-doit"] --> implementer[Implementer]
+  planit["/_planit"] --> architect[Architect]
+  doit["/_doit"] --> implementer[Implementer]
   implementer --> consultant[Consultant]
-  checkit["/seh-checkit"] --> reviewer[Reviewer]
-  shipit["/seh-shipit"] --> architect
+  checkit["/_checkit"] --> reviewer[Reviewer]
+  shipit["/_shipit"] --> architect
   shipit --> implementer
   shipit --> reviewer
   reviewer --> prDone["PR opened, status done"]
   prDone --> humanMerge[You merge on GitHub]
 ```
 
-## /seh-setup
+## /_setit-se
 
 The only way to configure this project. The CLI does not write config. Questions are **one at a time**. The skill does not commit.
 
 If `harness.config.json` is missing, that is a **first run**. If the file is already there, that is a **later run** — the same skill, not a second command.
 
 ```text
-"change the architect model" · "change the architect model on Cursor" · "connect Jira" · "change the base branch"
+"change the architect model" · "change the architect model on Cursor" · "connect Jira" · "connect Azure DevOps" · "change the base branch"
 ```
 
 ### First run
@@ -141,17 +160,17 @@ If `harness.config.json` is missing, that is a **first run**. If the file is alr
 3. **Questions** (before it writes config): for each host, then for each of the four roles, one model (suggest that host’s `modelSuggest`; see [Models per host](#models-per-host)); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
 4. Writes `harness.config.json` (`seh.generatedFrom` = `.seh/VERSION`) and generates live agents, work skills, and rule packs from `.seh/` into **every** host tree. Each live agent’s `model:` is `agents.roles.<role>.model[<host.id>]` only.
 5. Merges project-root `AGENTS.md` and/or `CLAUDE.md` with the seh template, shows the full proposed markdown, and waits for acceptance. The result is always `AGENTS.md`. It writes `CLAUDE.md` only when `.claude/` was present and/or `CLAUDE.md` already existed (prefer a symlink to `AGENTS.md`; if the link fails, an independent file with the same body).
-6. Offers Jira **once**. A decline is stored; add, change, or remove later is this same skill.
+6. Offers an external tracker (Jira or Azure DevOps) **once**. A decline is stored; add, change, or remove later is this same skill.
 
 ### Later run
 
 Config already exists. Say what to change in ordinary language.
 
-If a role `model` is still a string, or the map is missing a host `id`, it finishes that map first (prefill a legacy string on every host, then confirm per host). If `.seh/VERSION` does not match `seh.generatedFrom`, it first regenerates live agents, work skills, and rule packs into every host tree, sets `seh.generatedFrom` to `.seh/VERSION`, and tells you the installed package templates changed (including that `/seh-feature` was renamed to `/seh-shipit`) — then continues. That is the same mechanism as [After a package update](#after-a-package-update).
+If a role `model` is still a string, or the map is missing a host `id`, it finishes that map first (prefill a legacy string on every host, then confirm per host). If `.seh/VERSION` does not match `seh.generatedFrom`, it first regenerates live agents, work skills, and rule packs into every host tree, sets `seh.generatedFrom` to `.seh/VERSION`, and tells you the installed package templates changed (including the renames from the table in [Skill names and `--prefix`](#skill-names-and---prefix)) — then continues. That is the same mechanism as [After a package update](#after-a-package-update).
 
 Then **one change at a time**: show current and new value, wait for confirmation, then write. It does not overwrite keys you did not confirm. A role `model` change is one cell `(role, host)` and rewrites `model:` in **that** host’s `agentsDir` only.
 
-It does **not** touch `agents.brainstorm` (that is `/seh-brainstorm`), rewrite the project PRD, remake or re-merge `AGENTS.md`, or commit. If `.claude/` is present and `CLAUDE.md` is still missing, it creates the symlink the same way as on first run.
+It does **not** touch `agents.brainstorm` (that is `/_grillit`), rewrite the project PRD, remake or re-merge `AGENTS.md`, or commit. If `.claude/` is present and `CLAUDE.md` is still missing, it creates the symlink the same way as on first run.
 
 ### What you can set or change
 
@@ -164,12 +183,12 @@ It does **not** touch `agents.brainstorm` (that is `/seh-brainstorm`), rewrite t
 | Packs / `packsIgnored` | detect; honour ignore | yes | regenerate rule packs |
 | Status strings | skeleton unless you confirm other strings | yes | config only |
 | Product line / `agents.docs` | from the PRD step | yes | config only |
-| Jira tracker | offer once: add or decline | add / change mapping / remove | config + local credentials file; no agent-body regen |
+| Jira / Azure DevOps tracker | offer once: add or decline | add / change mapping / remove | config + local credentials file; no agent-body regen |
 | Project PRD | create only if missing | no rewrite | — |
 | `AGENTS.md` | merge + accept | no remake | later: only create missing `CLAUDE.md` if `.claude/` exists |
-| Brainstorm members / model / consult | no | no | `/seh-brainstorm` |
+| Brainstorm members / model / consult | no | no | `/_grillit` |
 
-**Jira.** First run offers it once. Later: add, change the mapping, or remove. Details: [Jira tracker](#jira-tracker).
+**Jira / Azure DevOps.** First run offers a tracker once. Later: add, change the mapping, or remove. Details: [Jira tracker](#jira-tracker), [Azure DevOps tracker](#azure-devops-tracker).
 
 ## Agents
 
@@ -186,7 +205,7 @@ Exactly four product agents. Brainstorm members are not agents and are not `@`-a
 
 Writes the spec, the implementation prompt, and the first log row. Status stays `todo`; the Implementer moves it later. Read-only on application code; no git writes; no worktrees.
 
-If a persona round is needed, Architect **stops and asks** `/seh-brainstorm`. It does not interview personae itself. When that skill returns **PART A**, Architect decides on every blocker, conflict, and gap, then continues the spec. Details: [Brainstorm](#brainstorm).
+If a persona round is needed, Architect **stops and asks** `/_grillit`. It does not interview personae itself. When that skill returns **PART A**, Architect decides on every blocker, conflict, and gap, then continues the spec. Details: [Brainstorm](#brainstorm).
 
 ### Implementer and Consultant
 
@@ -224,11 +243,11 @@ The Reviewer starts from `implemented` (or from `in review` on a later round wit
 
 Optional extra viewpoints while specifying. Members are markdown **personae**, not seh roles and not `@`-targets. The skill orchestrates; it does not role-play.
 
-There is still a **facilitator**, but it is not a fifth product agent: no model in `agents.roles`, no `/seh-setup` question. It is an isolated collector. Implementer, Consultant, and Reviewer never run a round. `/seh-setup` does not edit members.
+There is still a **facilitator**, but it is not a fifth product agent: no model in `agents.roles`, no `/_setit-se` question. It is an isolated collector. Implementer, Consultant, and Reviewer never run a round. `/_setit-se` does not edit members.
 
 ```mermaid
 flowchart LR
-  skill["/seh-brainstorm"] --> personas[Persona turns]
+  skill["/_grillit"] --> personas[Persona turns]
   personas --> facilitator[Facilitator]
   facilitator --> partA[PART A]
   partA --> architect[Architect decides]
@@ -236,7 +255,7 @@ flowchart LR
 
 ### Personae and how you manage them
 
-CRUD is **only** `/seh-brainstorm`. Config lives in `agents.brainstorm.members`: `id`, `description`, `identity`, `cares`, `dislikes`. Live files are `<brainstormDir>/members/<id>.md` for **every** `brainstormDir` in `.seh/references/hosts.json`, generated from the template. After create, edit, or remove, regenerate that file from config. Do not hand-edit generated member markdown.
+CRUD is **only** `/_grillit`. Config lives in `agents.brainstorm.members`: `id`, `description`, `identity`, `cares`, `dislikes`. Live files are `<brainstormDir>/members/<id>.md` for **every** `brainstormDir` in `.seh/references/hosts.json`, generated from the template. After create, edit, or remove, regenerate that file from config. Do not hand-edit generated member markdown.
 
 On the **first** member in a project, the skill also asks (once):
 
@@ -266,9 +285,9 @@ Do not paste transcripts back into the chat or into the Architect launch. If eve
 
 ### Two ways in
 
-**Direct consult** (`/seh-brainstorm` plus a question or a spec). Needs a ready app context and at least one member. The consult threshold does **not** apply. If you name members, those are asked; otherwise every member. The skill runs personae → facilitator → Architect, then **shows the Architect’s decisions** (not the raw persona replies). You resolve leftover conflicts. A blocker the Architect rejected is still shown.
+**Direct consult** (`/_grillit` plus a question or a spec). Needs a ready app context and at least one member. The consult threshold does **not** apply. If you name members, those are asked; otherwise every member. The skill runs personae → facilitator → Architect, then **shows the Architect’s decisions** (not the raw persona replies). You resolve leftover conflicts. A blocker the Architect rejected is still shown.
 
-**During specification** (`/seh-planit`, or Architect inside `/seh-shipit`). If Architect needs a round, work skills **stop and ask** `/seh-brainstorm`. They do not interview personae in-process. `/seh-shipit` does not start a round by itself.
+**During specification** (`/_planit`, or Architect inside `/_shipit`). If Architect needs a round, work skills **stop and ask** `/_grillit`. They do not interview personae in-process. `/_shipit` does not start a round by itself.
 
 A round **on its own** (nobody named a question) runs only when there are at least **two** members **and** the work passes `agents.brainstorm.consult` (`any` / `significant` / `broad` as above).
 
@@ -286,7 +305,7 @@ Two axes. Do not mix them.
 
 ### Interaction
 
-From **intent**, not a required slash flag. Default: `interactive`. Architect, Implementer, and Reviewer take `Mode:` on launch. `/seh-planit`, `/seh-doit`, and `/seh-checkit` pass that mode to the role they launch. You may name the mode in the request so every agent in a `/seh-shipit` run shares it; you do not assemble it like a CLI flag. Consultant does not take `Mode:`.
+From **intent**, not a required slash flag. Default: `interactive`. Architect, Implementer, and Reviewer take `Mode:` on launch. `/_planit`, `/_doit`, and `/_checkit` pass that mode to the role they launch. You may name the mode in the request so every agent in a `/_shipit` run shares it; you do not assemble it like a CLI flag. Consultant does not take `Mode:`.
 
 | Mode | Ask the user |
 |------|----------------|
@@ -306,23 +325,23 @@ Consultant never talks to the user; the Implementer does, if the debt protocol r
 
 ### Reviewer variants
 
-These are **not** a substitute for interaction modes. Reviewer still receives `Mode:` from `/seh-checkit` (same default). That skill also picks **one** variant for the whole invocation: `review` (default) | `update`. Both apply together (for example `autonomous` + `update`).
+These are **not** a substitute for interaction modes. Reviewer still receives `Mode:` from `/_checkit` (same default). That skill also picks **one** variant for the whole invocation: `review` (default) | `update`. Both apply together (for example `autonomous` + `update`).
 
 ## Trackers and statuses
 
 ### One active tracker
 
-**Exactly one tracker:** files **or** Jira, never both. Agents write spec, prompt, log, and status to the active tracker only. They do not mirror.
+**Exactly one tracker:** files, Jira, **or** Azure DevOps, never two at once. Agents write spec, prompt, log, and status to the active tracker only. They do not mirror.
 
-Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, Jira is active. If it is absent, the files tracker is active.
+Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, its `kind` (`jira` or `ado`) is the active tracker; a config without `kind` is Jira. If it is absent, the files tracker is active.
 
-Switching does **not** migrate. Connect Jira → new work is tickets only; leftover `docs/features` (etc.) are ignored. Remove Jira → new work is files only; existing tickets are not copied into files.
+Switching does **not** migrate. Connect Jira or Azure DevOps → new work is tickets / work items only; leftover `docs/features` (etc.) are ignored. Remove the tracker → new work is files only; existing tickets are not copied into files.
 
 `CHANGELOG.md` and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
 
-Name a task to a skill with the **active** tracker’s key: a file basename (`001-login`) or a Jira issue key (`PROJ-12`). See [Skills](#skills) for examples.
+Name a task to a skill with the **active** tracker’s key: a file basename (`001-login`) or a Jira issue key (`PROJ-12`), or an Azure DevOps work item id (`1234`). See [Skills](#skills) for examples.
 
-Same artifact shape on both trackers (markdown files, or mapped Jira fields / description / comments):
+Same artifact shape on both trackers (markdown files, or mapped Jira / Azure DevOps fields / description / comments):
 
 - **Spec** — abstract, requirements, acceptance criteria, architectural decisions (choices and why, not a tutorial)
 - **Prompt** — phase-grain order, what not to change; the Implementer still writes their own plan
@@ -340,13 +359,13 @@ One task = three files, same basename (example `001-feature-example-name`):
 
 Task key = basename. Branch name = basename.
 
-Status lives in the spec file frontmatter. The strings come from `agents.statuses` in config. Do not translate them from the conversation language. Change those strings with `/seh-setup` (config only).
+Status lives in the spec file frontmatter. The strings come from `agents.statuses` in config. Do not translate them from the conversation language. Change those strings with `/_setit-se` (config only).
 
 When Implementer or Reviewer starts a worktree, `start-task` copies this task’s three files from the launch working tree into the worktree when they exist there.
 
 ### Jira tracker
 
-Connect, change, or remove only through `/seh-setup` (`"connect Jira"` / the first-run offer). There is no `seh` CLI for Jira. Agents and setup call `.seh/scripts/jira` (Jira Cloud REST). They do not use MCP and do not compose `curl`.
+Connect, change, or remove only through `/_setit-se` (`"connect Jira"` / the first-run offer). There is no `seh` CLI for Jira. Agents and setup call `.seh/scripts/jira` (Jira Cloud REST). They do not use MCP and do not compose `curl`.
 
 Credentials: you put the token in a project-local ignored file `harness.credentials.local.json`:
 
@@ -358,7 +377,7 @@ Credentials: you put the token in a project-local ignored file `harness.credenti
 
 **Add** (no tracker yet, or you accept the first-run offer). One question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.seh/scripts/jira meta` lists that project’s statuses, issue types, and fields. Map each seh step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
 
-`null` means that step does not call a Jira transition. There is no file fallback. If a mapped status is missing from that issue type’s workflow, work stops — fix the mapping in `/seh-setup`.
+`null` means that step does not call a Jira transition. There is no file fallback. If a mapped status is missing from that issue type’s workflow, work stops — fix the mapping in `/_setit-se`.
 
 **Change** (tracker already there): change the integration (same mapping questions; token stays unless you rotate it in the credentials file) or remove it.
 
@@ -379,9 +398,40 @@ Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log, an
 | Reviewer report (✅/❌/⚠️) | Comment. |
 | Acceptance (clean review, PR opened) | Transition to mapped `done` when not `null`. |
 
+### Azure DevOps tracker
+
+Connect, change, or remove only through `/_setit-se` (`"connect Azure DevOps"` / the first-run offer). There is no `seh` CLI for it. Agents and setup call `.seh/scripts/ado` (Azure DevOps Boards, WIT REST `api-version=7.1`). They do not use MCP, `az boards`, or `curl`.
+
+Credentials: you put the PAT in the same ignored file `harness.credentials.local.json`:
+
+```json
+{ "adoPat": "…" }
+```
+
+Never paste the PAT in chat. Never write it into git or `harness.config.json`. Organization URL, project, and field mapping live in config under `agents.tracker` (`kind: "ado"`; skeleton `.seh/references/harness.tracker.ado.json`).
+
+**Add.** One question at a time: `organizationUrl` (`https://dev.azure.com/{org}`, no trailing slash), then `project` (name or GUID). Setup creates `harness.credentials.local.json` with an empty `adoPat` if the file is missing (an existing file is never overwritten). You paste the PAT there and confirm. Setup runs `.seh/scripts/ado meta`; on `BLOCKED:` you fix the PAT, URL, or project and it retries until `OK`.
+
+Then one question: use Azure DevOps **only to read task info**, with spec, prompt, and log in repo files? (default no → `artifactsOnTrackerOnly: true`.) Then map `todo`, `inProgress`, `codeReview`, `inReview`, `done` to an exact state name from the `meta` list (numbered), or skip = `null`. Map `blocker` if you use `depends`. Map `workItemTypes.feature` / `.bug`. If `artifactsOnTrackerOnly` is `true`, also map where spec, prompt, and optional log live (`fields.*`: a field `referenceName`, `description`, `comment`, or `history`). If `false`, `fields.*` stay empty. Agents transition only to mapped states. The state list is the union over all work item types: a state missing on a given type makes `ado transition` stop with `BLOCKED:` for that type.
+
+`null` means that step does not change state. No file fallback. Current state already equal to the target → `UNCHANGED`. ADO has no transitions API: the script PATCHes `System.State` and ADO rejects illegal moves.
+
+**Change:** change the mapping, rotate the PAT in the credentials file, or toggle `artifactsOnTrackerOnly` (to `true` needs `fields.*` mapped again; to `false` drops them; no content migration). Switching to Jira = Remove, then Add (no migration).
+
+**Remove:** confirm, drop `agents.tracker`, delete or clear the `adoPat` key in `harness.credentials.local.json`. Files-only again. A first-run decline does not block a later add.
+
+Task key = numeric work item id. Branch and worktree name = that id.
+
+- `artifactsOnTrackerOnly: true` (default; also when the key is missing): spec, prompt, and log live **only** on the work item. ADO stores HTML; `ado get` returns plain text, and `ado set` writes plain text as minimal HTML. `ado set log` appends (a `history` mapping or a `comment` mapping adds an entry). `agents.statuses` is not written onto the work item.
+- `artifactsOnTrackerOnly: false`: they live in `docs/features/<id>.feature.md`, `docs/prompt/<id>.prompt.md`, `docs/feature-log/<id>.log.md`. Spec frontmatter `status` uses `agents.statuses`. `ado get` reads those files; `ado set` on spec/prompt/log is `BLOCKED:`. The work item still carries state transitions, comments, and links.
+
+`ado create` makes the work item (type from `workItemTypes`); the Architect then sets `todo` with `ado transition`. Lifecycle rows are the same as the Jira table above, with comments via `ado comment` and `depends` / `relates` via `ado link` (if linking fails, a comment says so and the task continues). Reviewer ❌ moves the item back to `inProgress`.
+
+Auth: PAT from `adoPat`, Basic with empty user, passed to curl through a temp config, never in argv. Cloud (`dev.azure.com`) is the supported shape; `api-version=7.1` is pinned in the script. Azure DevOps Server is not covered.
+
 ### Statuses
 
-The five seh steps are the same on both trackers. On files, the labels are the strings in `agents.statuses`. On Jira, each step uses the mapped `agents.tracker.statuses` name (or is skipped when that key is `null`).
+The five seh steps are the same on every tracker. On files, the labels are the strings in `agents.statuses`. On Jira and Azure DevOps, each step uses the mapped `agents.tracker.statuses` name (or is skipped when that key is `null`).
 
 ```text
 todo → in progress → implemented → in review → done
@@ -399,7 +449,7 @@ You merge the PR on GitHub. The merge does not change the status; `done` is alre
 
 ## Rule packs
 
-`/seh-setup` generates short, path-scoped coding rules from detected frameworks. They are not always-on essay markdown. Ignore packs with `packsIgnored`. First setup may also record **one** optional project rule (a standing instruction beyond packs).
+`/_setit-se` generates short, path-scoped coding rules from detected frameworks. They are not always-on essay markdown. Ignore packs with `packsIgnored`. First setup may also record **one** optional project rule (a standing instruction beyond packs).
 
 | Pack | Typical detection |
 |------|-------------------|
@@ -418,12 +468,12 @@ Base branch is `agents.baseBranch` (first setup; suggested default `dev`). Scrip
 
 Implementer and Reviewer always work in a git worktree: `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/seh-worktrees/001-login`). `start-task` does not switch the caller’s checkout. `return-to-base` from a seh worktree removes it.
 
-Allowlisted git/`gh` goes through `.seh/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`. Jira Cloud REST goes through `.seh/scripts/jira`. No rebase, reset, or force. seh does not merge the PR.
+Allowlisted git/`gh` goes through `.seh/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`. Jira Cloud REST goes through `.seh/scripts/jira`; Azure DevOps REST through `.seh/scripts/ado`. No rebase, reset, or force. seh does not merge the PR.
 
 Replies follow the conversation language. Spec, prompt, log, changelog, and PR text follow `agents.contentLanguage` from config. Status strings stay as configured; do not translate them from the conversation.
 
 ## CLI
 
-v1 CLI is only `seh install` and `seh uninstall`. Everything else is a skill. Install and uninstall loop every host in the **package** `hosts.json` (uninstall still works after `.seh/` is gone).
+v1 CLI is only `seh install [--prefix P]` and `seh uninstall`. Everything else is a skill. Install and uninstall loop every host in the **package** `hosts.json` (uninstall still works after `.seh/` is gone).
 
-No extra product agents. No Linear or GitHub Issues as a tracker. No merging pull requests.
+No extra product agents. No Linear or GitHub Issues as a tracker (files, Jira, Azure DevOps only). No merging pull requests.

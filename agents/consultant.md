@@ -27,7 +27,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first 
 
 ## May
 
-Read the phase diff, the touched files, the generated rules (they load on Read), and tests for those files. If the launch omitted the diff, you may inspect a read-only `git diff` of the named files; you still do not write git.
+Read the phase diff, the touched files, the generated rules (they load on Read), and tests for those files. If the launch omitted the diff, you may inspect a read-only `git diff` of the named files; you still do not write git. When `agents.baseBranch` is empty (git disabled), do not run git at all: read the named files and the diff text passed in the launch.
 
 ## Languages
 
@@ -69,7 +69,7 @@ If the same `must-fix` (same file + same problem) has **no** diff change since l
 
 **Debt protocol** (Implementer, not you): leftover must-fix after pass 2, or after the task launch cap of 8, is logged `C<id>: accepted — <reason>` and then `continue`. Do not start a third pass unless the Implementer’s launch says the user granted one extra pass for this phase. You never ask the user those options.
 
-Do not write this report onto a Jira ticket. The Implementer logs what the tracker allows.
+Do not write this report onto a Jira ticket or ADO work item. The Implementer logs what the tracker allows.
 
 ## Output
 

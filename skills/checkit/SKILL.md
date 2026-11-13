@@ -26,7 +26,7 @@ Before any work. Compare `.seh/VERSION` and `seh.generatedFrom` after trimming w
 1. If `.seh/` or `.seh/VERSION` is missing:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se
+BLOCKED: seh install has not been run here — run seh install (npx -p se-harness seh install or npx -p github:meehow-halas/se-harness seh install), then /{{prefix}}setit-se
 ```
 
 2. If `harness.config.json` is missing:
@@ -66,14 +66,14 @@ Parse the user message. Do not mix variants.
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit` and the same variant for every child, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys and `sessionSpawn` is `manual`: print the commands per key and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit` and the same variant for every child, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys and `sessionSpawn` is `manual`: print the commands per key and stop. One key: continue below.
 
 ## Resolve the tasks
 
-Need an existing spec + prompt on the **active tracker** (repo files when Jira has `artifactsOnTrackerOnly: false`). **Files tracker with a worktree:** when `.git/seh-worktrees/<task>` exists (its path is `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`), `start-task` has moved the uncommitted spec, prompt, and log out of the launch checkout into that worktree. Read them there. An empty `docs/prompt/` in the launch checkout is not "missing" in that case; check the worktree first, and treat the launch checkout only when no worktree exists. User named one or more basenames or issue keys → those tasks. Otherwise the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
+Need an existing spec + prompt on the **active tracker** (repo files when `agents.tracker.artifactsOnTrackerOnly` is `false`, same for Jira and ADO; otherwise bodies on the issue / work item via `jira get` or `ado get` by `kind`). **Files tracker with a worktree:** when `.git/seh-worktrees/<task>` exists (its path is `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`), `start-task` has moved the uncommitted spec, prompt, and log out of the launch checkout into that worktree. Read them there. An empty `docs/prompt/` in the launch checkout is not "missing" in that case; check the worktree first, and treat the launch checkout only when no worktree exists. User named one or more basenames or issue keys → those tasks. Otherwise the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
 
 ```text
-BLOCKED: task is ambiguous — name the feature basename or Jira key
+BLOCKED: task is ambiguous — name the feature basename, Jira key, or ADO work item id
 ```
 
 If spec or prompt is missing for a named task, stop **that** task and continue the others:
@@ -91,6 +91,8 @@ Read `status:` in the task's spec (worktree copy when a worktree exists, else th
 This skill is the parent. Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md` from `.seh/references/hosts.json` — a copy from `/{{prefix}}setit-se`, not a symlink to `.seh/agents/`). Do not duplicate that procedure here.
 
 For each resolved task:
+
+**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout. Variant `update` needs git: stop with `BLOCKED: update needs git`.
 
 1. Run `.seh/scripts/start-task <task>` from the launch checkout if a worktree is not already printed for it. Copy `worktree:`. Do not compose `git`.
 2. Launch Reviewer with at least:
@@ -110,8 +112,8 @@ Do not merge. After a clean accepted review, the Reviewer may open a PR; this sk
 
 ## After Reviewer finishes
 
-Report the variant, each task key, ✅/⚠️/❌, status, `worktree:`, and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
+Report the variant, each task key, ✅/⚠️/❌, status, `worktree:` (git enabled only), and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
 
 - Open ❌ → offer `/{{prefix}}doit` (those items only, same list) or `/{{prefix}}shipit` for a single task. Do not start them unless the user already asked to fix in this invocation.
-- Clean review accepted → the Reviewer committed, opened the PR and set `done`. Report the PR URL. Nothing left for this skill; the user merges on GitHub, and that does not reopen the task.
+- Clean review accepted → the Reviewer committed, opened the PR and set `done` (git disabled: no commit or PR, only changelog and `done`). Report the PR URL when there is one. Nothing left for this skill; the user merges on GitHub, and that does not reopen the task.
 - Update finished → report; do not review unless they also asked for review (they did not: this invocation was update only).

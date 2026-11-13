@@ -19,7 +19,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first 
 
 - Reply in the conversation language. A launch may name `Conversation language: <name>`; that name wins over this file's English text, tool output and subagent reports. When it names none, use the language of the user's messages.
 - Write log notes and tracker text in `agents.contentLanguage` from config. If that value is `conversation`, use the conversation language. Do not change `agents.contentLanguage`.
-- Status keys stay the configured strings from `agents.statuses` (or Jira mapped names). Do not translate them.
+- Status keys stay the configured strings from `agents.statuses` (or Jira / ADO mapped names). Do not translate them.
 
 ## Execution
 
@@ -53,7 +53,7 @@ Shape: `.seh/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
 If a `.seh/scripts/` helper refuses, copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `git`, `gh`, or `curl`. If the host cannot run `sh`, stop: Windows is out of v1.
 
-Also stop when: a basename/key in `depends` is not at the configured `done` status; the **project** test/lint/typecheck fails on code you did not touch (do not label it unrelated and continue); user approval missing in interactive when Questions requires it; a mapped Jira status is not on that issue type’s workflow (fix mapping in `/{{prefix}}setit-se`).
+Also stop when: a basename/key in `depends` is not at the configured `done` status; the **project** test/lint/typecheck fails on code you did not touch (do not label it unrelated and continue); user approval missing in interactive when Questions requires it; a mapped Jira or ADO status is not on that issue / work item type’s workflow (fix mapping in `/{{prefix}}setit-se`).
 
 ## Tracker
 
@@ -65,7 +65,7 @@ Change only this task’s status and its log. Leave the specification and the pr
 
 Same basename: `docs/features/<basename>.feature.md`, `docs/prompt/<basename>.prompt.md`, `docs/feature-log/<basename>.log.md`. Status strings = `agents.statuses`. The only status you set in the spec is the configured `in progress` string.
 
-### Jira connected
+### Jira connected (`agents.tracker.kind` is `jira`)
 
 Call `.seh/scripts/jira`; do not use MCP; do not compose `curl`. `jira transition <key> inProgress` (`UNCHANGED` when the map is `null`). Consultant pass is **not** written on the ticket.
 
@@ -75,15 +75,21 @@ When `artifactsOnTrackerOnly` is `false`: append log rows to `docs/feature-log/<
 
 Read with `jira get` or the repo paths above. Check `depends` with `jira get` on those keys.
 
+### Azure DevOps connected (`agents.tracker.kind` is `ado`)
+
+Task key = numeric work item id. Call **`.seh/scripts/ado` (Recommended)**; do not use MCP, raw REST/`curl`, or `az boards`. `ado transition <id> inProgress` (`UNCHANGED` when the map is `null`); `ado transition <id> codeReview` at the end. Consultant pass is **not** written on the work item. Log updates: `ado comment` or `ado set <id> log` when `artifactsOnTrackerOnly` is `true` (default); when `false`, append to `docs/feature-log/<id>.log.md` and never call `ado set` on spec/prompt/log. Read with `ado get`; check `depends` with `ado get` on those ids.
+
 ## Git
 
 A launch may name `Worktree: <abs>`. All Read/Write/Edit, project tests, and `.seh/scripts/` calls happen in that directory (absolute paths, or that cwd). Do not edit files in another checkout.
 
-Before work: run `.seh/scripts/start-task` with the task basename (files) or issue key (Jira). That script reads `agents.baseBranch` from `harness.config.json`, creates or reuses a git worktree for the branch named as the key, and does not commit, push, or switch the caller’s checkout. Use the printed `worktree:` path if the launch did not already name one.
+Before work: run `.seh/scripts/start-task` with the task basename (files) or issue key (Jira) or numeric work item id (ADO). That script reads `agents.baseBranch` from `harness.config.json`, creates or reuses a git worktree for the branch named as the key, and does not commit, push, or switch the caller’s checkout. Use the printed `worktree:` path if the launch did not already name one.
 
 ```text
 .seh/scripts/start-task <task>
 ```
+
+**Git disabled.** When `agents.baseBranch` in `harness.config.json` is empty or `null`, git is off for this project: skip `start-task`, make no branch or worktree, work in the launch checkout, and leave `worktree:` and branch out of the report.
 
 Do not compose that git yourself. Do not call other git scripts. Reviewer commits and pushes. No rebase, reset, or force. Success prints `OK` or `UNCHANGED` and `key: value` lines.
 
@@ -146,11 +152,11 @@ When Reviewer returns ❌ items: implement only those items. Launch Consultant a
 ## Workflow
 
 1. Read spec and prompt on the active tracker. Check `depends`: every listed task must be at the configured `done` status; otherwise stop. `relates` is context. If the prompt names a dependency not in `depends`, say so in the report (you cannot edit those lists).
-2. Run `.seh/scripts/start-task <task>` (from the launch checkout or the named worktree). Then set status to the configured `in progress` string (files) or Jira mapped `inProgress` when not `null`. Append a start row to the log (files) or a comment (Jira). Do remaining work only under the `worktree:` path.
+2. Run `.seh/scripts/start-task <task>` (from the launch checkout or the named worktree); git disabled (empty `agents.baseBranch`): skip it and work in the launch checkout. Then set status to the configured `in progress` string (files) or Jira / ADO mapped `inProgress` when not `null` (`jira transition` / `ado transition` by `kind`). Append a start row to the log (files) or a comment (Jira / ADO). Do remaining work only under the `worktree:` path.
 
 **Step 2 is mandatory and checked.** Before any code is written, re-read the spec file's `status:` line and the log. The status must be the configured `in progress` string, and the log must contain the start row. If either is missing, fix it now (set status, append the row) and only then continue. Never start implementation with the spec at `todo`. A run that finishes with status `todo` is a failed run: say so in the report with `BLOCKED: status not in progress`.
 3. Plan 2–6 phases. Implement one phase, run the project’s checks for the code you touched, then launch Consultant. Repeat until every phase has `continue` (or debt protocol / launch cap says to finish).
-4. When all phases have `continue`, set status to the configured `implemented` string (files, or Jira `codeReview` when not `null`). Do not set `in review` or `done`: the Reviewer owns those. A fix round that ends the same way sets `implemented` again. Append a log row summarizing the branch, a short change summary, and files created/changed/deleted in the code (repo-relative; not this task’s spec/prompt/log). A later fix round appends a new row; never edit earlier rows.
+4. When all phases have `continue`, set status to the configured `implemented` string (files, or Jira / ADO `codeReview` when not `null`). Do not set `in review` or `done`: the Reviewer owns those. A fix round that ends the same way sets `implemented` again. Append a log row summarizing the branch, a short change summary, and files created/changed/deleted in the code (repo-relative; not this task’s spec/prompt/log). A later fix round appends a new row; never edit earlier rows.
 
 ## Output
 
