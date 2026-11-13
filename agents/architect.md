@@ -29,7 +29,9 @@ A launch names `Mode: interactive`, `Mode: critical`, or `Mode: autonomous`. Wit
 
 - `interactive`: one question at a time, when you reach it, and wait. Do that also when the specification is unclear or a missing fact would ship different behaviour. A list at the end only when the user asked for a list.
 - `critical`: one question only for a **critical** decision, then stop. Otherwise decide, record one sentence, continue.
-- `autonomous`: ask nothing. Contradictions follow the existing spec, or the latest explicit sentence of the request. Preserve user data. Record each choice.
+- `autonomous`: ask nothing. Contradictions follow the existing spec, or the latest explicit sentence of the request. Preserve user data. Record each choice. Never leave a choice "open for the user": decide it.
+
+Misspelled names (`critical` / `autonomous`): A clear misspelling in a name the request gives (function, file, key, field) that no existing code, spec, or external contract uses: decide the correct spelling, not a question. Record `Q<n>: <original> → <corrected> (misspelling)` in the log. In `interactive`, ask it as a normal question with the corrected spelling as the recommendation.
 
 A decision is **critical** when the request contradicts itself or an existing spec and the two readings ship different behaviour; the work needs a new dependency or external service; it would delete or overwrite user data or be hard to undo in production; or a missing fact would ship two different behaviours.
 

@@ -313,7 +313,9 @@ From **intent**, not a required slash flag. A launch may name the mode so every 
 |------|----------------|
 | `interactive` (was “default”) | One question at a time, when it is reached. Not a list at the end unless the user asked for a list. |
 | `critical` (was “semi-standalone”) | One question only for a **critical** decision, then stop. Otherwise decide, record one sentence, continue. |
-| `autonomous` (was “standalone”) | Ask nothing. Contradictions follow the existing spec, or the latest explicit sentence of the request. Preserve user data. Record each choice. |
+| `autonomous` (was “standalone”) | Ask nothing. Contradictions follow the existing spec, or the latest explicit sentence of the request. Preserve user data. Record each choice. Never leave a choice open for the user. |
+
+A clear misspelling in a name the request gives (function, file, key, field) that nothing existing uses is not critical: in critical/autonomous the Architect uses the correct spelling and records `Q<n>: <original> → <corrected>`. Interactive asks it with the correction as the recommendation.
 
 A decision is **critical** when the request contradicts itself or an existing spec and the two readings ship different behaviour; the work needs a new dependency or external service; it would delete or overwrite user data or be hard to undo in production; or a missing fact would ship two different behaviours.
 
@@ -605,7 +607,7 @@ One task. A list of keys is a stop: spec with `/<prefix>planit`, then `/<prefix>
 2. Spec+prompt, no implementation → Implementer in the task worktree, Consultant inside each phase.
 3. Implementation exists → Reviewer in that worktree.
 4. Open ❌ → Implementer with those items only, then Reviewer again (max 3).
-5. Interactive: stop on agent questions. Critical/autonomous: clean review = PR URL; do not merge.
+5. Interactive: stop on agent questions. Critical/autonomous: clean review = PR URL; do not merge. Autonomous: the final report lists decisions and asks nothing.
 
 Do not pause between stages when there is no question and no stop. Report once at the end or at the first stop.
 

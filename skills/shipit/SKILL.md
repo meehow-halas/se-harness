@@ -139,6 +139,7 @@ Do not start a fourth Reviewer round.
 
 - `interactive`: stop on agent questions (already handled). After a clean review, Reviewer waits for explicit acceptance, then git allowlist (commit, push, PR, return to base). Do not merge.
 - `critical` / `autonomous`: a clean Reviewer run is acceptance. Report the PR URL. Do not merge.
+- `autonomous`: the final report asks nothing. List the agents' recorded decisions (`Q<n>`) as done facts; no follow-up question, no choice buttons, no "should I change X?". The user changes a decision with a new request.
 
 The Reviewer opens the PR and sets `done`. The user merges it on GitHub; this skill is finished.
 
