@@ -34,7 +34,7 @@ A phase is `done` when its checklist is true **and**:
 |-------|--------|------------|--------|
 | 1 | PRD + references (`kind`, skeleton, credentials key) | — | done |
 | 2 | `lib-ado.sh`, `ado-json.js`, `ado meta`, auth | 1 | done |
-| 3 | `get`, `create`, `set`, `comment` | 2 | todo |
+| 3 | `get`, `create`, `set`, `comment` | 2 | done |
 | 4 | `transition`, `link`, `UNCHANGED` / `BLOCKED` | 3 | todo |
 | 5 | `/<prefix>setit-se` ADO add/change/remove | 2, 4 | todo |
 | 6 | Agents, work skills, consumer `AGENTS.md` | 4, 5 | todo |

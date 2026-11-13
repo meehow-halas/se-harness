@@ -16,6 +16,27 @@ fi
 verb=$1
 shift
 
+parse_file_opt() {
+  BODY_FILE=
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --file)
+        if [ -z "${2-}" ]; then
+          blocked "missing value for --file" "pass --file <path>"
+        fi
+        BODY_FILE=$2
+        shift 2
+        ;;
+      *)
+        blocked "unexpected arguments" "usage: ado $verb ... [--file <path>]"
+        ;;
+    esac
+  done
+  if [ -n "$BODY_FILE" ] && [ ! -f "$BODY_FILE" ]; then
+    blocked "body file $BODY_FILE does not exist" "pass --file with a readable path, or stdin"
+  fi
+}
+
 case $verb in
   meta)
     if [ $# -ne 0 ]; then
@@ -38,6 +59,148 @@ case $verb in
     printf 'project: %s\n' "$_proj"
     printf '%s\n' "$_out"
     exit 0
+    ;;
+
+  get)
+    if [ $# -ne 1 ]; then
+      blocked "unexpected arguments" "usage: ado get <work-item-id>"
+    fi
+    require_task "$1"
+    load_ado
+    _id=$1
+    _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
+    _wit="/${_seg}/_apis/wit"
+    _api=$(ado_json api-version)
+    _capi=$(ado_json comments-api-version)
+    _fields=$(ado_json fetch-fields "$SEH_ADO_CFG")
+    _item=$(mktemp)
+    _comments=$(mktemp)
+    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_item" "$_comments"' EXIT
+    ado_http GET "${_wit}/workitems/${_id}?fields=${_fields}&api-version=${_api}"
+    cp "$SEH_ADO_BODY" "$_item"
+    if [ "$(ado_json needs-comments "$SEH_ADO_CFG")" = "true" ]; then
+      ado_http GET "${_wit}/workitems/${_id}/comments?api-version=${_capi}"
+      cp "$SEH_ADO_BODY" "$_comments"
+      _out=$(ado_json format-get "$SEH_ADO_CFG" "$_item" "$_comments")
+    else
+      _out=$(ado_json format-get "$SEH_ADO_CFG" "$_item")
+    fi
+    printf 'OK\n'
+    printf '%s\n' "$_out"
+    exit 0
+    ;;
+
+  create)
+    _type=
+    _title=
+    while [ $# -gt 0 ]; do
+      case $1 in
+        --type)
+          if [ -z "${2-}" ]; then
+            blocked "missing value for --type" "usage: ado create --type feature|bug --title <text>"
+          fi
+          _type=$2
+          shift 2
+          ;;
+        --title)
+          if [ -z "${2-}" ]; then
+            blocked "missing value for --title" "usage: ado create --type feature|bug --title <text>"
+          fi
+          _title=$2
+          shift 2
+          ;;
+        *)
+          blocked "unexpected arguments" "usage: ado create --type feature|bug --title <text>"
+          ;;
+      esac
+    done
+    case $_type in
+      feature|bug) ;;
+      *)
+        blocked "invalid work item type $_type" "usage: ado create --type feature|bug --title <text>"
+        ;;
+    esac
+    if [ -z "$_title" ]; then
+      blocked "missing --title" "usage: ado create --type feature|bug --title <text>"
+    fi
+    load_ado
+    if ! _enc=$(ado_json type-encoded "$SEH_ADO_CFG" "$_type" 2>/dev/null); then
+      blocked "work item type $_type is not mapped" "set agents.tracker.workItemTypes in /<prefix>setit-se"
+    fi
+    _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
+    _api=$(ado_json api-version)
+    _payload=$(mktemp)
+    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_payload"' EXIT
+    ado_json create-body "$_title" > "$_payload"
+    ado_http POST "/${_seg}/_apis/wit/workitems/${_enc}?api-version=${_api}" "$_payload" "$(ado_json patch-content-type)"
+    _id=$(ado_json extract-id "$SEH_ADO_BODY")
+    ok "id: ${_id}"
+    ;;
+
+  set)
+    if [ $# -lt 2 ]; then
+      blocked "unexpected arguments" "usage: ado set <work-item-id> spec|prompt|log [--file <path>]"
+    fi
+    require_task "$1"
+    _id=$1
+    _kind=$2
+    shift 2
+    case $_kind in
+      spec|prompt|log) ;;
+      *)
+        blocked "invalid field $_kind" "usage: ado set <work-item-id> spec|prompt|log [--file <path>]"
+        ;;
+    esac
+    parse_file_opt "$@"
+    load_ado
+    if [ "$(ado_json artifacts-on-tracker-only "$SEH_ADO_CFG")" = "false" ]; then
+      blocked "artifact content is stored in repository files" "edit docs/features docs/prompt docs/feature-log"
+    fi
+    _loc=$(ado_json mapped-field "$SEH_ADO_CFG" "$_kind")
+    if [ -z "$_loc" ]; then
+      blocked "$_kind is not mapped" "set agents.tracker.fields in /<prefix>setit-se"
+    fi
+    _src=$(read_body_file "$BODY_FILE")
+    _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
+    _wit="/${_seg}/_apis/wit"
+    _api=$(ado_json api-version)
+    _payload=$(mktemp)
+    _item=$(mktemp)
+    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_payload" "$_item"' EXIT
+    if [ "$_loc" = "comment" ]; then
+      ado_json set-body "$SEH_ADO_CFG" "$_kind" "$_src" > "$_payload"
+      ado_http POST "${_wit}/workitems/${_id}/comments?api-version=$(ado_json comments-api-version)" "$_payload"
+      ok "id: ${_id}" "field: ${_kind}" "location: comment"
+    fi
+    if [ "$_kind" = "log" ] && [ "$_loc" != "description" ] && [ "$_loc" != "history" ]; then
+      _fields=$(ado_json fetch-fields "$SEH_ADO_CFG")
+      ado_http GET "${_wit}/workitems/${_id}?fields=${_fields}&api-version=${_api}"
+      cp "$SEH_ADO_BODY" "$_item"
+      ado_json set-body "$SEH_ADO_CFG" "$_kind" "$_src" "$_item" > "$_payload"
+    else
+      ado_json set-body "$SEH_ADO_CFG" "$_kind" "$_src" > "$_payload"
+    fi
+    ado_http PATCH "${_wit}/workitems/${_id}?api-version=${_api}" "$_payload" "$(ado_json patch-content-type)"
+    ok "id: ${_id}" "field: ${_kind}" "location: ${_loc}"
+    ;;
+
+  comment)
+    if [ $# -lt 1 ]; then
+      blocked "unexpected arguments" "usage: ado comment <work-item-id> [--file <path>]"
+    fi
+    require_task "$1"
+    _id=$1
+    shift
+    parse_file_opt "$@"
+    load_ado
+    _src=$(read_body_file "$BODY_FILE")
+    _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
+    _api=$(ado_json comments-api-version)
+    _payload=$(mktemp)
+    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_payload"' EXIT
+    ado_json comment-body "$_src" > "$_payload"
+    ado_http POST "/${_seg}/_apis/wit/workitems/${_id}/comments?api-version=${_api}" "$_payload"
+    ok "id: ${_id}"
     ;;
 
   *)

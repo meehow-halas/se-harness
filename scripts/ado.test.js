@@ -156,7 +156,12 @@ function defaultRoutes(extra = {}) {
 }
 
 function runAdo(cwd, args, env) {
-  return runScript("ado", args, { cwd, env });
+  const r = runScript("ado", args, { cwd, env });
+  assert.equal((r.stdout + r.stderr).includes(FIX.token), false, "token leaked");
+  if (env && env.PATH && env.PATH.includes(".ado-bin")) {
+    assert.equal(argvHasToken(path.join(cwd, ".ado-bin", "curl-argv.log"), FIX.token), false, "token in argv");
+  }
+  return r;
 }
 
 function argvHasToken(logFile, token) {
@@ -289,4 +294,381 @@ describe("ado", () => {
     });
   });
 
+
+  describe("content verbs", () => {
+    const ID = "48213";
+    const itemPath = (id = ID) => witPath(`/_apis/wit/workitems/${id}`);
+
+    function dataLines(stub) {
+      if (!fs.existsSync(stub.dataFile)) {
+        return [];
+      }
+      return fs
+        .readFileSync(stub.dataFile, "utf8")
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .map((l) => JSON.parse(l));
+    }
+
+    function argvLines(stub) {
+      return fs
+        .readFileSync(stub.logFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(l));
+    }
+
+    const workItem = {
+      id: Number(ID),
+      fields: {
+        "System.Title": "QX9 widget title",
+        "System.State": "QX9 Backlog New",
+        "System.WorkItemType": FIX.featureType,
+        "System.Description": "<p>QX9 prompt body</p>",
+        [FIX.specField]: "<p>QX9 spec body</p>",
+        "Custom.QX9Extra": "extra-value-7",
+      },
+    };
+
+    test("get prints scalars and spec/prompt/log blocks from the configured fields", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, {
+          trackerOver: { fetchFields: [FIX.specField, "Custom.QX9Extra"] },
+        });
+        const stub = writeCurlStub(
+          cwd,
+          defaultRoutes({
+            [`GET ${itemPath()}`]: { code: 200, body: workItem },
+            [`GET ${itemPath()}/comments`]: {
+              code: 200,
+              body: { comments: [{ text: "<p>QX9 first note</p>" }, { text: "second note" }] },
+            },
+          })
+        );
+        const result = runAdo(cwd, ["get", ID], stub.env);
+        assert.equal(result.status, 0, result.stdout + result.stderr);
+        assert.match(result.stdout, /^OK\n/);
+        assert.match(result.stdout, /id: 48213\n/);
+        assert.match(result.stdout, /title: QX9 widget title\n/);
+        assert.match(result.stdout, /status: QX9 Backlog New\n/);
+        assert.match(result.stdout, /type: Product Backlog Item\n/);
+        assert.match(result.stdout, /Custom\.QX9Extra: extra-value-7\n/);
+        assert.match(result.stdout, /BEGIN spec\n<p>QX9 spec body<\/p>\nEND spec/);
+        assert.match(result.stdout, /BEGIN prompt\n<p>QX9 prompt body<\/p>\nEND prompt/);
+        assert.match(
+          result.stdout,
+          /BEGIN log\n<p>QX9 first note<\/p>\n\nsecond note\nEND log/
+        );
+        assert.equal(result.stdout.includes(FIX.token), false);
+        const first = argvLines(stub)[0].find((a) => String(a).includes("/workitems/"));
+        assert.ok(first.includes("fields="));
+        assert.ok(first.includes(FIX.specField));
+        assert.ok(first.includes("Custom.QX9Extra"));
+        assert.ok(first.includes("api-version=7.1"));
+      });
+    });
+
+    test("get maps fields by configured names (swapped spec/prompt, log on a field)", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, {
+          trackerOver: {
+            fields: { spec: "description", prompt: "Custom.ZY3Prompt", log: "Custom.ZY3Log" },
+            fetchFields: [],
+          },
+        });
+        const stub = writeCurlStub(
+          cwd,
+          defaultRoutes({
+            [`GET ${itemPath("77")}`]: {
+              code: 200,
+              body: {
+                id: 77,
+                fields: {
+                  "System.Title": "t",
+                  "System.Description": "desc-as-spec",
+                  "Custom.ZY3Prompt": "prompt-from-custom",
+                  "Custom.ZY3Log": "log-from-custom",
+                },
+              },
+            },
+            [`GET ${itemPath("77")}/comments`]: { code: 200, body: { comments: [{ text: "ignored" }] } },
+          })
+        );
+        const result = runAdo(cwd, ["get", "77"], stub.env);
+        assert.match(result.stdout, /BEGIN spec\ndesc-as-spec\nEND spec/);
+        assert.match(result.stdout, /BEGIN prompt\nprompt-from-custom\nEND prompt/);
+        assert.match(result.stdout, /BEGIN log\nlog-from-custom\nEND log/);
+        assert.equal(result.stdout.includes("ignored"), false);
+      });
+    });
+
+    test("get reads repo files by id when artifactsOnTrackerOnly is false", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { artifactsOnTrackerOnly: false } });
+        writeFile(cwd, "docs/features/48213.feature.md", "---\nx: 1\n---\nrepo spec\n");
+        writeFile(cwd, "docs/prompt/48213.prompt.md", "repo prompt\n");
+        writeFile(cwd, "docs/feature-log/48213.log.md", "repo log\n");
+        const stub = writeCurlStub(
+          cwd,
+          defaultRoutes({
+            [`GET ${itemPath()}`]: { code: 200, body: workItem },
+            [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [] } },
+          })
+        );
+        const result = runAdo(cwd, ["get", ID], stub.env);
+        assert.match(result.stdout, /BEGIN spec\nrepo spec\nEND spec/);
+        assert.match(result.stdout, /BEGIN prompt\nrepo prompt\nEND prompt/);
+        assert.match(result.stdout, /BEGIN log\nrepo log\nEND log/);
+        assert.equal(result.stdout.includes("QX9 spec body"), false);
+      });
+    });
+
+    test("get rejects a non-numeric id", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const result = runAdo(cwd, ["get", "QX-1"], writeCurlStub(cwd, defaultRoutes()).env);
+        assertBlocked(result, /invalid task id/);
+      });
+    });
+
+    test("create posts the configured type name and project, prints id", () => {
+      withTempDir((cwd) => {
+        const project = "Zy3 Spaced Project";
+        const type = "Zy3 Work Thing";
+        writeProject(cwd, {
+          trackerOver: {
+            project,
+            workItemTypes: { feature: "Other Feature", bug: type },
+          },
+        });
+        const route = `POST /qx9-ado-fixture-org/${encodeURIComponent(project)}/_apis/wit/workitems/%24${encodeURIComponent(type)}`;
+        const stub = writeCurlStub(cwd, { [route]: { code: 200, body: { id: 5521 } } });
+        const result = runAdo(cwd, ["create", "--type", "bug", "--title", "QX9 a \"quoted\" title"], stub.env);
+        const parsed = assertOk(result, { id: "5521" });
+        assert.equal(parsed.fields.id, "5521");
+        const sent = dataLines(stub)[0];
+        assert.deepEqual(JSON.parse(sent.data), [
+          { op: "add", path: "/fields/System.Title", value: "QX9 a \"quoted\" title" },
+        ]);
+        const argv = argvLines(stub)[0];
+        assert.ok(argv.includes("Content-Type: application/json-patch+json"));
+        assert.equal(argvHasToken(stub.logFile, FIX.token), false);
+      });
+    });
+
+    test("create BLOCKED for unmapped type or bad args", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { workItemTypes: { feature: FIX.featureType } } });
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        assertBlocked(runAdo(cwd, ["create", "--type", "bug", "--title", "x"], stub.env), /not mapped/);
+        assertBlocked(runAdo(cwd, ["create", "--type", "epic", "--title", "x"], stub.env), /invalid work item type/);
+        assertBlocked(runAdo(cwd, ["create", "--type", "feature"], stub.env), /missing --title/);
+      });
+    });
+
+    test("set spec patches the mapped custom field with escaped HTML", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, { [`PATCH ${itemPath()}`]: { code: 200, body: {} } });
+        writeFile(cwd, "body.md", "a < b & c\nline two\n\nnext para\n");
+        const result = runAdo(cwd, ["set", ID, "spec", "--file", path.join(cwd, "body.md")], stub.env);
+        assertOk(result, { id: ID, field: "spec", location: FIX.specField });
+        const sent = dataLines(stub)[0];
+        assert.deepEqual(JSON.parse(sent.data), [
+          {
+            op: "add",
+            path: `/fields/${FIX.specField}`,
+            value: "<p>a &lt; b &amp; c<br>line two</p><p>next para</p>",
+          },
+        ]);
+        assert.ok(argvLines(stub)[0].includes("Content-Type: application/json-patch+json"));
+      });
+    });
+
+    test("set prompt on description reads stdin and uses System.Description", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, { [`PATCH ${itemPath()}`]: { code: 200, body: {} } });
+        const { spawnSync } = require("child_process");
+        const r = spawnSync("sh", [path.join(__dirname, "ado"), "set", ID, "prompt"], {
+          cwd,
+          input: "from stdin\n",
+          env: { ...process.env, ...stub.env, GIT_CONFIG_GLOBAL: "/dev/null" },
+          encoding: "utf8",
+        });
+        assert.equal(r.status, 0, r.stdout + r.stderr);
+        assert.deepEqual(JSON.parse(dataLines(stub)[0].data), [
+          { op: "add", path: "/fields/System.Description", value: "<p>from stdin</p>" },
+        ]);
+      });
+    });
+
+    test("set log on a field appends to the existing value", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { fields: { spec: FIX.specField, prompt: "description", log: "Custom.ZY3Log" } } });
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: {
+            code: 200,
+            body: { id: 1, fields: { "Custom.ZY3Log": "<p>old entry</p>" } },
+          },
+          [`PATCH ${itemPath()}`]: { code: 200, body: {} },
+        });
+        writeFile(cwd, "log.md", "new entry\n");
+        const result = runAdo(cwd, ["set", ID, "log", "--file", path.join(cwd, "log.md")], stub.env);
+        assertOk(result, { field: "log", location: "Custom.ZY3Log" });
+        const patch = dataLines(stub).find((d) => d.key.startsWith("PATCH"));
+        assert.equal(JSON.parse(patch.data)[0].value, "<p>old entry</p><p>new entry</p>");
+      });
+    });
+
+    test("set log mapped to comment posts a comment, no PATCH", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, {
+          [`POST ${itemPath()}/comments`]: { code: 200, body: { id: 1 } },
+        });
+        writeFile(cwd, "log.md", "log line\n");
+        const result = runAdo(cwd, ["set", ID, "log", "--file", path.join(cwd, "log.md")], stub.env);
+        assertOk(result, { field: "log", location: "comment" });
+        const sent = dataLines(stub);
+        assert.equal(sent.length, 1);
+        assert.deepEqual(JSON.parse(sent[0].data), { text: "<p>log line</p>" });
+        assert.ok(argvLines(stub)[0].some((a) => String(a).includes("api-version=7.1-preview.4")));
+      });
+    });
+
+    test("set BLOCKED when field unmapped or artifacts live in the repo", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { fields: { spec: "", prompt: "description", log: "comment" } } });
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        writeFile(cwd, "b.md", "x\n");
+        const f = path.join(cwd, "b.md");
+        assertBlocked(runAdo(cwd, ["set", ID, "spec", "--file", f], stub.env), /spec is not mapped/);
+        assert.equal(fs.existsSync(stub.dataFile), false);
+      });
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { artifactsOnTrackerOnly: false } });
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        writeFile(cwd, "b.md", "x\n");
+        for (const kind of ["spec", "prompt", "log"]) {
+          assertBlocked(
+            runAdo(cwd, ["set", ID, kind, "--file", path.join(cwd, "b.md")], stub.env),
+            /stored in repository files/
+          );
+        }
+        assert.equal(fs.existsSync(stub.dataFile), false);
+      });
+    });
+
+    test("set BLOCKED for missing file and bad field", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        assertBlocked(runAdo(cwd, ["set", ID, "spec", "--file", path.join(cwd, "nope.md")], stub.env), /does not exist/);
+        assertBlocked(runAdo(cwd, ["set", ID, "title"], stub.env), /invalid field/);
+      });
+    });
+
+    test("comment posts HTML text to the comments API of the configured project", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, {
+          [`POST ${itemPath("9001")}/comments`]: { code: 200, body: { id: 3 } },
+        });
+        writeFile(cwd, "c.md", "hello <world>\n");
+        const result = runAdo(cwd, ["comment", "9001", "--file", path.join(cwd, "c.md")], stub.env);
+        assertOk(result, { id: "9001" });
+        assert.deepEqual(JSON.parse(dataLines(stub)[0].data), { text: "<p>hello &lt;world&gt;</p>" });
+        assert.equal(argvHasToken(stub.logFile, FIX.token), false);
+      });
+    });
+
+    test("every CRUD verb targets the configured organization and project", () => {
+      withTempDir((cwd) => {
+        const org = "https://dev.azure.com/zy3-alt-org";
+        const project = "Zy3 Alt Project";
+        writeProject(cwd, {
+          trackerOver: { organizationUrl: org, project, workItemTypes: { feature: "Zy3 Feat", bug: "Zy3 Bug" } },
+        });
+        const base = `/zy3-alt-org/${encodeURIComponent(project)}/_apis/wit/workitems`;
+        const stub = writeCurlStub(cwd, {
+          [`GET ${base}/12`]: { code: 200, body: { id: 12, fields: {} } },
+          [`GET ${base}/12/comments`]: { code: 200, body: { comments: [] } },
+          [`POST ${base}/%24Zy3%20Feat`]: { code: 200, body: { id: 13 } },
+          [`PATCH ${base}/12`]: { code: 200, body: {} },
+          [`POST ${base}/12/comments`]: { code: 200, body: {} },
+        });
+        writeFile(cwd, "b.md", "x\n");
+        const f = path.join(cwd, "b.md");
+        assert.equal(runAdo(cwd, ["get", "12"], stub.env).status, 0);
+        assert.equal(runAdo(cwd, ["create", "--type", "feature", "--title", "t"], stub.env).status, 0);
+        assert.equal(runAdo(cwd, ["set", "12", "spec", "--file", f], stub.env).status, 0);
+        assert.equal(runAdo(cwd, ["comment", "12", "--file", f], stub.env).status, 0);
+        for (const argv of argvLines(stub)) {
+          const url = argv[argv.indexOf("--url") + 1];
+          assert.ok(url.startsWith(`${org}/${encodeURIComponent(project)}/`), url);
+        }
+        assert.equal(argvHasToken(stub.logFile, FIX.token), false);
+      });
+    });
+
+    test("history map: get reads System.History, set patches it without appending", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, {
+          trackerOver: { fields: { spec: "history", prompt: "description", log: "history" }, fetchFields: [] },
+        });
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: {
+            code: 200,
+            body: { id: 48213, fields: { "System.History": "hist-text", "System.Description": "d" } },
+          },
+          [`PATCH ${itemPath()}`]: { code: 200, body: {} },
+        });
+        const got = runAdo(cwd, ["get", ID], stub.env);
+        assert.match(got.stdout, /BEGIN spec\nhist-text\nEND spec/);
+        assert.match(got.stdout, /BEGIN log\nhist-text\nEND log/);
+        assert.ok(argvLines(stub)[0].some((a) => String(a).includes("System.History")));
+        assert.equal(argvLines(stub).length, 1, "no comments fetch when nothing maps to comment");
+        writeFile(cwd, "l.md", "entry\n");
+        const set = runAdo(cwd, ["set", ID, "log", "--file", path.join(cwd, "l.md")], stub.env);
+        assertOk(set, { location: "history" });
+        const patches = dataLines(stub).filter((d) => d.key.startsWith("PATCH"));
+        assert.deepEqual(JSON.parse(patches[0].data), [
+          { op: "add", path: "/fields/System.History", value: "<p>entry</p>" },
+        ]);
+        assert.equal(dataLines(stub).filter((d) => d.key.startsWith("GET")).length, 1);
+        assert.equal(got.stdout.includes(FIX.token) || set.stdout.includes(FIX.token), false);
+      });
+    });
+
+    test("get fetches comments only when a mapping needs them", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, {
+          trackerOver: { fields: { spec: FIX.specField, prompt: "description", log: "Custom.ZY3Log" } },
+        });
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: { code: 200, body: { id: 48213, fields: {} } },
+        });
+        const r = runAdo(cwd, ["get", ID], stub.env);
+        assert.equal(r.status, 0, r.stdout + r.stderr);
+        assert.equal(argvLines(stub).length, 1);
+        assert.equal(r.stdout.includes(FIX.token), false);
+      });
+    });
+
+    test("HTTP error from ADO surfaces as BLOCKED", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, {
+          [`POST ${itemPath()}/comments`]: { code: 404, body: { message: "QX9 no such item" } },
+        });
+        writeFile(cwd, "c.md", "x\n");
+        assertBlocked(
+          runAdo(cwd, ["comment", ID, "--file", path.join(cwd, "c.md")], stub.env),
+          /404: QX9 no such item/
+        );
+      });
+    });
+  });
 });

@@ -79,10 +79,14 @@ ado_http() {
   _method=$1
   _path=$2
   _data=${3-}
+  _ctype=${4-}
   _url="${SEH_ADO_URL}${_path}"
   set -- curl --config "$SEH_ADO_CURL_CFG" --url "$_url" -X "$_method" -o "$SEH_ADO_BODY" -w '%{http_code}'
   if [ -n "$_data" ]; then
     set -- "$@" --data-binary "@$_data"
+    if [ -n "$_ctype" ]; then
+      set -- "$@" -H "Content-Type: $_ctype"
+    fi
   fi
   SEH_ADO_CODE=$("$@") || blocked "Azure DevOps request failed" "check the organization URL and retry"
   case $SEH_ADO_CODE in
@@ -113,4 +117,18 @@ require_task() {
       blocked "invalid task id $1" "pass a positive integer work item id"
       ;;
   esac
+}
+
+read_body_file() {
+  _file=${1-}
+  if [ -n "$_file" ]; then
+    if [ ! -f "$_file" ]; then
+      blocked "body file $_file does not exist" "pass --file with a readable path, or stdin"
+    fi
+    printf '%s\n' "$_file"
+    return 0
+  fi
+  _tmp=$(mktemp)
+  cat > "$_tmp"
+  printf '%s\n' "$_tmp"
 }

@@ -2,8 +2,11 @@
 "use strict";
 
 const fs = require("fs");
+const path = require("path");
 
 const API_VERSION = "7.1";
+// MS docs list the Comments API only as 7.1-preview.4.
+const COMMENTS_API_VERSION = "7.1-preview.4";
 
 function fail(msg) {
   process.stderr.write(`${msg}\n`);
@@ -40,6 +43,66 @@ function uniqueNames(values) {
     out.push(v);
   }
   return out;
+}
+
+const PATCH_CT = "application/json-patch+json";
+
+function mapped(t, kind) {
+  const v = (t.fields || {})[kind];
+  return typeof v === "string" ? v.trim() : "";
+}
+
+function fieldRef(loc) {
+  if (loc === "description") {
+    return "System.Description";
+  }
+  if (loc === "history") {
+    return "System.History";
+  }
+  return loc;
+}
+
+function artifactsOnTrackerOnly(t) {
+  return t.artifactsOnTrackerOnly !== false;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Phase 3: plain text -> minimal HTML. Round-trip polish is phase 7.
+function toHtml(text) {
+  const t = text.replace(/\r\n/g, "\n").replace(/\n+$/, "");
+  if (!t.trim()) {
+    return "";
+  }
+  return t
+    .split(/\n{2,}/)
+    .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+function scalar(v) {
+  if (v == null) {
+    return "";
+  }
+  if (typeof v === "object") {
+    return typeof v.displayName === "string" ? v.displayName : "";
+  }
+  return String(v);
+}
+
+function readArtifactFile(root, rel) {
+  const p = path.join(root, rel);
+  return fs.existsSync(p) ? fs.readFileSync(p, "utf8").replace(/\n$/, "") : "";
+}
+
+function stripYamlFrontmatter(text) {
+  if (!text.startsWith("---")) {
+    return text;
+  }
+  const end = text.indexOf("\n---", 3);
+  return end === -1 ? text : text.slice(end + 4).replace(/^\n/, "");
 }
 
 const cmd = process.argv[2];
@@ -182,6 +245,208 @@ if (cmd === "format-meta") {
     fi += 1;
     lines.push(`field.${fi}: ${f.referenceName} | ${name}`);
   }
+  process.stdout.write(`${lines.join("\n")}\n`);
+  process.exit(0);
+}
+
+if (cmd === "comments-api-version") {
+  process.stdout.write(`${COMMENTS_API_VERSION}\n`);
+  process.exit(0);
+}
+
+if (cmd === "needs-comments") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  const kinds = ["spec", "prompt", "log"];
+  const need =
+    artifactsOnTrackerOnly(t) &&
+    (kinds.some((k) => mapped(t, k) === "comment") || !mapped(t, "log"));
+  process.stdout.write(need ? "true\n" : "false\n");
+  process.exit(0);
+}
+
+if (cmd === "patch-content-type") {
+  process.stdout.write(PATCH_CT);
+  process.exit(0);
+}
+
+if (cmd === "mapped-field") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  process.stdout.write(`${mapped(t, process.argv[4])}\n`);
+  process.exit(0);
+}
+
+if (cmd === "artifacts-on-tracker-only") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  process.stdout.write(artifactsOnTrackerOnly(t) ? "true\n" : "false\n");
+  process.exit(0);
+}
+
+if (cmd === "type-encoded") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  const name =
+    t.workItemTypes && typeof t.workItemTypes[process.argv[4]] === "string"
+      ? t.workItemTypes[process.argv[4]].trim()
+      : "";
+  if (!name) {
+    fail("missing-type");
+  }
+  process.stdout.write(`%24${encodeURIComponent(name)}`);
+  process.exit(0);
+}
+
+if (cmd === "fetch-fields") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  const names = [
+    "System.Id",
+    "System.Title",
+    "System.State",
+    "System.WorkItemType",
+    "System.Description",
+  ];
+  for (const kind of ["spec", "prompt", "log"]) {
+    const loc = mapped(t, kind);
+    if (loc && loc !== "comment") {
+      names.push(fieldRef(loc));
+    }
+  }
+  for (const f of Array.isArray(t.fetchFields) ? t.fetchFields : []) {
+    if (typeof f === "string" && f.trim()) {
+      names.push(fieldRef(f.trim()));
+    }
+  }
+  process.stdout.write(`${uniqueNames(names).join(",")}\n`);
+  process.exit(0);
+}
+
+if (cmd === "create-body") {
+  const title = process.argv[3] || "";
+  if (!title) {
+    fail("create-fields");
+  }
+  process.stdout.write(
+    JSON.stringify([{ op: "add", path: "/fields/System.Title", value: title }])
+  );
+  process.exit(0);
+}
+
+if (cmd === "extract-id") {
+  const body = readJson(process.argv[3]);
+  const id = body && body.id;
+  if (typeof id !== "number" && typeof id !== "string") {
+    fail("missing-id");
+  }
+  process.stdout.write(`${id}\n`);
+  process.exit(0);
+}
+
+if (cmd === "comment-body") {
+  process.stdout.write(
+    JSON.stringify({ text: toHtml(fs.readFileSync(process.argv[3], "utf8")) })
+  );
+  process.exit(0);
+}
+
+if (cmd === "set-body") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  const kind = process.argv[4];
+  const loc = mapped(t, kind);
+  const text = fs.readFileSync(process.argv[5], "utf8");
+  if (!loc) {
+    fail("unmapped-field");
+  }
+  if (loc === "comment") {
+    process.stdout.write(JSON.stringify({ text: toHtml(text) }));
+    process.exit(0);
+  }
+  const ref = fieldRef(loc);
+  let value = toHtml(text);
+  if (kind === "log" && process.argv[6]) {
+    const existing = readJson(process.argv[6]);
+    const prev = scalar(((existing && existing.fields) || {})[ref]);
+    value = prev ? `${prev}${value}` : value;
+  }
+  process.stdout.write(
+    JSON.stringify([{ op: "add", path: `/fields/${ref}`, value }])
+  );
+  process.exit(0);
+}
+
+if (cmd === "format-get") {
+  const cfgPath = process.argv[3];
+  const t = trackerFrom(readJson(cfgPath));
+  const item = readJson(process.argv[4]);
+  const comments = process.argv[5] ? readJson(process.argv[5]) : {};
+  const fields = (item && item.fields) || {};
+  const id = String(item.id != null ? item.id : fields["System.Id"] || "");
+  const commentsText = () =>
+    (Array.isArray(comments.comments) ? comments.comments : [])
+      .map((c) => scalar(c && c.text))
+      .filter(Boolean)
+      .join("\n\n");
+  let spec;
+  let prompt;
+  let log;
+  if (!artifactsOnTrackerOnly(t)) {
+    const root = path.dirname(cfgPath);
+    spec = stripYamlFrontmatter(
+      readArtifactFile(root, `docs/features/${id}.feature.md`)
+    ).trim();
+    prompt = readArtifactFile(root, `docs/prompt/${id}.prompt.md`).trim();
+    log = readArtifactFile(root, `docs/feature-log/${id}.log.md`).trim();
+  } else {
+    const text = (kind) => {
+      const loc = mapped(t, kind);
+      if (!loc) {
+        return "";
+      }
+      return loc === "comment" ? commentsText() : scalar(fields[fieldRef(loc)]);
+    };
+    spec = text("spec");
+    prompt = text("prompt");
+    log = text("log");
+    if (!mapped(t, "spec")) {
+      spec = scalar(fields["System.Description"]);
+    }
+    if (!mapped(t, "log")) {
+      log = commentsText();
+    }
+  }
+  const lines = [
+    `id: ${id}`,
+    `title: ${scalar(fields["System.Title"])}`,
+    `status: ${scalar(fields["System.State"])}`,
+    `type: ${scalar(fields["System.WorkItemType"])}`,
+  ];
+  const shown = new Set();
+  const core = new Set([
+    "System.Id",
+    "System.Title",
+    "System.State",
+    "System.WorkItemType",
+    "System.Description",
+  ]);
+  const mappedRefs = new Set(
+    ["spec", "prompt", "log"].map((k) => fieldRef(mapped(t, k)))
+  );
+  for (const f of Array.isArray(t.fetchFields) ? t.fetchFields : []) {
+    const ref = typeof f === "string" ? fieldRef(f.trim()) : "";
+    if (!ref || core.has(ref) || mappedRefs.has(ref) || shown.has(ref)) {
+      continue;
+    }
+    shown.add(ref);
+    lines.push(`${ref}: ${scalar(fields[ref])}`);
+  }
+  lines.push(
+    "BEGIN spec",
+    spec,
+    "END spec",
+    "BEGIN prompt",
+    prompt,
+    "END prompt",
+    "BEGIN log",
+    log,
+    "END log"
+  );
   process.stdout.write(`${lines.join("\n")}\n`);
   process.exit(0);
 }
