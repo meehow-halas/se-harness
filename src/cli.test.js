@@ -848,6 +848,35 @@ describe("seh install --prefix", () => {
     });
   });
 
+  test("reinstall without --prefix keeps the stored prefix, including empty", () => {
+    for (const stored of ["my-", ""]) {
+      withTempDir((root) => {
+        const { pkg, project } = setupPackage(root);
+        assert.equal(runCli(["install", "--prefix", stored], { cwd: project, packageRoot: pkg }).status, 0);
+        const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0);
+        assert.equal(read(path.join(project, ".seh", "PREFIX")), `${stored}\n`);
+        assert.match(result.stdout, new RegExp(`run /${stored}setit-se`));
+        assert.equal(read(path.join(project, ".seh", "agents", "a.md")), `go: /${stored}shipit\n`);
+        for (const host of HOST_DIRS) {
+          assert.equal(exists(path.join(project, host, "skills", `${stored}setit-se`)), true, host);
+          assert.equal(exists(path.join(project, host, "skills", "_setit-se")), false, host);
+        }
+      });
+    }
+  });
+
+  test("reinstall without --prefix falls back to _ when stored PREFIX is invalid", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      runCli(["install", "--prefix", "a_"], { cwd: project, packageRoot: pkg });
+      fs.writeFileSync(path.join(project, ".seh", "PREFIX"), "../x\n");
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(read(path.join(project, ".seh", "PREFIX")), "_\n");
+      assert.equal(exists(path.join(project, ".claude", "skills", "_setit-se")), true);
+    });
+  });
+
   test("real package: no unrendered token left, work-skill templates keep source names", () => {
     withTempDir((project) => {
       const result = runCli(["install", "--prefix", "q_"], { cwd: project });

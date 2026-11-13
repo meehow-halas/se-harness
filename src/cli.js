@@ -17,6 +17,7 @@ const SETUP_SKILL = "setit-se";
 const DEFAULT_PREFIX = "_";
 const PREFIX_FILE = "PREFIX";
 const PREFIX_TOKEN = "{{prefix}}";
+const PREFIX_PATTERN = /^[A-Za-z0-9_-]*$/;
 const HOSTS_FILE = "hosts.json";
 const CHECK_UPDATE_SCRIPT = ".seh/scripts/check-update";
 const OPENCODE_PLUGIN_SRC = path.join("references", "opencode-check-update.js");
@@ -37,7 +38,7 @@ const GITIGNORE_ENTRIES = [
 function usage() {
   return [
     "Usage: seh <install|uninstall> [--prefix P]",
-    "  --prefix P   (install) prefix for installed skill names, default _ (/_setit-se). \"\" for none",
+    "  --prefix P   (install) prefix for installed skill names, default: .seh/PREFIX if present, else _ (/_setit-se). \"\" for none",
   ].join("\n");
 }
 
@@ -55,7 +56,7 @@ function parseArgs(argv) {
       } else {
         value = arg.slice("--prefix=".length);
       }
-      if (!/^[A-Za-z0-9_-]*$/.test(value)) {
+      if (!PREFIX_PATTERN.test(value)) {
         return { error: "seh: --prefix may contain only letters, digits, _ and -" };
       }
       out.prefix = value;
@@ -470,14 +471,20 @@ function pruneEmptyAncestors(startDir, cwd) {
 
 function install(ctx, prefixArg) {
   const { cwd, packageRoot } = resolveCtx(ctx);
-  const prefix = prefixArg === undefined ? DEFAULT_PREFIX : prefixArg;
   const hosts = loadHosts(packageRoot);
   const sehDir = path.join(cwd, ".seh");
   const previousPrefix = fs.existsSync(path.join(sehDir, PREFIX_FILE))
     ? readPrefix(sehDir)
     : undefined;
+  // A reinstall without --prefix keeps the stored prefix, so an update does
+  // not silently rename the project's skills back to the default.
+  const storedPrefix =
+    previousPrefix !== undefined && PREFIX_PATTERN.test(previousPrefix)
+      ? previousPrefix
+      : DEFAULT_PREFIX;
+  const prefix = prefixArg === undefined ? storedPrefix : prefixArg;
   fs.mkdirSync(sehDir, { recursive: true });
-  if (previousPrefix !== undefined && previousPrefix !== prefix) {
+  if (previousPrefix !== undefined && PREFIX_PATTERN.test(previousPrefix) && previousPrefix !== prefix) {
     for (const host of hosts) {
       const old = setupSkillDir(cwd, host, previousPrefix);
       fs.rmSync(old, { recursive: true, force: true });
