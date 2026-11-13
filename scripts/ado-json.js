@@ -70,7 +70,7 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// Phase 3: plain text -> minimal HTML. Round-trip polish is phase 7.
+// Plain text -> minimal HTML: <p> per blank-line paragraph, <br> per newline.
 function toHtml(text) {
   const t = text.replace(/\r\n/g, "\n").replace(/\n+$/, "");
   if (!t.trim()) {
@@ -80,6 +80,32 @@ function toHtml(text) {
     .split(/\n{2,}/)
     .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
     .join("");
+}
+
+const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+
+// Inverse of toHtml, tolerant of what ADO's editor stores (div/li/nbsp...).
+function htmlToText(html) {
+  if (!html) {
+    return "";
+  }
+  return html
+    .replace(/\r\n/g, "\n")
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|ul|ol|pre|blockquote|table)>/gi, "\n\n")
+    .replace(/<\/(li|tr)>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
+      if (e[0] === "#") {
+        const n = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+        return n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : m;
+      }
+      const v = ENTITIES[e.toLowerCase()];
+      return v === undefined ? m : v;
+    })
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function scalar(v) {
@@ -359,11 +385,24 @@ if (cmd === "set-body") {
     process.exit(0);
   }
   const ref = fieldRef(loc);
-  let value = toHtml(text);
+  // System.History is plain text in ADO; every other field is HTML.
+  let value =
+    ref === "System.History"
+      ? text.replace(/\r\n/g, "\n").replace(/\n+$/, "")
+      : toHtml(text);
   if (kind === "log" && process.argv[6]) {
     const existing = readJson(process.argv[6]);
     const prev = scalar(((existing && existing.fields) || {})[ref]);
-    value = prev ? `${prev}${value}` : value;
+    if (prev && value) {
+      // New entry is a new paragraph; keep a blank-line gap even when the
+      // old value is plain text or ends mid-line.
+      const sep = /<\/(p|div|h[1-6]|ul|ol|pre|blockquote|table)>\s*$/i.test(prev)
+        ? ""
+        : "<br><br>";
+      value = `${prev}${sep}${value}`;
+    } else if (prev) {
+      value = prev;
+    }
   }
   process.stdout.write(
     JSON.stringify([{ op: "add", path: `/fields/${ref}`, value }])
@@ -443,7 +482,7 @@ if (cmd === "format-get") {
   const id = String(item.id != null ? item.id : fields["System.Id"] || "");
   const commentsText = () =>
     (Array.isArray(comments.comments) ? comments.comments : [])
-      .map((c) => scalar(c && c.text))
+      .map((c) => htmlToText(scalar(c && c.text)))
       .filter(Boolean)
       .join("\n\n");
   let spec;
@@ -462,13 +501,15 @@ if (cmd === "format-get") {
       if (!loc) {
         return "";
       }
-      return loc === "comment" ? commentsText() : scalar(fields[fieldRef(loc)]);
+      return loc === "comment"
+        ? commentsText()
+        : htmlToText(scalar(fields[fieldRef(loc)]));
     };
     spec = text("spec");
     prompt = text("prompt");
     log = text("log");
     if (!mapped(t, "spec")) {
-      spec = scalar(fields["System.Description"]);
+      spec = htmlToText(scalar(fields["System.Description"]));
     }
     if (!mapped(t, "log")) {
       log = commentsText();

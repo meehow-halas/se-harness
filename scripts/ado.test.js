@@ -355,11 +355,11 @@ describe("ado", () => {
         assert.match(result.stdout, /status: QX9 Backlog New\n/);
         assert.match(result.stdout, /type: Product Backlog Item\n/);
         assert.match(result.stdout, /Custom\.QX9Extra: extra-value-7\n/);
-        assert.match(result.stdout, /BEGIN spec\n<p>QX9 spec body<\/p>\nEND spec/);
-        assert.match(result.stdout, /BEGIN prompt\n<p>QX9 prompt body<\/p>\nEND prompt/);
+        assert.match(result.stdout, /BEGIN spec\nQX9 spec body\nEND spec/);
+        assert.match(result.stdout, /BEGIN prompt\nQX9 prompt body\nEND prompt/);
         assert.match(
           result.stdout,
-          /BEGIN log\n<p>QX9 first note<\/p>\n\nsecond note\nEND log/
+          /BEGIN log\nQX9 first note\n\nsecond note\nEND log/
         );
         assert.equal(result.stdout.includes(FIX.token), false);
         const first = argvLines(stub)[0].find((a) => String(a).includes("/workitems/"));
@@ -367,6 +367,53 @@ describe("ado", () => {
         assert.ok(first.includes(FIX.specField));
         assert.ok(first.includes("Custom.QX9Extra"));
         assert.ok(first.includes("api-version=7.1"));
+      });
+    });
+
+    test("get decodes HTML bodies: paragraphs, br, lists, entities, nbsp, nested tags", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: {
+            code: 200,
+            body: {
+              id: Number(ID),
+              fields: {
+                "System.Title": "t",
+                "System.State": "s",
+                "System.WorkItemType": "w",
+                "System.Description": "<div>one&nbsp;two<br />three</div><div>&lt;b&gt; &amp; &#65;&#x42;</div>",
+                [FIX.specField]: "<p>para <b>bold</b> a</p><p>para2</p><ul><li>x1</li><li>x2</li></ul>",
+              },
+            },
+          },
+          [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [] } },
+        });
+        const result = runAdo(cwd, ["get", ID], stub.env);
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(result.stdout, /BEGIN spec\npara bold a\n\npara2\n\nx1\nx2\nEND spec/);
+        assert.match(result.stdout, /BEGIN prompt\none two\nthree\n\n<b> & AB\nEND prompt/);
+      });
+    });
+
+    test("set then get round-trips text with line breaks, blank lines and markup chars", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const text = "line <1> & more\nline 2\n\npara &amp; two\n- item";
+        const put = writeCurlStub(cwd, { [`PATCH ${itemPath()}`]: { code: 200, body: {} } });
+        writeFile(cwd, "body.md", text + "\n");
+        runAdo(cwd, ["set", ID, "spec", "--file", path.join(cwd, "body.md")], put.env);
+        const html = JSON.parse(dataLines(put)[0].data)[0].value;
+        fs.rmSync(path.join(cwd, ".ado-bin"), { recursive: true, force: true });
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: {
+            code: 200,
+            body: { id: Number(ID), fields: { [FIX.specField]: html } },
+          },
+          [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [] } },
+        });
+        const result = runAdo(cwd, ["get", ID], stub.env);
+        assert.ok(result.stdout.includes(`BEGIN spec\n${text}\nEND spec`), result.stdout);
       });
     });
 
@@ -523,6 +570,82 @@ describe("ado", () => {
       });
     });
 
+    test("set log appends after plain-text or mid-line old value with a blank-line gap", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { fields: { spec: FIX.specField, prompt: "description", log: "Custom.ZY3Log" } } });
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: { code: 200, body: { id: 1, fields: { "Custom.ZY3Log": "legacy plain note" } } },
+          [`PATCH ${itemPath()}`]: { code: 200, body: {} },
+        });
+        writeFile(cwd, "log.md", "new <e>\n");
+        runAdo(cwd, ["set", ID, "log", "--file", path.join(cwd, "log.md")], stub.env);
+        const patch = dataLines(stub).find((d) => d.key.startsWith("PATCH"));
+        const html = JSON.parse(patch.data)[0].value;
+        assert.equal(html, "legacy plain note<br><br><p>new &lt;e&gt;</p>");
+      });
+    });
+
+    test("log appended twice then read back keeps entries separated by a blank line", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { fields: { spec: FIX.specField, prompt: "description", log: "Custom.ZY3Log" } } });
+        const put = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: { code: 200, body: { id: 1, fields: { "Custom.ZY3Log": "<p>first A</p>" } } },
+          [`PATCH ${itemPath()}`]: { code: 200, body: {} },
+        });
+        writeFile(cwd, "log.md", "second B\nline\n");
+        runAdo(cwd, ["set", ID, "log", "--file", path.join(cwd, "log.md")], put.env);
+        const html = JSON.parse(dataLines(put).find((d) => d.key.startsWith("PATCH")).data)[0].value;
+        fs.rmSync(path.join(cwd, ".ado-bin"), { recursive: true, force: true });
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: { code: 200, body: { id: 1, fields: { "Custom.ZY3Log": html } } },
+        });
+        const got = runAdo(cwd, ["get", ID], stub.env);
+        assert.match(got.stdout, /BEGIN log\nfirst A\n\nsecond B\nline\nEND log/);
+      });
+    });
+
+    test("get drops script/style and does not double-decode entities", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: {
+            code: 200,
+            body: { id: 1, fields: { [FIX.specField]: "<style>p{x:y}</style><p>a &amp;lt; b</p><script>evil()</script>" } },
+          },
+          [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [] } },
+        });
+        const got = runAdo(cwd, ["get", ID], stub.env);
+        assert.match(got.stdout, /BEGIN spec\na &lt; b\nEND spec/);
+      });
+    });
+
+    test("set with CRLF input stores <br>, not carriage returns", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, { [`PATCH ${itemPath()}`]: { code: 200, body: {} } });
+        writeFile(cwd, "b.md", "a\r\nb\r\n\r\nc\r\n");
+        runAdo(cwd, ["set", ID, "spec", "--file", path.join(cwd, "b.md")], stub.env);
+        assert.equal(JSON.parse(dataLines(stub)[0].data)[0].value, "<p>a<br>b</p><p>c</p>");
+      });
+    });
+
+    test("set log mapped to description appends to the existing description", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { fields: { spec: FIX.specField, prompt: "Custom.ZY3Prompt", log: "description" } } });
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: { code: 200, body: { id: 1, fields: { "System.Description": "<p>old desc</p>" } } },
+          [`PATCH ${itemPath()}`]: { code: 200, body: {} },
+        });
+        writeFile(cwd, "log.md", "added\n");
+        const result = runAdo(cwd, ["set", ID, "log", "--file", path.join(cwd, "log.md")], stub.env);
+        assertOk(result, { field: "log", location: "description" });
+        const patch = dataLines(stub).find((d) => d.key.startsWith("PATCH"));
+        assert.deepEqual(JSON.parse(patch.data), [
+          { op: "add", path: "/fields/System.Description", value: "<p>old desc</p><p>added</p>" },
+        ]);
+      });
+    });
+
     test("set log mapped to comment posts a comment, no PATCH", () => {
       withTempDir((cwd) => {
         writeProject(cwd);
@@ -631,12 +754,12 @@ describe("ado", () => {
         assert.match(got.stdout, /BEGIN log\nhist-text\nEND log/);
         assert.ok(argvLines(stub)[0].some((a) => String(a).includes("System.History")));
         assert.equal(argvLines(stub).length, 1, "no comments fetch when nothing maps to comment");
-        writeFile(cwd, "l.md", "entry\n");
+        writeFile(cwd, "l.md", "entry <1> & two\nline\n");
         const set = runAdo(cwd, ["set", ID, "log", "--file", path.join(cwd, "l.md")], stub.env);
         assertOk(set, { location: "history" });
         const patches = dataLines(stub).filter((d) => d.key.startsWith("PATCH"));
         assert.deepEqual(JSON.parse(patches[0].data), [
-          { op: "add", path: "/fields/System.History", value: "<p>entry</p>" },
+          { op: "add", path: "/fields/System.History", value: "entry <1> & two\nline" },
         ]);
         assert.equal(dataLines(stub).filter((d) => d.key.startsWith("GET")).length, 1);
         assert.equal(got.stdout.includes(FIX.token) || set.stdout.includes(FIX.token), false);

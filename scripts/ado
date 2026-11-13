@@ -172,7 +172,7 @@ case $verb in
       ado_http POST "${_wit}/workitems/${_id}/comments?api-version=$(ado_json comments-api-version)" "$_payload"
       ok "id: ${_id}" "field: ${_kind}" "location: comment"
     fi
-    if [ "$_kind" = "log" ] && [ "$_loc" != "description" ] && [ "$_loc" != "history" ]; then
+    if [ "$_kind" = "log" ] && [ "$_loc" != "history" ]; then
       _fields=$(ado_json fetch-fields "$SEH_ADO_CFG")
       ado_http GET "${_wit}/workitems/${_id}?fields=${_fields}&api-version=${_api}"
       cp "$SEH_ADO_BODY" "$_item"
