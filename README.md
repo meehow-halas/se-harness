@@ -77,7 +77,7 @@ Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag. In
 
 In the assistant, run **`/_setit-se`**. That is the only way to finish first-time setup. The CLI does not configure the project.
 
-First run asks one question at a time (role models **per host**, content language, base git branch, optional project rule, Jira). It does not commit.
+First run asks one question at a time (role models **per host**, content language, base git branch, optional project rule, Jira or Azure DevOps). It does not commit.
 
 **Required result:** a project PRD, `harness.config.json`, live agents, remaining skills, and rule packs in **every** host tree, plus a project-root `AGENTS.md`.
 
@@ -95,7 +95,7 @@ Say what you want in ordinary language. The assistant matches **intent** to a sk
 | Spec only | `/_planit` |
 | Implementation only | `/_doit` (one task or a list) |
 | One review or update from base | `/_checkit` (one task or a list; one variant) |
-| Change parameters or Jira | `/_setit-se` |
+| Change parameters or tracker (Jira / Azure DevOps) | `/_setit-se` |
 | Personae | `/_grillit` |
 
 After you accept a clean review, the Reviewer commits, opens the PR and sets `done`. That ends the feature. You merge the PR on GitHub; nothing else is needed from seh.
@@ -123,7 +123,7 @@ If Architect needs a persona round, work skills **stop and ask** `/_grillit`. `/
 
 | Skill | When | What happens | Example |
 |-------|------|----------------|---------|
-| `/_setit-se` | First config; later models, packs, base branch, Jira | One question at a time; generate live files; does not commit. See [`/_setit-se`](#_setit-se). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" |
+| `/_setit-se` | First config; later models, packs, base branch, tracker | One question at a time; generate live files; does not commit. See [`/_setit-se`](#_setit-se). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" · "connect Azure DevOps" |
 | `/_planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
 | `/_doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. Ends with status `implemented` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
 | `/_checkit` | One Reviewer round per named task | Variants: review (default), update from base. One variant for the whole invocation; same worktree / parallel rules as `/_doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" |
@@ -150,7 +150,7 @@ The only way to configure this project. The CLI does not write config. Questions
 If `harness.config.json` is missing, that is a **first run**. If the file is already there, that is a **later run** — the same skill, not a second command.
 
 ```text
-"change the architect model" · "change the architect model on Cursor" · "connect Jira" · "change the base branch"
+"change the architect model" · "change the architect model on Cursor" · "connect Jira" · "connect Azure DevOps" · "change the base branch"
 ```
 
 ### First run
@@ -160,7 +160,7 @@ If `harness.config.json` is missing, that is a **first run**. If the file is alr
 3. **Questions** (before it writes config): for each host, then for each of the four roles, one model (suggest that host’s `modelSuggest`; see [Models per host](#models-per-host)); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
 4. Writes `harness.config.json` (`seh.generatedFrom` = `.seh/VERSION`) and generates live agents, work skills, and rule packs from `.seh/` into **every** host tree. Each live agent’s `model:` is `agents.roles.<role>.model[<host.id>]` only.
 5. Merges project-root `AGENTS.md` and/or `CLAUDE.md` with the seh template, shows the full proposed markdown, and waits for acceptance. The result is always `AGENTS.md`. It writes `CLAUDE.md` only when `.claude/` was present and/or `CLAUDE.md` already existed (prefer a symlink to `AGENTS.md`; if the link fails, an independent file with the same body).
-6. Offers Jira **once**. A decline is stored; add, change, or remove later is this same skill.
+6. Offers an external tracker (Jira or Azure DevOps) **once**. A decline is stored; add, change, or remove later is this same skill.
 
 ### Later run
 
@@ -183,12 +183,12 @@ It does **not** touch `agents.brainstorm` (that is `/_grillit`), rewrite the pro
 | Packs / `packsIgnored` | detect; honour ignore | yes | regenerate rule packs |
 | Status strings | skeleton unless you confirm other strings | yes | config only |
 | Product line / `agents.docs` | from the PRD step | yes | config only |
-| Jira tracker | offer once: add or decline | add / change mapping / remove | config + local credentials file; no agent-body regen |
+| Jira / Azure DevOps tracker | offer once: add or decline | add / change mapping / remove | config + local credentials file; no agent-body regen |
 | Project PRD | create only if missing | no rewrite | — |
 | `AGENTS.md` | merge + accept | no remake | later: only create missing `CLAUDE.md` if `.claude/` exists |
 | Brainstorm members / model / consult | no | no | `/_grillit` |
 
-**Jira.** First run offers it once. Later: add, change the mapping, or remove. Details: [Jira tracker](#jira-tracker).
+**Jira / Azure DevOps.** First run offers a tracker once. Later: add, change the mapping, or remove. Details: [Jira tracker](#jira-tracker), [Azure DevOps tracker](#azure-devops-tracker).
 
 ## Agents
 
@@ -331,17 +331,17 @@ These are **not** a substitute for interaction modes. Reviewer still receives `M
 
 ### One active tracker
 
-**Exactly one tracker:** files **or** Jira, never both. Agents write spec, prompt, log, and status to the active tracker only. They do not mirror.
+**Exactly one tracker:** files, Jira, **or** Azure DevOps, never two at once. Agents write spec, prompt, log, and status to the active tracker only. They do not mirror.
 
-Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, Jira is active. If it is absent, the files tracker is active.
+Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, its `kind` (`jira` or `ado`) is the active tracker; a config without `kind` is Jira. If it is absent, the files tracker is active.
 
-Switching does **not** migrate. Connect Jira → new work is tickets only; leftover `docs/features` (etc.) are ignored. Remove Jira → new work is files only; existing tickets are not copied into files.
+Switching does **not** migrate. Connect Jira or Azure DevOps → new work is tickets / work items only; leftover `docs/features` (etc.) are ignored. Remove the tracker → new work is files only; existing tickets are not copied into files.
 
 `CHANGELOG.md` and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
 
-Name a task to a skill with the **active** tracker’s key: a file basename (`001-login`) or a Jira issue key (`PROJ-12`). See [Skills](#skills) for examples.
+Name a task to a skill with the **active** tracker’s key: a file basename (`001-login`) or a Jira issue key (`PROJ-12`), or an Azure DevOps work item id (`1234`). See [Skills](#skills) for examples.
 
-Same artifact shape on both trackers (markdown files, or mapped Jira fields / description / comments):
+Same artifact shape on both trackers (markdown files, or mapped Jira / Azure DevOps fields / description / comments):
 
 - **Spec** — abstract, requirements, acceptance criteria, architectural decisions (choices and why, not a tutorial)
 - **Prompt** — phase-grain order, what not to change; the Implementer still writes their own plan
@@ -398,9 +398,40 @@ Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log, an
 | Reviewer report (✅/❌/⚠️) | Comment. |
 | Acceptance (clean review, PR opened) | Transition to mapped `done` when not `null`. |
 
+### Azure DevOps tracker
+
+Connect, change, or remove only through `/_setit-se` (`"connect Azure DevOps"` / the first-run offer). There is no `seh` CLI for it. Agents and setup call `.seh/scripts/ado` (Azure DevOps Boards, WIT REST `api-version=7.1`). They do not use MCP, `az boards`, or `curl`.
+
+Credentials: you put the PAT in the same ignored file `harness.credentials.local.json`:
+
+```json
+{ "adoPat": "…" }
+```
+
+Never paste the PAT in chat. Never write it into git or `harness.config.json`. Organization URL, project, and field mapping live in config under `agents.tracker` (`kind: "ado"`; skeleton `.seh/references/harness.tracker.ado.json`).
+
+**Add.** One question at a time: `organizationUrl` (`https://dev.azure.com/{org}`, no trailing slash), then `project` (name or GUID). Setup creates `harness.credentials.local.json` with an empty `adoPat` if the file is missing (an existing file is never overwritten). You paste the PAT there and confirm. Setup runs `.seh/scripts/ado meta`; on `BLOCKED:` you fix the PAT, URL, or project and it retries until `OK`.
+
+Then one question: use Azure DevOps **only to read task info**, with spec, prompt, and log in repo files? (default no → `artifactsOnTrackerOnly: true`.) Then map `todo`, `inProgress`, `codeReview`, `inReview`, `done` to an exact state name from the `meta` list (numbered), or skip = `null`. Map `blocker` if you use `depends`. Map `workItemTypes.feature` / `.bug`. If `artifactsOnTrackerOnly` is `true`, also map where spec, prompt, and optional log live (`fields.*`: a field `referenceName`, `description`, `comment`, or `history`). If `false`, `fields.*` stay empty. Agents transition only to mapped states. The state list is the union over all work item types: a state missing on a given type makes `ado transition` stop with `BLOCKED:` for that type.
+
+`null` means that step does not change state. No file fallback. Current state already equal to the target → `UNCHANGED`. ADO has no transitions API: the script PATCHes `System.State` and ADO rejects illegal moves.
+
+**Change:** change the mapping, rotate the PAT in the credentials file, or toggle `artifactsOnTrackerOnly` (to `true` needs `fields.*` mapped again; to `false` drops them; no content migration). Switching to Jira = Remove, then Add (no migration).
+
+**Remove:** confirm, drop `agents.tracker`, delete or clear the `adoPat` key in `harness.credentials.local.json`. Files-only again. A first-run decline does not block a later add.
+
+Task key = numeric work item id. Branch and worktree name = that id.
+
+- `artifactsOnTrackerOnly: true` (default; also when the key is missing): spec, prompt, and log live **only** on the work item. ADO stores HTML; `ado get` returns plain text, and `ado set` writes plain text as minimal HTML. `ado set log` appends (a `history` mapping or a `comment` mapping adds an entry). `agents.statuses` is not written onto the work item.
+- `artifactsOnTrackerOnly: false`: they live in `docs/features/<id>.feature.md`, `docs/prompt/<id>.prompt.md`, `docs/feature-log/<id>.log.md`. Spec frontmatter `status` uses `agents.statuses`. `ado get` reads those files; `ado set` on spec/prompt/log is `BLOCKED:`. The work item still carries state transitions, comments, and links.
+
+`ado create` makes the work item (type from `workItemTypes`); the Architect then sets `todo` with `ado transition`. Lifecycle rows are the same as the Jira table above, with comments via `ado comment` and `depends` / `relates` via `ado link` (if linking fails, a comment says so and the task continues). Reviewer ❌ moves the item back to `inProgress`.
+
+Auth: PAT from `adoPat`, Basic with empty user, passed to curl through a temp config, never in argv. Cloud (`dev.azure.com`) is the supported shape; `api-version=7.1` is pinned in the script. Azure DevOps Server is not covered.
+
 ### Statuses
 
-The five seh steps are the same on both trackers. On files, the labels are the strings in `agents.statuses`. On Jira, each step uses the mapped `agents.tracker.statuses` name (or is skipped when that key is `null`).
+The five seh steps are the same on every tracker. On files, the labels are the strings in `agents.statuses`. On Jira and Azure DevOps, each step uses the mapped `agents.tracker.statuses` name (or is skipped when that key is `null`).
 
 ```text
 todo → in progress → implemented → in review → done
@@ -437,7 +468,7 @@ Base branch is `agents.baseBranch` (first setup; suggested default `dev`). Scrip
 
 Implementer and Reviewer always work in a git worktree: `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/seh-worktrees/001-login`). `start-task` does not switch the caller’s checkout. `return-to-base` from a seh worktree removes it.
 
-Allowlisted git/`gh` goes through `.seh/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`. Jira Cloud REST goes through `.seh/scripts/jira`. No rebase, reset, or force. seh does not merge the PR.
+Allowlisted git/`gh` goes through `.seh/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`. Jira Cloud REST goes through `.seh/scripts/jira`; Azure DevOps REST through `.seh/scripts/ado`. No rebase, reset, or force. seh does not merge the PR.
 
 Replies follow the conversation language. Spec, prompt, log, changelog, and PR text follow `agents.contentLanguage` from config. Status strings stay as configured; do not translate them from the conversation.
 
@@ -445,4 +476,4 @@ Replies follow the conversation language. Spec, prompt, log, changelog, and PR t
 
 v1 CLI is only `seh install [--prefix P]` and `seh uninstall`. Everything else is a skill. Install and uninstall loop every host in the **package** `hosts.json` (uninstall still works after `.seh/` is gone).
 
-No extra product agents. No Linear or GitHub Issues as a tracker. No merging pull requests.
+No extra product agents. No Linear or GitHub Issues as a tracker (files, Jira, Azure DevOps only). No merging pull requests.
