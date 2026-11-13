@@ -227,7 +227,6 @@ if (cmd === "http-error") {
 
 if (cmd === "format-meta") {
   const typesBody = readJson(process.argv[3]);
-  const fieldsBody = readJson(process.argv[4]);
   const statusNames = [];
   const typeNames = [];
   const types = Array.isArray(typesBody.value) ? typesBody.value : [];
@@ -259,7 +258,14 @@ if (cmd === "format-meta") {
     fi += 1;
     lines.push(`field.${fi}: ${id} | ${name}`);
   }
-  const fields = Array.isArray(fieldsBody.value) ? fieldsBody.value : [];
+  const fields = [];
+  for (const it of types) {
+    const own = (it && (Array.isArray(it.fields) ? it.fields : it.fieldInstances)) || [];
+    if (Array.isArray(own)) {
+      fields.push(...own);
+    }
+  }
+  const seenFields = new Set();
   for (const f of fields) {
     if (!f || typeof f.referenceName !== "string") {
       continue;
@@ -267,6 +273,10 @@ if (cmd === "format-meta") {
     if (!f.referenceName.startsWith("Custom.")) {
       continue;
     }
+    if (seenFields.has(f.referenceName)) {
+      continue;
+    }
+    seenFields.add(f.referenceName);
     const name = typeof f.name === "string" ? f.name : f.referenceName;
     fi += 1;
     lines.push(`field.${fi}: ${f.referenceName} | ${name}`);

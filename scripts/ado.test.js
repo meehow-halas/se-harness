@@ -135,20 +135,31 @@ function defaultRoutes(extra = {}) {
               { name: "QX9 In Review" },
               { name: "QX9 Shipped" },
             ],
+            fields: [
+              { referenceName: "System.Title", name: "Title" },
+              { referenceName: FIX.specField, name: FIX.specName },
+              { referenceName: "Custom.QX9Shared", name: "QX9 Shared" },
+            ],
           },
           {
             name: FIX.bugType,
             states: [{ name: FIX.todoStatus }, { name: "QX9 Shipped" }],
+            fields: [
+              { referenceName: "Custom.QX9Shared", name: "QX9 Shared" },
+              { referenceName: "Custom.QX9BugOnly", name: "QX9 Bug Only" },
+            ],
           },
         ],
       },
     },
+    // Organization-wide field list: includes fields no type in this project uses.
     "GET /qx9-ado-fixture-org/_apis/wit/fields": {
       code: 200,
       body: {
         value: [
           { referenceName: "System.Title", name: "Title" },
           { referenceName: FIX.specField, name: FIX.specName },
+          { referenceName: "Custom.OtherProjectOnly", name: "Other Project Only" },
         ],
       },
     },
@@ -217,6 +228,26 @@ describe("ado", () => {
     });
   });
 
+  test("meta lists only custom fields of the project's work item types, once each", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd);
+      const stub = writeCurlStub(cwd, defaultRoutes());
+      const result = runAdo(cwd, ["meta"], stub.env);
+      assertOk(result, { project: FIX.project });
+      const fieldLines = result.stdout.split("\n").filter((l) => l.startsWith("field."));
+      assert.deepEqual(fieldLines, [
+        "field.1: description | Description",
+        "field.2: comment | Comment",
+        "field.3: history | History",
+        `field.4: ${FIX.specField} | ${FIX.specName}`,
+        "field.5: Custom.QX9Shared | QX9 Shared",
+        "field.6: Custom.QX9BugOnly | QX9 Bug Only",
+      ]);
+      const urls = fs.readFileSync(stub.logFile, "utf8");
+      assert.equal(urls.includes("/_apis/wit/fields"), false);
+    });
+  });
+
   test("meta lists statuses, work item types, and custom fields for the configured project", () => {
     withTempDir((cwd) => {
       writeProject(cwd);
@@ -273,8 +304,6 @@ describe("ado", () => {
       const routes = defaultRoutes();
       routes[`GET /zy3-other-org-fixture/${otherProject}/_apis/wit/workitemtypes`] =
         routes[`GET ${witPath("/_apis/wit/workitemtypes")}`];
-      routes["GET /zy3-other-org-fixture/_apis/wit/fields"] =
-        routes["GET /qx9-ado-fixture-org/_apis/wit/fields"];
       const stub = writeCurlStub(cwd, routes);
       const result = runAdo(cwd, ["meta"], stub.env);
       assertOk(result, { project: otherProject });

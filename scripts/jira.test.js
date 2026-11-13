@@ -103,7 +103,7 @@ for (let i = 0; i < args.length; i++) {
 const u = new URL(url);
 const key = method + " " + u.pathname;
 const routes = JSON.parse(fs.readFileSync(routesFile, "utf8"));
-const hit = routes[key] || routes[key.replace(/\\/$/, "")] || { code: 404, body: { errorMessages: ["no stub for " + key] } };
+const hit = routes[key + u.search] || routes[key] || routes[key.replace(/\\/$/, "")] || { code: 404, body: { errorMessages: ["no stub for " + key] } };
 fs.appendFileSync(dataLog, JSON.stringify({ key, data, search: u.search }) + "\\n");
 const body = typeof hit.body === "string" ? hit.body : JSON.stringify(hit.body || {});
 if (out) fs.writeFileSync(out, body);
@@ -118,12 +118,43 @@ if (writeFmt === "%{http_code}") process.stdout.write(String(hit.code || 200));
   };
 }
 
+function createMetaRoutes(projectKey) {
+  return {
+    [`GET /rest/api/3/issue/createmeta/${projectKey}/issuetypes/10731`]: {
+      code: 200,
+      body: {
+        startAt: 0,
+        maxResults: 200,
+        total: 3,
+        fields: [
+          { fieldId: "summary", key: "summary", name: "Summary" },
+          { fieldId: FIX.specField, key: FIX.specField, name: FIX.specName },
+          { fieldId: "customfield_48300", key: "customfield_48300", name: "QX7 Shared" },
+        ],
+      },
+    },
+    [`GET /rest/api/3/issue/createmeta/${projectKey}/issuetypes/10732`]: {
+      code: 200,
+      body: {
+        startAt: 0,
+        maxResults: 200,
+        total: 2,
+        fields: [
+          { fieldId: "customfield_48300", key: "customfield_48300", name: "QX7 Shared" },
+          { fieldId: "customfield_48301", key: "customfield_48301", name: "QX7 Defect Only" },
+        ],
+      },
+    },
+  };
+}
+
 function defaultRoutes(extra = {}) {
   return {
     [`GET /rest/api/3/project/${FIX.projectKey}/statuses`]: {
       code: 200,
       body: [
         {
+          id: "10731",
           name: FIX.featureType,
           statuses: [
             { name: FIX.todoStatus },
@@ -132,16 +163,20 @@ function defaultRoutes(extra = {}) {
           ],
         },
         {
+          id: "10732",
           name: FIX.bugType,
           statuses: [{ name: FIX.todoStatus }, { name: "Shipped" }],
         },
       ],
     },
+    ...createMetaRoutes(FIX.projectKey),
+    // Site-wide field list: includes fields no screen in this project uses.
     "GET /rest/api/3/field": {
       code: 200,
       body: [
         { id: "summary", name: "Summary" },
         { id: FIX.specField, name: FIX.specName },
+        { id: "customfield_99001", name: "Other Project Only" },
       ],
     },
     "GET /rest/api/3/issue/QX7-42": {
@@ -252,6 +287,70 @@ describe("jira", () => {
       const stub = writeCurlStub(cwd, defaultRoutes());
       const result = runJira(cwd, ["meta"], stub.env);
       assertBlocked(result, /Jira token is missing/);
+    });
+  });
+
+  test("meta lists only custom fields on the project's issue types, once each", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd);
+      const stub = writeCurlStub(cwd, defaultRoutes());
+      const result = runJira(cwd, ["meta"], stub.env);
+      assertOk(result, { projectKey: FIX.projectKey });
+      const fieldLines = result.stdout.split("\n").filter((l) => l.startsWith("field."));
+      assert.deepEqual(fieldLines, [
+        "field.1: description | Description",
+        "field.2: comment | Comment",
+        `field.3: ${FIX.specField} | ${FIX.specName}`,
+        "field.4: customfield_48300 | QX7 Shared",
+        "field.5: customfield_48301 | QX7 Defect Only",
+      ]);
+      const urls = fs.readFileSync(stub.logFile, "utf8");
+      assert.equal(urls.includes("/rest/api/3/field"), false);
+    });
+  });
+
+  test("meta follows createmeta pages until total is reached", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd);
+      const base = `GET /rest/api/3/issue/createmeta/${FIX.projectKey}/issuetypes/10731`;
+      const routes = defaultRoutes({
+        [`${base}?startAt=0&maxResults=200`]: {
+          code: 200,
+          body: {
+            startAt: 0,
+            maxResults: 2,
+            total: 3,
+            fields: [
+              { fieldId: "customfield_51001", name: "Page One A" },
+              { fieldId: "customfield_51002", name: "Page One B" },
+            ],
+          },
+        },
+        [`${base}?startAt=2&maxResults=200`]: {
+          code: 200,
+          body: {
+            startAt: 2,
+            maxResults: 2,
+            total: 3,
+            fields: [{ fieldId: "customfield_51003", name: "Page Two" }],
+          },
+        },
+      });
+      const stub = writeCurlStub(cwd, routes);
+      const result = runJira(cwd, ["meta"], stub.env);
+      assertOk(result, { projectKey: FIX.projectKey });
+      assert.match(result.stdout, /customfield_51001 \| Page One A/);
+      assert.match(result.stdout, /customfield_51003 \| Page Two/);
+      const hits = fs
+        .readFileSync(stub.dataFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(l))
+        .filter((h) => h.key === base);
+      assert.deepEqual(
+        hits.map((h) => h.search),
+        ["?startAt=0&maxResults=200", "?startAt=2&maxResults=200"]
+      );
     });
   });
 
@@ -441,6 +540,7 @@ describe("jira", () => {
       const routes = defaultRoutes();
       routes["GET /rest/api/3/project/ZY3/statuses"] =
         routes[`GET /rest/api/3/project/${FIX.projectKey}/statuses`];
+      Object.assign(routes, createMetaRoutes("ZY3"));
       const stub = writeCurlStub(cwd, routes);
       const result = runJira(cwd, ["meta"], stub.env);
       assertOk(result, { projectKey: "ZY3" });
