@@ -16,6 +16,7 @@ Version reset from `2.0.0`: seh has no production users yet. First changelog ent
 
 ### Fixed
 
+- OpenCode showed `Plugin failed: …/.opencode/plugins/seh-check-update.js` on every start. The plugin now uses the OpenCode V2 shape: a default export `{ id, setup }`, events from `ctx.event.subscribe` (`session.created`), and the notice added through `ctx.session.instructions.entry.put` (key `seh-update`). Top-level sessions only. The check runs once per OpenCode process and never blocks it.
 - `seh install` without `--prefix` reset an existing project to `_`. It now keeps the prefix in `.seh/PREFIX`, so updating no longer renames the skills. `_` is used only on a first install or when `.seh/PREFIX` holds a disallowed value.
 - Autonomous `/<prefix>shipit` asked the user at the end. Architect now fixes a clear misspelling in a requested name (for example `substract` → `subtract`) in `critical` / `autonomous` and records it as `Q<n>`, and never leaves a choice open for the user. The autonomous final report lists decisions and asks nothing.
 
