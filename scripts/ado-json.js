@@ -66,10 +66,6 @@ function readOnly(t) {
   return t.readOnly === true;
 }
 
-function artifactsOnTrackerOnly(t) {
-  return !readOnly(t) && t.artifactsOnTrackerOnly !== false;
-}
-
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -288,7 +284,7 @@ if (cmd === "needs-comments") {
   const t = trackerFrom(readJson(process.argv[3]));
   const kinds = ["spec", "prompt", "log"];
   const need =
-    artifactsOnTrackerOnly(t) &&
+    !readOnly(t) &&
     (kinds.some((k) => mapped(t, k) === "comment") || !mapped(t, "log"));
   process.stdout.write(need ? "true\n" : "false\n");
   process.exit(0);
@@ -313,12 +309,6 @@ if (cmd === "read-only") {
     on = false;
   }
   process.stdout.write(on ? "true\n" : "false\n");
-  process.exit(0);
-}
-
-if (cmd === "artifacts-on-tracker-only") {
-  const t = trackerFrom(readJson(process.argv[3]));
-  process.stdout.write(artifactsOnTrackerOnly(t) ? "true\n" : "false\n");
   process.exit(0);
 }
 
@@ -503,7 +493,7 @@ if (cmd === "format-get") {
   let spec;
   let prompt;
   let log;
-  if (!artifactsOnTrackerOnly(t)) {
+  if (readOnly(t)) {
     const root = path.dirname(cfgPath);
     spec = stripYamlFrontmatter(
       readArtifactFile(root, `docs/features/${id}.feature.md`)

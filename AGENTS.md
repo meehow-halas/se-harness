@@ -29,8 +29,18 @@ Write tests that would fail if the promised behaviour broke, not tests that rest
 
 Run with `npm test`. Keep `*.test.js` next to the unit. `seh install` must not copy those files into `.seh/`.
 
+## Versioning
+
+The version is `version` in `package.json` (SemVer). `seh install` writes it to `.seh/VERSION`, and `/<prefix>setit-se` regenerates installed agents, skills, and packs only when that value changes. So every change to a shipped directory (`agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, `src/`) needs a version bump in the same change.
+
+- **Patch** (fix, wording, no new or removed behaviour or config key): bump without asking.
+- **Minor** (new behaviour or config key, backward compatible) and **major** (removed or changed behaviour or config key, a breaking install or config change): propose the level and wait for the user's approval.
+- One bump per unreleased change set: if `CHANGELOG.md` already has an entry for the current version that is not yet tagged, add to it instead of bumping again.
+- Every bump adds or extends the matching `CHANGELOG.md` entry (Keep a Changelog: Added / Changed / Fixed / Removed).
+
 ## Commands
 
 - Tests: `npm test`. See **Tests**.
+- Before you finish a change to a shipped directory, update `CHANGELOG.md` under the current version (see **Versioning**). A change without a changelog line is not done.
 - Do not commit unless the user asks.
 - Do not edit, “improve”, or sync `README.md` with the PRD, the plan, or the code unless the user explicitly asks to change the README.

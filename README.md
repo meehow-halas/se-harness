@@ -335,6 +335,11 @@ These are **not** a substitute for interaction modes. Reviewer still receives `M
 
 Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, its `kind` (`jira` or `ado`) is the active tracker; a config without `kind` is Jira. If it is absent, the files tracker is active.
 
+Jira and Azure DevOps run in one of two modes, chosen in `/_setit-se` right after you pick the tracker (`agents.tracker.readOnly`):
+
+- **Full write** (default, `readOnly: false`): seh creates items, writes spec, prompt, and log on them, and moves statuses. No repo files for tasks.
+- **Read-only** (`readOnly: true`): seh only reads the tracker, e.g. so you can point the Architect at an existing item. It never creates, edits, comments, transitions, or links. Spec, prompt, log, and status live in repo files, as with the files tracker, named by the item key when the task exists on the tracker.
+
 Switching does **not** migrate. Connect Jira or Azure DevOps → new work is tickets / work items only; leftover `docs/features` (etc.) are ignored. Remove the tracker → new work is files only; existing tickets are not copied into files.
 
 `CHANGELOG.md` and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
@@ -375,15 +380,15 @@ Credentials: you put the token in a project-local ignored file `harness.credenti
 
 `seh install` already ignores that filename. Never paste the token in chat. Never write it into git or `harness.config.json`. Project key and field mapping live in config under `agents.tracker`.
 
-**Add** (no tracker yet, or you accept the first-run offer). One question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.seh/scripts/jira meta` lists that project’s statuses, issue types, and fields. Map each seh step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
+**Add** (no tracker yet, or you accept the first-run offer). First: read-only mode, yes or no (see [One active tracker](#one-active-tracker)). Then, either way, one question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.seh/scripts/jira meta` lists that project’s statuses, issue types, and fields. Read-only: map only `blocker` (if you use `depends`) and `fetchFields`; status moves are writes, so nothing else is mapped. Full write: map each seh step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
 
 `null` means that step does not call a Jira transition. There is no file fallback. If a mapped status is missing from that issue type’s workflow, work stops — fix the mapping in `/_setit-se`.
 
-**Change** (tracker already there): change the integration (same mapping questions; token stays unless you rotate it in the credentials file) or remove it.
+**Change** (tracker already there): change the integration (same mapping questions; token stays unless you rotate it in the credentials file), toggle read-only (to full write asks the maps still missing; no migration), or remove it.
 
 **Remove:** confirm, drop `agents.tracker` from config, delete or clear `harness.credentials.local.json`. The project is files-only again. A first-run decline (`jiraOffer: declined`) does not block a later add.
 
-Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log, and status live **only** on the ticket. Agents do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/` while Jira is active. While Jira is the tracker, `agents.statuses` is not written onto the ticket. After Remove, file-tracker strings from `agents.statuses` apply again.
+Task key = issue key (`PROJ-123`). Branch name = that key. Full write: spec, prompt, log, and status live **only** on the ticket. Agents do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/` while Jira is active. While Jira is the tracker, `agents.statuses` is not written onto the ticket. After Remove, file-tracker strings from `agents.statuses` apply again.
 
 | When | On the ticket |
 |------|----------------|
@@ -410,20 +415,19 @@ Credentials: you put the PAT in the same ignored file `harness.credentials.local
 
 Never paste the PAT in chat. Never write it into git or `harness.config.json`. Organization URL, project, and field mapping live in config under `agents.tracker` (`kind: "ado"`; skeleton `.seh/references/harness.tracker.ado.json`).
 
-**Add.** One question at a time: `organizationUrl` (`https://dev.azure.com/{org}`, no trailing slash), then `project` (name or GUID). Setup creates `harness.credentials.local.json` with an empty `adoPat` if the file is missing (an existing file is never overwritten). You paste the PAT there and confirm. Setup runs `.seh/scripts/ado meta`; on `BLOCKED:` you fix the PAT, URL, or project and it retries until `OK`.
+**Add.** First: read-only mode, yes or no (see [One active tracker](#one-active-tracker)). Then, either way, one question at a time: `organizationUrl` (`https://dev.azure.com/{org}`, no trailing slash), then `project` (name or GUID). Setup creates `harness.credentials.local.json` with an empty `adoPat` if the file is missing (an existing file is never overwritten). You paste the PAT there and confirm. Setup runs `.seh/scripts/ado meta`; on `BLOCKED:` you fix the PAT, URL, or project and it retries until `OK`.
 
-Then one question: use Azure DevOps **only to read task info**, with spec, prompt, and log in repo files? (default no → `artifactsOnTrackerOnly: true`.) Then map `todo`, `inProgress`, `codeReview`, `inReview`, `done` to an exact state name from the `meta` list (numbered), or skip = `null`. Map `blocker` if you use `depends`. Map `workItemTypes.feature` / `.bug`. If `artifactsOnTrackerOnly` is `true`, also map where spec, prompt, and optional log live (`fields.*`: a field `referenceName`, `description`, `comment`, or `history`). If `false`, `fields.*` stay empty. Agents transition only to mapped states. The state list is the union over all work item types: a state missing on a given type makes `ado transition` stop with `BLOCKED:` for that type.
+Read-only: map only `blocker` (if you use `depends`) and `fetchFields`. Full write: map `todo`, `inProgress`, `codeReview`, `inReview`, `done` to an exact state name from the `meta` list (numbered), or skip = `null`. Map `blocker` if you use `depends`. Map `workItemTypes.feature` / `.bug`. Map where spec, prompt, and optional log live (`fields.*`: a field `referenceName`, `description`, `comment`, or `history`). Agents transition only to mapped states. The state list is the union over all work item types: a state missing on a given type makes `ado transition` stop with `BLOCKED:` for that type.
 
 `null` means that step does not change state. No file fallback. Current state already equal to the target → `UNCHANGED`. ADO has no transitions API: the script PATCHes `System.State` and ADO rejects illegal moves.
 
-**Change:** change the mapping, rotate the PAT in the credentials file, or toggle `artifactsOnTrackerOnly` (to `true` needs `fields.*` mapped again; to `false` drops them; no content migration). Switching to Jira = Remove, then Add (no migration).
+**Change:** change the mapping, rotate the PAT in the credentials file, or toggle read-only (to full write asks the maps still missing; no migration). Switching to Jira = Remove, then Add (no migration).
 
 **Remove:** confirm, drop `agents.tracker`, delete or clear the `adoPat` key in `harness.credentials.local.json`. Files-only again. A first-run decline does not block a later add.
 
 Task key = numeric work item id. Branch and worktree name = that id.
 
-- `artifactsOnTrackerOnly: true` (default; also when the key is missing): spec, prompt, and log live **only** on the work item. ADO stores HTML; `ado get` returns plain text, and `ado set` writes plain text as minimal HTML. `ado set log` appends (a `history` mapping or a `comment` mapping adds an entry). `agents.statuses` is not written onto the work item.
-- `artifactsOnTrackerOnly: false`: they live in `docs/features/<id>.feature.md`, `docs/prompt/<id>.prompt.md`, `docs/feature-log/<id>.log.md`. Spec frontmatter `status` uses `agents.statuses`. `ado get` reads those files; `ado set` on spec/prompt/log is `BLOCKED:`. The work item still carries state transitions, comments, and links.
+Full write: spec, prompt, and log live **only** on the work item. ADO stores HTML; `ado get` returns plain text, and `ado set` writes plain text as minimal HTML. `ado set log` appends (a `history` mapping or a `comment` mapping adds an entry). `agents.statuses` is not written onto the work item. Read-only: they live in `docs/features/<id>.feature.md`, `docs/prompt/<id>.prompt.md`, `docs/feature-log/<id>.log.md`, with status in spec frontmatter (`agents.statuses`); `ado get` reads those files and every `ado` write verb is `BLOCKED:`.
 
 `ado create` makes the work item (type from `workItemTypes`); the Architect then sets `todo` with `ado transition`. Lifecycle rows are the same as the Jira table above, with comments via `ado comment` and `depends` / `relates` via `ado link` (if linking fails, a comment says so and the task continues). Reviewer ❌ moves the item back to `inProgress`.
 
