@@ -20,6 +20,7 @@ Version reset from `2.0.0`: seh has no production users yet. First changelog ent
 - Autonomous `/<prefix>shipit` asked the user at the end. Architect now fixes a clear misspelling in a requested name (for example `substract` → `subtract`) in `critical` / `autonomous` and records it as `Q<n>`, and never leaves a choice open for the user. The autonomous final report lists decisions and asks nothing.
 
 - `jira meta` and `ado meta` listed every custom field on the Jira site or in the ADO organization, so `/<prefix>setit-se` offered fields that the project does not use (for example ones left over from another project). Jira now takes fields from the project’s create metadata per issue type, with paging. ADO takes them from the project’s work item types. A field appears once even when several types have it.
+- Skills and agents named Claude Code tools (`Agent tool`, `wrap_up`, `WebSearch`), which Cursor and OpenCode do not have. The text now says what to do (launch Consultant as a subagent, search the web, end-of-turn summary) without naming one host’s tool.
 
 ### Removed
 

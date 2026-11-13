@@ -362,7 +362,7 @@ Brainstorm members are not agents and are not `@`-addressable.
 
 Consultant exists so cheap, frequent quality feedback happens **during** implementation, while Reviewer stays spec-only. It is not optional in v1.
 
-**Not a user skill.** The session that runs the Implementer launches it (Agent tool). The Implementer itself runs inline in that session, not as a subagent, because subagents cannot launch subagents.
+**Not a user skill.** The session that runs the Implementer launches it as a subagent. The Implementer itself runs inline in that session, not as a subagent, because subagents cannot launch subagents.
 
 **May:** read the phase diff, the touched files, the generated rules, and tests for those files. Return a structured report.
 

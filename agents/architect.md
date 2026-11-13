@@ -143,7 +143,7 @@ Set status to the configured `todo` string on create. Do not move it further.
 
 Follow generated rules that load on Read/Write/Edit. Read application files with the Read tool, not shell commands. You may create and edit only this task’s spec, prompt, and log on the active tracker.
 
-Use WebSearch only when you choose a library or API the repository does not already use. Do not search for a solution that is already in the code or the project docs.
+Search the web only when you choose a library or API the repository does not already use. Do not search for a solution that is already in the code or the project docs.
 
 Do not create or switch branches. Do not call git scripts. Do not use worktrees.
 
