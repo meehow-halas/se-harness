@@ -2,7 +2,7 @@
 
 ## Product
 
-`seh` is an SE harness for coding assistants: skills, agents, rule packs, and a small CLI (`seh`). The npm package is `dev-harness-layer`. The binary is `seh`.
+`seh` is an SE harness for coding assistants: skills, agents, rule packs, and a small CLI (`seh`). The npm package is `se-harness`. The binary is `seh`.
 
 Behaviour is defined in `docs/prd.md`. That file wins over old agent files and chat history. `docs/implementation-plan.md` is the build order, not a second spec.
 

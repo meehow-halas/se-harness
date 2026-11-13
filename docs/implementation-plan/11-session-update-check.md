@@ -6,8 +6,8 @@ When Claude Code or Cursor Agent starts a session in a project that has seh, che
 
 ## In scope
 
-- `.seh/scripts/check-update`: compare `.seh/VERSION` to the highest semver git tag on `https://github.com/nbmh/dev-harness-layer.git` (`git ls-remote --tags --refs`). `v` prefix is optional. Non-semver tags ignored.
-- Available version is GitHub, not npm, whether bootstrap used npm or `github:nbmh/dev-harness-layer`.
+- `.seh/scripts/check-update`: compare `.seh/VERSION` to the highest semver git tag on `https://github.com/meehow-halas/se-harness.git` (`git ls-remote --tags --refs`). `v` prefix is optional. Non-semver tags ignored.
+- Available version is GitHub, not npm, whether bootstrap used npm or `github:meehow-halas/se-harness`.
 - Notify only when the tag is strictly greater. Fail-open (empty stdout, exit 0) on missing VERSION, network/timeout, no tags, or local version already higher.
 - Cache under `.seh/` with TTL 24h.
 - Host adapters on `references/hosts.json`: `hooksFile`, `hooksEvent`, `hooksShape`, `hooksHostArg`.

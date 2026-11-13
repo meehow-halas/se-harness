@@ -254,7 +254,7 @@ function makePackageRoot(dir, { payload, setupSkill = true, version = "1.2.3" } 
   const names = payload || PAYLOAD_DIRS;
   fs.writeFileSync(
     path.join(dir, "package.json"),
-    `${JSON.stringify({ name: "dev-harness-layer", version })}\n`
+    `${JSON.stringify({ name: "se-harness", version })}\n`
   );
   for (const name of names) {
     const folder = path.join(dir, name);

@@ -2,7 +2,7 @@
 
 A layer for software engineering work in an AI coding assistant. Supported hosts in this version are **Claude Code**, **Cursor Agent**, and **OpenCode**. A later host is a row in `references/hosts.json` plus a format adapter, not a second product. It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
 
-The product and CLI binary are **`seh`**. The npm package is **`dev-harness-layer`**.
+The product and CLI binary are **`seh`**. The npm package is **`se-harness`**.
 
 This PRD wins whenever old agent files or chat history disagree.
 
@@ -36,17 +36,17 @@ Exactly one of:
 
 ```text
 # npm
-npx -p dev-harness-layer seh install
+npx -p se-harness seh install
 
 # GitHub (the seh repo; #ref is an optional tag, branch, or commit)
-npx -p github:nbmh/dev-harness-layer seh install
-npx -p github:nbmh/dev-harness-layer#<ref> seh install
-npx -p https://github.com/nbmh/dev-harness-layer seh install
+npx -p github:meehow-halas/se-harness seh install
+npx -p github:meehow-halas/se-harness#<ref> seh install
+npx -p https://github.com/meehow-halas/se-harness seh install
 ```
 
 **Skill-name prefix.** `seh install --prefix P` (default `_`; allowed characters letters, digits, `_`, `-`; `--prefix ""` for none) sets a prefix for every skill name. Source names in `skills/` have no prefix (`setit-se`, `planit`, `doit`, `checkit`, `shipit`, `grillit`); the live directory and the frontmatter `name:` (the slash command) are `<prefix><name>`, so the default commands are `/_setit-se`, `/_planit`, `/_doit`, `/_checkit`, `/_shipit`, `/_grillit`. Install writes the prefix to `.seh/PREFIX` and replaces the token `{{prefix}}` with it in every text file it copies into `.seh/`. `seh uninstall` reads `.seh/PREFIX` and takes no `--prefix`. Installing again with another prefix removes the old install-owned setup skill. `/<prefix>setit-se` generates the work skills as `<prefix><name>`, records `seh.generatedPrefix`, and removes live skills made with an earlier prefix or the pre-prefix `seh-*` names.
 
-`nbmh/dev-harness-layer` is the GitHub repository that publishes the `dev-harness-layer` package (`seh` CLI). A git HTTPS URL is the same as `github:nbmh/dev-harness-layer`. npm and GitHub are first-class and equivalent.
+`meehow-halas/se-harness` is the GitHub repository that publishes the `se-harness` package (`seh` CLI). A git HTTPS URL is the same as `github:meehow-halas/se-harness`. npm and GitHub are first-class and equivalent.
 
 **Required result:** `.seh/` and the project skill `/<prefix>setit-se` in every supported host `skillsDir` (today `.claude/skills/<prefix>setit-se`, `.cursor/skills/<prefix>setit-se`, and `.opencode/skills/<prefix>setit-se`). Setup is **not** done. `/<prefix>shipit`, `/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, and `/<prefix>grillit` do not exist yet and must not be offered. `/<prefix>setit-se` is the skill that finishes first-time setup and later changes the same config.
 
@@ -80,8 +80,8 @@ After an accepted review the Reviewer commits, opens the PR and sets `done` (git
 Same source as step 1:
 
 ```text
-npx -p dev-harness-layer seh uninstall
-npx -p github:nbmh/dev-harness-layer seh uninstall
+npx -p se-harness seh uninstall
+npx -p github:meehow-halas/se-harness seh uninstall
 ```
 
 Removes `.seh/` and the install-owned `/<prefix>setit-se` skill. Leaves `harness.config.json` and files `/<prefix>setit-se` generated.
@@ -90,7 +90,7 @@ Removes `.seh/` and the install-owned `/<prefix>setit-se` skill. Leaves `harness
 
 `seh` is **never** installed globally (`npm install -g` is out). **Never** write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, or any other machine-wide location.
 
-The product and CLI binary are **`seh`**. The npm package is **`dev-harness-layer`**. Run the CLI only in the target project. Pick one source in step 1 and reuse it in step 4.
+The product and CLI binary are **`seh`**. The npm package is **`se-harness`**. Run the CLI only in the target project. Pick one source in step 1 and reuse it in step 4.
 
 These two commands are the entire `seh` CLI in v1. They are idempotent.
 
@@ -110,7 +110,7 @@ Install also ensures the project-root `.gitignore` contains `.seh/` and `harness
 
 `seh uninstall` removes that same set (`.seh/`, the install-owned `/<prefix>setit-se` skill in every `skillsDir`, and the install-owned hook command from each `hooksFile`). It does not delete `harness.config.json`, files `/<prefix>setit-se` already generated, or a host hooks file that still has other keys. If the file has only empty hook lists left (and Cursor’s required `version` key), uninstall deletes that file.
 
-On host session start, `.seh/scripts/check-update` compares `.seh/VERSION` to the highest semver git tag on `https://github.com/nbmh/dev-harness-layer.git`. That GitHub tag is the available version, whether bootstrap used npm or GitHub. It only injects context when the tag is strictly newer. It never runs `seh install`. Network, timeout, missing `.seh/VERSION`, or a local version that is already higher: silence (fail-open). Cache under `.seh/` (TTL 24h). A later `/<prefix>setit-se` after a manual install is still required when templates changed.
+On host session start, `.seh/scripts/check-update` compares `.seh/VERSION` to the highest semver git tag on `https://github.com/meehow-halas/se-harness.git`. That GitHub tag is the available version, whether bootstrap used npm or GitHub. It only injects context when the tag is strictly newer. It never runs `seh install`. Network, timeout, missing `.seh/VERSION`, or a local version that is already higher: silence (fail-open). Cache under `.seh/` (TTL 24h). A later `/<prefix>setit-se` after a manual install is still required when templates changed.
 
 ### What `/<prefix>setit-se` does
 
@@ -479,7 +479,7 @@ There is no user-facing Consultant skill.
 
 ### `/<prefix>setit-se` (detail)
 
-**Entry.** If `seh install` has not been run in this project (`.seh/` is missing, or `/<prefix>setit-se` is absent from **every** `skillsDir` in `.seh/references/hosts.json`), stop and tell the user to run `seh install` here from npm (`npx -p dev-harness-layer seh install`) or from GitHub (`npx -p github:nbmh/dev-harness-layer seh install`), then `/<prefix>setit-se` again. Present in **any** listed `skillsDir` is enough.
+**Entry.** If `seh install` has not been run in this project (`.seh/` is missing, or `/<prefix>setit-se` is absent from **every** `skillsDir` in `.seh/references/hosts.json`), stop and tell the user to run `seh install` here from npm (`npx -p se-harness seh install`) or from GitHub (`npx -p github:meehow-halas/se-harness seh install`), then `/<prefix>setit-se` again. Present in **any** listed `skillsDir` is enough.
 
 If `harness.config.json` is missing: first-run path below. If it is present: later-run path below. Do not overwrite keys the user did not confirm. Do not regenerate generated files as a silent first-run repeat. A later-run template mismatch (`.seh/VERSION` ≠ `seh.generatedFrom`) is not a first-run repeat: regenerate live agents, work skills, and rules, then continue the later-run path.
 
@@ -634,7 +634,7 @@ Quality during implementation is **Consultant + the project’s own test command
 
 | Command | Purpose |
 |---------|---------|
-| `seh install` | This project: `.seh/` (including `scripts/` and `.seh/VERSION`) plus the `/<prefix>setit-se` skill in every `skillsDir` from `references/hosts.json`. From npm (`npx -p dev-harness-layer seh install`) or GitHub (`npx -p github:nbmh/dev-harness-layer seh install`). Does not generate live agents, work skills, or rule packs. |
+| `seh install` | This project: `.seh/` (including `scripts/` and `.seh/VERSION`) plus the `/<prefix>setit-se` skill in every `skillsDir` from `references/hosts.json`. From npm (`npx -p se-harness seh install`) or GitHub (`npx -p github:meehow-halas/se-harness seh install`). Does not generate live agents, work skills, or rule packs. |
 | `seh uninstall` | Reverse of install in this project. Same source as install. |
 
 Everything else is a skill, a `.seh/scripts/` helper, or a normal project command (including the project’s own test/lint). Git/`gh` on the allowlist is invoked by those scripts, not by a `seh` subcommand.
@@ -653,7 +653,7 @@ Examples: `seh install` missing, `/<prefix>setit-se` not run yet, `.seh/VERSION`
 
 ## Decisions
 
-1. **The product and CLI binary are `seh`.** The npm package and GitHub repo are `dev-harness-layer`.
+1. **The product and CLI binary are `seh`.** The npm package and GitHub repo are `se-harness`.
 2. **No extra wrappers.** There is no agent-wrapper CLI. Isolation for Implementer and Reviewer is git worktrees via `.seh/scripts/start-task`, not a `seh` subcommand. Ship only what this PRD names.
 3. **The binding user flow is the only adoption path:** `seh install` (npm or GitHub) → `/<prefix>setit-se` → work skills. Reverse of install is `seh uninstall` with the same source. No extra CLI for setup or config, no global install, no skip of `/<prefix>setit-se`.
 4. **CLI is only install/uninstall, always in the current project.** Install writes `.seh/` (including `scripts/` and `.seh/VERSION`), `/<prefix>setit-se` into every supported host `skillsDir`, and the session-start hook command into every host `hooksFile`. It does not generate live agents, work skills, or rule packs. Generation of those is `/<prefix>setit-se`. Verify is the project’s script. Git/`gh` on the allowlist and the session update check are invoked by `.seh/scripts/`.
@@ -673,7 +673,7 @@ Examples: `seh install` missing, `/<prefix>setit-se` not run yet, `.seh/VERSION`
 18. **Template version is stamped.** `seh install` writes `.seh/VERSION`. `/<prefix>setit-se` writes `seh.generatedFrom` in `harness.config.json`. A later `/<prefix>setit-se` regenerates live agents, work skills, and rules when those two differ. Install never generates live files. Work skills stop on that mismatch the same way they stop when config is missing.
 19. **Always write every supported host.** `references/hosts.json` is the host table. Install and `/<prefix>setit-se` write all rows; they do not ask which hosts to use. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format, `modelSuggest`, hook shape). Each row may carry `modelSuggest` (per role and `brainstorm`) as interview defaults; seh does not translate one host’s model id into another’s. Do not maintain a second template tree per host.
 20. **Worktree always when git is enabled (none when disabled, then sequential only); parallel on `/<prefix>doit` and `/<prefix>checkit`.** Implementer and Reviewer work in `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` even for one task. Architect stays on the launch checkout. No fifth agent and no extra skill: `/<prefix>doit` and `/<prefix>checkit` accept a list; `/<prefix>shipit` stays one sequential task. Parallel children when the runtime allows.
-21. **Session update check is GitHub tags, notify only.** Available version is the highest semver tag on `nbmh/dev-harness-layer`, not npm. Host session-start hooks run `.seh/scripts/check-update`. Fail-open. No `seh check` CLI and no silent install. Do not treat default-branch `package.json` or untagged commits as a new version.
+21. **Session update check is GitHub tags, notify only.** Available version is the highest semver tag on `meehow-halas/se-harness`, not npm. Host session-start hooks run `.seh/scripts/check-update`. Fail-open. No `seh check` CLI and no silent install. Do not treat default-branch `package.json` or untagged commits as a new version.
 
 ## Deferred
 
