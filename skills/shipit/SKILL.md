@@ -71,11 +71,11 @@ This skill runs one task. If the prompt has the line `Fan-out child: yes`, this 
 
 ## Resolve the task
 
-Active tracker only: files if `agents.tracker` is absent; Jira if present (artifact bodies per `agents.tracker.artifactsOnTrackerOnly`). Never mirror.
+Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present (artifact bodies per `agents.tracker.artifactsOnTrackerOnly`, same for Jira and ADO). Never mirror.
 
 - New work (a sentence, no key) → no spec yet.
 - Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /{{prefix}}shipit is one task` above).
-- Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira). Compare to those values; do not translate them.
+- Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
 
 If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
 

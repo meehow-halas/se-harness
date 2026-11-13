@@ -57,7 +57,7 @@ If the prompt has the line `Fan-out child: yes`, this session is a child: run th
 
 ## Resolve the request
 
-The user may give a sentence, an existing basename, or a Jira key. Pass that to the Architect. Do not write spec, prompt, or log yourself. The Architect uses the **active tracker only** (files if `agents.tracker` is absent; Jira if it is present). Read `agents.tracker.artifactsOnTrackerOnly`: when `false`, artifact bodies are repo files only. Never mirror.
+The user may give a sentence, an existing basename, a Jira key, or an ADO work item id. Pass that to the Architect. Do not write spec, prompt, or log yourself. The Architect uses the **active tracker only** (files if `agents.tracker` is absent; the connected tracker (`agents.tracker.kind`: Jira or ADO) if it is present). Read `agents.tracker.artifactsOnTrackerOnly` (same for Jira and ADO): when `false`, artifact bodies are repo files only. Never mirror.
 
 ## Launch Architect once
 
@@ -83,4 +83,4 @@ Offer the next step. Do **not** start it:
 - `/{{prefix}}doit` — implement this spec (Consultant loop inside Implementer)
 - `/{{prefix}}shipit` — full path from here
 
-Do not start Reviewer. Do not call git scripts. When Jira is the active tracker, the Architect calls `.seh/scripts/jira`; this skill does not. Do not write spec, prompt, or log yourself.
+Do not start Reviewer. Do not call git scripts. When Jira or ADO is the active tracker, the Architect calls `.seh/scripts/jira` or `.seh/scripts/ado` by `kind`; this skill does not. Do not write spec, prompt, or log yourself.

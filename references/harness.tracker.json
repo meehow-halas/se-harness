@@ -1,4 +1,5 @@
 {
+  "kind": "jira",
   "artifactsOnTrackerOnly": true,
   "url": "",
   "user": "",

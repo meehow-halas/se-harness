@@ -47,9 +47,9 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 
 ## Tracker
 
-One tracker connection: files-only when `agents.tracker` is absent, or Jira when it is present. Do not mirror the same artifact text in two places.
+One tracker connection: files-only when `agents.tracker` is absent, or Jira / Azure DevOps (`agents.tracker.kind`: `jira` or `ado`) when it is present. Do not mirror the same artifact text in two places.
 
-Which mode is active is in `harness.config.json`. If `agents.tracker` is present, Jira holds the issue key, workflow, and reads via `.seh/scripts/jira` (Jira Cloud REST; not MCP, not raw `curl`). When `agents.tracker.artifactsOnTrackerOnly` is `true` (default), spec, prompt, and log live on the issue. When it is `false`, those three live only in `docs/features/`, `docs/prompt/`, and `docs/feature-log/` named by issue key; `jira set` on spec/prompt/log is `BLOCKED`. Do not invent Jira status names. Credentials are in a local ignored file, never in git and never in chat.
+Which mode is active is in `harness.config.json`. If `agents.tracker` is present, the tracker (`kind` `jira`: issue key; `kind` `ado`: numeric work item id) holds the key, workflow, and reads via `.seh/scripts/jira` (Jira Cloud REST) or `.seh/scripts/ado` (Azure DevOps WIT REST) by `kind` — **`.seh/scripts/ado` (Recommended)** for ADO over raw REST / `curl` / `az boards`; not MCP. When `agents.tracker.artifactsOnTrackerOnly` is `true` (default), spec, prompt, and log live on the issue. When it is `false`, those three live only in `docs/features/`, `docs/prompt/`, and `docs/feature-log/` named by issue key; `jira set` / `ado set` on spec/prompt/log is `BLOCKED`. Do not invent Jira or ADO status names. Credentials are in a local ignored file, never in git and never in chat.
 
 If `agents.tracker` is absent, the files tracker is active. Same basename for all three files (example: `001-feature-example-name`):
 
@@ -67,7 +67,7 @@ Several keys in one work-skill call: on hosts whose `sessionSpawn` is `start_ses
 
 ## Git
 
-Allowlisted git/`gh` and Jira operations run through `.seh/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh` or `curl` themselves. Git scripts read `agents.baseBranch` from `harness.config.json`. Optional `agents.commitTrailer` (one line, for example `Co-Authored-By: Name <mail>`) is appended to every commit `commit-task` makes; absent means no trailer. Jira scripts read `agents.tracker` and `harness.credentials.local.json`. No rebase, reset, or force. No merge of the PR (human on GitHub). Implementer and Reviewer always use a git worktree at `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`. A launch may name `Worktree: <abs>`. Architect does not use worktrees.
+Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh`, `curl`, or `az boards` themselves. Git scripts read `agents.baseBranch` from `harness.config.json`. Optional `agents.commitTrailer` (one line, for example `Co-Authored-By: Name <mail>`) is appended to every commit `commit-task` makes; absent means no trailer. Jira and ADO scripts read `agents.tracker` and `harness.credentials.local.json`. No rebase, reset, or force. No merge of the PR (human on GitHub). Implementer and Reviewer always use a git worktree at `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`. A launch may name `Worktree: <abs>`. Architect does not use worktrees.
 
 | Script | Who |
 |--------|-----|
@@ -78,10 +78,11 @@ Allowlisted git/`gh` and Jira operations run through `.seh/scripts/`. Agents cal
 | `update-from-base` | Reviewer, only when the user asks to update |
 | `return-to-base` | Reviewer, after PR opened (removes the seh worktree) |
 | `jira` | `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
+| `ado` | Same who-calls-what as `jira`, when `agents.tracker.kind` is `ado`: `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress` / `codeReview`, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 
 **Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR, `update`), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with changelog and status written to files. The scripts also answer `UNCHANGED` + `git: disabled`.
 
-Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira`.
+Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira` or `ado`.
 
 ## Tests
 
