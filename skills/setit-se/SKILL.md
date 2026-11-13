@@ -1,6 +1,6 @@
 ---
 name: setit-se
-description: First-time seh setup and later parameter changes. Use when the user runs /{{prefix}}setit-se or needs to configure this project's seh install, models, base branch, packs, AGENTS.md, or Jira tracker.
+description: First-time seh setup and later parameter changes. Use when the user runs /{{prefix}}setit-se or needs to configure this project's seh install, models, base branch, packs, AGENTS.md, or Jira / Azure DevOps tracker.
 ---
 
 # /{{prefix}}setit-se
@@ -53,7 +53,7 @@ BLOCKED: role model missing for host <id> — run /{{prefix}}setit-se
 
 **Per-host confirm (first run, legacy, missing host).** For each host in `.seh/references/hosts.json` (table order), prefill all four roles for that host’s `id`, show a table (architect / implementer / consultant / reviewer → model), then **one question per host**: whether to change any of those models. Skip / no = accept the table. Yes = the user may reply once with overrides (e.g. `architect: opus`); apply only named roles; leave the rest from prefill. If parsing is unclear, one follow-up question only. Do not stamp live `model:` until every host is confirmed.
 
-**Show each table once.** The table and its question appear once, in the question itself. Do not repeat the same table or the same question in a message before it, after it, or in the closing summary. The same rule applies to every confirmation in this skill (project name, tracker, language, Jira offer): one message per question, no re-printed copies.
+**Show each table once.** The table and its question appear once, in the question itself. Do not repeat the same table or the same question in a message before it, after it, or in the closing summary. The same rule applies to every confirmation in this skill (project name, tracker, language, tracker offer): one message per question, no re-printed copies.
 
 **Question wording.** Frame the question as **change**, not **keep**. Do not ask “Keep these models?”, “Czy zostawić te modele?”, or similar — **yes** on a keep-framed question means accept, but this flow treats **yes** as “I want overrides”. After the table, use a **change** question plus helper text in this shape (replace `<host label>` with a readable name from the host row’s `id`, e.g. `claude-code` → Claude Code):
 
@@ -102,7 +102,7 @@ Do not write `harness.config.json` or generate live files until these are confir
 
 **Packs.** After detection (below), state which packs you will generate. Honour `packsIgnored` if the user names packs to skip.
 
-Start the live config from `.seh/references/harness.config.json`. Fill answers. Leave `agents.statuses` at the skeleton defaults unless the user confirmed other strings. Leave `jiraOffer` `null` until the Jira offer. Omit `agents.tracker`. Set `seh.generatedFrom` to the trimmed contents of `.seh/VERSION`. Do not put credentials in config.
+Start the live config from `.seh/references/harness.config.json`. Fill answers. Leave `agents.statuses` at the skeleton defaults unless the user confirmed other strings. Leave `jiraOffer` `null` until the tracker offer. Omit `agents.tracker`. Set `seh.generatedFrom` to the trimmed contents of `.seh/VERSION`. Do not put credentials in config.
 
 ### 4. Generate from `.seh/`
 
@@ -141,9 +141,9 @@ Then `CLAUDE.md` when the project **originally** had a `.claude/` directory **an
 
 When `CLAUDE.md` is required: prefer a relative file symlink `CLAUDE.md` → `AGENTS.md`. If it is already that symlink, leave it. If it was a regular file, replace it with the symlink (content is already in `AGENTS.md`). Detect the host OS and create the link the way that OS expects (Unix: `ln -s AGENTS.md CLAUDE.md`; Windows: a file symlink such as `mklink CLAUDE.md AGENTS.md` — not a directory junction). **Having `CLAUDE.md` when it is required matters more than the link.** If the symlink cannot be created for any reason, write `CLAUDE.md` as an **independent regular file** with the same accepted body as `AGENTS.md`. Tell the user they are two files because the link failed. Do not stop setup. Do not omit `CLAUDE.md` when `.claude/` was present or when `CLAUDE.md` already existed.
 
-### 6. Jira offer
+### 6. Tracker offer
 
-After writing config and generating files (and after the agents-file step), offer Jira **once**. See **Tracker**. Decline → set `jiraOffer` to `declined`. Do not commit.
+After writing config and generating files (and after the agents-file step), offer an external tracker **once**. See **Tracker**. Decline → set `jiraOffer` to `declined`. Do not commit.
 
 ---
 
@@ -179,43 +179,52 @@ Then **one change at a time**. Show current and new value, wait for confirmation
 
 If `.claude/` is present and `CLAUDE.md` is still missing: create the symlink the same way as on first run; if the link fails, write `CLAUDE.md` as an independent file with the current `AGENTS.md` body. If `CLAUDE.md` already exists as a regular file on a later run, do not overwrite it and do not re-run the first-run merge.
 
-If the user names another config key (model, base branch, …), do that key first, then the tracker offer only when there is still no tracker and the offer was not declined — unless they explicitly asked to add/change/remove Jira, in which case do the tracker path even after a decline.
+If the user names another config key (model, base branch, …), do that key first, then the tracker offer only when there is still no tracker and the offer was not declined — unless they explicitly asked to add/change/remove the external tracker (Jira or Azure DevOps), in which case do the tracker path even after a decline.
 
 ---
 
-## Tracker (Jira)
+## Tracker (Jira or Azure DevOps)
 
-First-run offer and every later run. Do not invent a `seh` CLI for Jira. Call `.seh/scripts/jira meta` (Jira Cloud REST; not MCP, not raw `curl`) and write config. Switching does **not** migrate old tasks. Token never in chat or git.
+First-run offer and every later run. Exactly one external tracker per project: `agents.tracker.kind` is `jira` or `ado`, never both. Do not invent a `seh` CLI. Call `.seh/scripts/jira meta` or `.seh/scripts/ado meta` (REST; not MCP, not `az devops`/`az boards`, not raw `curl`) and write config. Switching does **not** migrate old tasks. Token never in chat or git.
 
-Credentials: the user puts the token in a project-local ignored file `harness.credentials.local.json` (`{"jiraToken":"…"}`). `seh install` already ignores that filename. Never paste the token in chat. Never write a real token into `harness.config.json`.
+**Offer / choice.** One question. List only modes in scope, in this order, recommended first:
 
-**Token step (Add and token rotation on Change).** After URL, user, and project key are in `agents.tracker` (write to `harness.config.json` as needed so `jira meta` can run):
+1. **Azure DevOps (Recommended for Azure Boards teams)** — WIT REST via `.seh/scripts/ado`, PAT in `harness.credentials.local.json` (`adoPat`), task key = numeric work item id.
+2. **Jira** — Jira Cloud REST via `.seh/scripts/jira`, `jiraToken`.
+3. **Files** — no external tracker (default). Choosing files on the first run = decline.
 
-1. If `harness.credentials.local.json` is missing at the project root, create it with `{"jiraToken":""}` only. If it exists, do not overwrite an existing token — show the path and ask the user to set or update `jiraToken` locally.
-2. Tell the user to paste the token in that file (never in chat). One question: confirm when the token is in the file.
-3. Run `.seh/scripts/jira meta`. On `OK`, briefly confirm the connection and continue. On `BLOCKED:`, show the full `BLOCKED:` line, explain what to fix (token, URL, user, project key, or access), and loop: user fixes → confirm again → `jira meta` until `OK` or they stop.
-4. Then fetch mapping data from the successful `meta` output (statuses, issue types, custom fields) and continue mapping below.
+Do not offer Jira and ADO together after one is chosen. If a tracker is already connected and the user asks for the other kind, treat it as **Remove** then **Add** (confirm; no migration).
+
+Credentials live in the project-local ignored file `harness.credentials.local.json` (`seh install` already ignores that filename). Never paste a token or PAT in chat. Never write a real token into `harness.config.json`. Keys: Jira `{"jiraToken":"…"}`, ADO `{"adoPat":"…"}`. Only the active kind's key is required; on connect, create the file with the active kind's key set to `""` only when it is missing; if it exists, keep other keys of that kind and do not overwrite an existing token. When switching kind, drop the old kind's key from the file (and `agents.tracker`) as part of Remove.
+
+**Token step (Add and token rotation on Change).** After the connection keys are in `agents.tracker` (Jira: `url`, `user`, `projectKey`; ADO: `organizationUrl`, `project`; write to `harness.config.json` as needed so `meta` can run):
+
+1. If `harness.credentials.local.json` is missing at the project root, create it with the empty key for the active kind (`{"jiraToken":""}` or `{"adoPat":""}`) only. If it exists, do not overwrite an existing token — show the path and ask the user to set or update the key locally.
+2. Tell the user to paste the token / PAT in that file (never in chat). One question: confirm when it is in the file.
+3. Run `.seh/scripts/jira meta` or `.seh/scripts/ado meta`. On `OK`, briefly confirm the connection and continue. On `BLOCKED:`, show the full `BLOCKED:` line, explain what to fix (token/PAT, URL, user, project, or access), and loop: user fixes token, `organizationUrl`, or `project` (or Jira url/user/key) → confirm again → `meta` until `OK` or they stop.
+4. Then fetch mapping data from the successful `meta` output (states/statuses, types, fields) and continue mapping below.
 
 **Artifact storage (one question, after meta OK, before status/field mapping).** Default: no or skip → `artifactsOnTrackerOnly: true`. Yes → `false`.
 
-- **EN:** “Should Jira be used only to read task information, with spec, prompt, and log stored independently in files?”
-- **PL:** “Czy Jira ma służyć tylko do odczytu informacji o zadaniu, a spec, prompt i logi mają być przechowywane niezależnie w plikach?”
+- **EN:** “Should <Jira|Azure DevOps> be used only to read task information, with spec, prompt, and log stored independently in files?”
+- **PL:** “Czy <Jira|Azure DevOps> ma służyć tylko do odczytu informacji o zadaniu, a spec, prompt i logi mają być przechowywane niezależnie w plikach?”
 
-When `artifactsOnTrackerOnly` is `false`, do not ask where spec, prompt, or log live on the issue; leave `fields.spec`, `fields.prompt`, and `fields.log` empty. Still map statuses, issue types, and `fetchFields`. After **yes**, you may state in one sentence that workflow still uses Jira transitions and `jira get` reads file bodies — agents do not call `jira set` for spec/prompt/log.
+When `artifactsOnTrackerOnly` is `false`, do not ask where spec, prompt, or log live on the issue / work item; leave `fields.spec`, `fields.prompt`, and `fields.log` empty. Still map statuses, types, and `fetchFields`. After **yes**, you may state in one sentence that workflow still uses tracker transitions and `get` reads file bodies — agents do not call `set` for spec/prompt/log.
 
 On **Change**, the user may toggle `artifactsOnTrackerOnly` one at a time. Moving to `true` requires mapping `fields.*` again; moving to `false` drops those mappings. No automatic migration of ticket content into files.
 
 | Intent | What happens |
 |--------|----------------|
-| **Add** (no tracker yet, user asks or accepts the offer) | Ask URL, user, project key (one question at a time). Write those three keys into `agents.tracker`, then do **Token step**. Then **Artifact storage**. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that project’s real list (numbered), or skip = `null`. Map `blocker` if they use dependencies. If `artifactsOnTrackerOnly` is `true`, map where spec and prompt live (two custom fields, description, or comments) and map log if used. Issue types for `feature` and `bug`. Write `agents.tracker` from `.seh/references/harness.tracker.json` plus answers (`artifactsOnTrackerOnly`, `statuses`, `issueTypes`, `fields`, `fetchFields` as needed, `url`, `user`, `projectKey`). Agents must not pick a Jira status that is not in this map. Do not compose `curl`. |
-| **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named, including **Artifact storage** when they ask. If they rotate the token or you need fresh project metadata, run **Token step** and `jira meta` once; do not re-run `meta` for every small mapping edit. |
-| **Remove** | Confirm, drop `agents.tracker` from config, delete or clear `harness.credentials.local.json`. Project is files-only again. `jiraOffer` does not block a later **Add**. |
+| **Add — Jira** (no tracker yet, user chooses Jira) | Ask URL, user, project key (one question at a time). Write those keys and `kind: "jira"` into `agents.tracker`, then **Token step** (`jiraToken`). Then **Artifact storage**. Then, one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that project’s real list (numbered), or skip = `null`. Map `blocker` if they use dependencies. If `artifactsOnTrackerOnly` is `true`, map where spec and prompt live (two custom fields, description, or comments) and map log if used. Issue types for `feature` and `bug`. Write `agents.tracker` from `.seh/references/harness.tracker.json` plus answers (`kind`, `artifactsOnTrackerOnly`, `statuses`, `issueTypes`, `fields`, `fetchFields` as needed, `url`, `user`, `projectKey`). Agents must not pick a Jira status that is not in this map. Do not compose `curl`. |
+| **Add — Azure DevOps** (no tracker yet, user chooses ADO) | Ask `organizationUrl` (e.g. `https://dev.azure.com/{org}`, no trailing slash), then `project` (name or GUID), one question at a time; no PAT in chat. Write those keys and `kind: "ado"` into `agents.tracker` (start from `.seh/references/harness.tracker.ado.json`), then **Token step** (`adoPat`, initially `""`). Then **Artifact storage**. Then map statuses: each of `todo`, `inProgress`, `codeReview`, `inReview`, `done` to an exact state name from the `ado meta` output (`status.N` lines, numbered; the list is the union over all work item types, so warn that a state missing on a given type makes `ado transition` `BLOCKED:` for that type), or skip = `null`; map `blocker` if they use dependencies. Map `workItemTypes.feature` and `.bug` to exact type names from the `issueType.N` lines of `ado meta` (`meta` does not need them set first). If `artifactsOnTrackerOnly` is `true`, map `fields.spec`, `fields.prompt`, `fields.log` to a field `referenceName`, `description`, `comment`, or `history` (log optional). `fetchFields` as needed (field refs). Agents must not pick a state that is not in this map. Do not use `az devops`, `az boards`, MCP, or raw `curl`. |
+| **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named, including **Artifact storage** when they ask. If they rotate the token / PAT, change `organizationUrl` / `project` / Jira connection keys, or you need fresh metadata, run **Token step** and `meta` once for the active kind; do not re-run `meta` for every small mapping edit. |
+| **Remove** | Confirm, drop `agents.tracker` from config, delete or clear the active kind's key (`jiraToken` or `adoPat`) in `harness.credentials.local.json`. Project is files-only again. `jiraOffer` does not block a later **Add**. |
 
 `null` on a tracker status means that step does not transition. There is no file fallback and no invented name.
 
 After a tracker change, write the mapping into `harness.config.json`. Do not regenerate agent markdown for `fetchFields` or the task key pattern.
 
-Decline on first run: `jiraOffer: "declined"`. Do not ask again until a later run **Add** (explicit, or the later-run offer rule above).
+Decline on first run (files chosen): `jiraOffer: "declined"` — it means “declined an external tracker on first ask” (Jira or ADO). Do not ask again until a later run **Add** (explicit, or the later-run offer rule above).
 
 ---
 
