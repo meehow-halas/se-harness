@@ -319,11 +319,9 @@ describe("jira", () => {
     });
   });
 
-  test("get reads spec prompt and log from repo files when artifactsOnTrackerOnly is false", () => {
+  test("full write: get takes bodies from the issue even when repo files exist", () => {
     withTempDir((cwd) => {
-      writeProject(cwd, {
-        trackerOver: { artifactsOnTrackerOnly: false },
-      });
+      writeProject(cwd);
       writeFile(
         cwd,
         "docs/features/QX7-42.feature.md",
@@ -334,29 +332,10 @@ describe("jira", () => {
       const stub = writeCurlStub(cwd, defaultRoutes());
       const result = runJira(cwd, ["get", "QX7-42"], stub.env);
       assert.equal(result.status, 0, result.stderr + result.stdout);
-      assert.match(result.stdout, /^OK\n/);
-      assert.match(result.stdout, /BEGIN spec\nrepo spec body qx7 unique\nEND spec/);
-      assert.match(result.stdout, /BEGIN prompt\nrepo prompt body qx7 unique\nEND prompt/);
-      assert.match(result.stdout, /BEGIN log\nrepo log body qx7 unique\nEND log/);
-      assert.doesNotMatch(result.stdout, /BEGIN spec\nspec body qx7\nEND spec/);
-    });
-  });
-
-  test("set BLOCKED when artifactsOnTrackerOnly is false", () => {
-    withTempDir((cwd) => {
-      writeProject(cwd, {
-        trackerOver: { artifactsOnTrackerOnly: false },
-      });
-      const specFile = path.join(cwd, "spec.md");
-      fs.writeFileSync(specFile, "ignored\n");
-      const stub = writeCurlStub(cwd, defaultRoutes());
-      const result = runJira(
-        cwd,
-        ["set", "QX7-42", "spec", "--file", specFile],
-        stub.env
-      );
-      assertBlocked(result, /artifact content is stored in repository files/);
-      assert.equal(fs.existsSync(stub.dataFile), false);
+      assert.match(result.stdout, /BEGIN spec\nspec body qx7\nEND spec/);
+      assert.equal(result.stdout.includes("repo spec body qx7 unique"), false);
+      assert.equal(result.stdout.includes("repo prompt body qx7 unique"), false);
+      assert.equal(result.stdout.includes("repo log body qx7 unique"), false);
     });
   });
 
@@ -518,9 +497,9 @@ describe("jira", () => {
       });
     });
 
-    test("get takes bodies from files even when artifactsOnTrackerOnly is true; scalars from tracker", () => {
+    test("get takes bodies from files; scalars from tracker", () => {
       withTempDir((cwd) => {
-        writeProject(cwd, { trackerOver: { readOnly: true, artifactsOnTrackerOnly: true } });
+        writeProject(cwd, { trackerOver: { readOnly: true } });
         writeFile(cwd, "docs/features/QX7-42.feature.md", "---\nid: QX7-42\n---\n\nro file spec 7q\n");
         writeFile(cwd, "docs/prompt/QX7-42.prompt.md", "ro file prompt 7q\n");
         writeFile(cwd, "docs/feature-log/QX7-42.log.md", "ro file log 7q\n");

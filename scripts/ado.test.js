@@ -451,9 +451,9 @@ describe("ado", () => {
       });
     });
 
-    test("get reads repo files by id when artifactsOnTrackerOnly is false", () => {
+    test("full write: get takes bodies from the work item even when repo files exist", () => {
       withTempDir((cwd) => {
-        writeProject(cwd, { trackerOver: { artifactsOnTrackerOnly: false } });
+        writeProject(cwd);
         writeFile(cwd, "docs/features/48213.feature.md", "---\nx: 1\n---\nrepo spec\n");
         writeFile(cwd, "docs/prompt/48213.prompt.md", "repo prompt\n");
         writeFile(cwd, "docs/feature-log/48213.log.md", "repo log\n");
@@ -465,10 +465,11 @@ describe("ado", () => {
           })
         );
         const result = runAdo(cwd, ["get", ID], stub.env);
-        assert.match(result.stdout, /BEGIN spec\nrepo spec\nEND spec/);
-        assert.match(result.stdout, /BEGIN prompt\nrepo prompt\nEND prompt/);
-        assert.match(result.stdout, /BEGIN log\nrepo log\nEND log/);
-        assert.equal(result.stdout.includes("QX9 spec body"), false);
+        assert.equal(result.status, 0, result.stderr + result.stdout);
+        assert.match(result.stdout, /QX9 spec body/);
+        assert.equal(result.stdout.includes("repo spec"), false);
+        assert.equal(result.stdout.includes("repo prompt"), false);
+        assert.equal(result.stdout.includes("repo log"), false);
       });
     });
 
@@ -662,25 +663,13 @@ describe("ado", () => {
       });
     });
 
-    test("set BLOCKED when field unmapped or artifacts live in the repo", () => {
+    test("set BLOCKED when field unmapped", () => {
       withTempDir((cwd) => {
         writeProject(cwd, { trackerOver: { fields: { spec: "", prompt: "description", log: "comment" } } });
         const stub = writeCurlStub(cwd, defaultRoutes());
         writeFile(cwd, "b.md", "x\n");
         const f = path.join(cwd, "b.md");
         assertBlocked(runAdo(cwd, ["set", ID, "spec", "--file", f], stub.env), /spec is not mapped/);
-        assert.equal(fs.existsSync(stub.dataFile), false);
-      });
-      withTempDir((cwd) => {
-        writeProject(cwd, { trackerOver: { artifactsOnTrackerOnly: false } });
-        const stub = writeCurlStub(cwd, defaultRoutes());
-        writeFile(cwd, "b.md", "x\n");
-        for (const kind of ["spec", "prompt", "log"]) {
-          assertBlocked(
-            runAdo(cwd, ["set", ID, kind, "--file", path.join(cwd, "b.md")], stub.env),
-            /stored in repository files/
-          );
-        }
         assert.equal(fs.existsSync(stub.dataFile), false);
       });
     });
@@ -946,9 +935,9 @@ describe("ado", () => {
         });
       });
 
-      test("get takes bodies from files even when artifactsOnTrackerOnly is true; scalars from tracker", () => {
+      test("get takes bodies from files; scalars from tracker", () => {
         withTempDir((cwd) => {
-          writeProject(cwd, { trackerOver: { readOnly: true, artifactsOnTrackerOnly: true } });
+          writeProject(cwd, { trackerOver: { readOnly: true } });
           writeFile(cwd, "docs/features/48213.feature.md", "---\nx: 1\n---\nro file spec 7q\n");
           writeFile(cwd, "docs/prompt/48213.prompt.md", "ro file prompt 7q\n");
           writeFile(cwd, "docs/feature-log/48213.log.md", "ro file log 7q\n");

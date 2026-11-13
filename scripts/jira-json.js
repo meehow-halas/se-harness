@@ -102,10 +102,6 @@ function readOnly(t) {
   return t.readOnly === true;
 }
 
-function artifactsOnTrackerOnly(t) {
-  return !readOnly(t) && t.artifactsOnTrackerOnly !== false;
-}
-
 function readArtifactFile(root, rel) {
   const p = path.join(root, rel);
   if (!fs.existsSync(p)) {
@@ -435,12 +431,6 @@ if (cmd === "read-only") {
   process.exit(0);
 }
 
-if (cmd === "artifacts-on-tracker-only") {
-  const t = trackerFrom(readJson(process.argv[3]));
-  process.stdout.write(artifactsOnTrackerOnly(t) ? "true\n" : "false\n");
-  process.exit(0);
-}
-
 if (cmd === "format-get") {
   const cfgPath = process.argv[3];
   const t = trackerFrom(readJson(cfgPath));
@@ -454,7 +444,7 @@ if (cmd === "format-get") {
   let spec;
   let prompt;
   let log;
-  if (!artifactsOnTrackerOnly(t)) {
+  if (readOnly(t)) {
     const root = path.dirname(cfgPath);
     spec = stripYamlFrontmatter(
       readArtifactFile(root, `docs/features/${key}.feature.md`)

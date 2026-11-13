@@ -155,9 +155,6 @@ case $verb in
     esac
     parse_file_opt "$@"
     load_ado
-    if [ "$(ado_json artifacts-on-tracker-only "$SEH_ADO_CFG")" = "false" ]; then
-      blocked "artifact content is stored in repository files" "edit docs/features docs/prompt docs/feature-log"
-    fi
     _loc=$(ado_json mapped-field "$SEH_ADO_CFG" "$_kind")
     if [ -z "$_loc" ]; then
       blocked "$_kind is not mapped" "set agents.tracker.fields in /<prefix>setit-se"
