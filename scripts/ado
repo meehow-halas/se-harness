@@ -47,13 +47,12 @@ case $verb in
     _wit="/${_seg}/_apis/wit"
     _api=$(ado_json api-version)
     _types=$(mktemp)
-    _fl=$(mktemp)
-    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_types" "$_fl"' EXIT
+    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_types"' EXIT
+    # Fields come from the project's work item types, not /_apis/wit/fields,
+    # which lists every field in the organization.
     ado_http GET "${_wit}/workitemtypes?api-version=${_api}&%24expand=states"
     cp "$SEH_ADO_BODY" "$_types"
-    ado_http GET "/_apis/wit/fields?api-version=${_api}"
-    cp "$SEH_ADO_BODY" "$_fl"
-    _out=$(ado_json format-meta "$_types" "$_fl")
+    _out=$(ado_json format-meta "$_types")
     _proj=$(ado_json project "$SEH_ADO_CFG")
     printf 'OK\n'
     printf 'project: %s\n' "$_proj"

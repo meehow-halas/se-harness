@@ -478,7 +478,7 @@ These scripts do not cover LLM procedure (phases, Consultant, review checklist, 
 
 | Script | Who | Reads | Does |
 |--------|-----|-------|------|
-| `jira meta` | `/<prefix>setit-se` Add/Change | `agents.tracker` url, user, projectKey + credentials | List that project’s statuses, issue types, and custom fields (numbered `key: value` lines) for mapping. |
+| `jira meta` | `/<prefix>setit-se` Add/Change | `agents.tracker` url, user, projectKey + credentials | List that project’s statuses, issue types, and custom fields (numbered `key: value` lines) for mapping. Fields come from the project’s create metadata per issue type (fields on that project’s create screens), never the site-wide field list; needs *Create issues* in the project. |
 | `jira get <key>` | Architect, Implementer, Reviewer | tracker maps, `fetchFields`, `readOnly` | GET the issue. Print scalars then `BEGIN spec` / `prompt` / `log`. Full write: bodies from mapped issue fields. When `readOnly` is `true`: bodies from `docs/features/`, `docs/prompt/`, `docs/feature-log/` for that key (empty if missing; no issue-field fallback). |
 | `jira create --type feature` or `bug --title <text>` | Architect | `issueTypes`, projectKey, `readOnly` | POST issue. Print `key:`. When `readOnly` is `true`: `BLOCKED:` with no HTTP request. |
 | `jira set <key> spec\|prompt\|log [--file <path>]` | Architect (spec/prompt/log); Implementer/Reviewer (log) | `fields`, `readOnly` | When `readOnly` is `true`, `BLOCKED:` — edit repo files. Else PUT the mapped field or description; POST comment when the map is `comment`. Body from `--file` or stdin. Log mapped to a field is appended. |
@@ -488,7 +488,7 @@ These scripts do not cover LLM procedure (phases, Consultant, review checklist, 
 
 | Script | Who | Reads | Does |
 |--------|-----|-------|------|
-| `ado meta` | `/<prefix>setit-se` Add/Change | `agents.tracker` organizationUrl, project + credentials | List states (per configured work item types), types, and fields (numbered `key: value` lines) for mapping. |
+| `ado meta` | `/<prefix>setit-se` Add/Change | `agents.tracker` organizationUrl, project + credentials | List states (per configured work item types), types, and fields (numbered `key: value` lines) for mapping. Fields come from the project’s work item types, never the organization-wide field list. |
 | `ado get <id>` | Architect, Implementer, Reviewer | tracker maps, `fetchFields`, `readOnly` | GET the work item. Print scalars then `BEGIN spec` / `prompt` / `log`. Full write: bodies from mapped fields. When `readOnly` is `true`: bodies from `docs/features/`, `docs/prompt/`, `docs/feature-log/` for that id (empty if missing; no work-item-field fallback). |
 | `ado create --type feature\|bug --title <text>` | Architect | `workItemTypes`, `project`, `readOnly` | POST work item. Print `id:`. When `readOnly` is `true`: `BLOCKED:` with no HTTP request. |
 | `ado set <id> spec\|prompt\|log [--file <path>]` | Architect (spec/prompt/log); Implementer/Reviewer (log) | `fields`, `readOnly` | When `readOnly` is `true`, `BLOCKED:` — edit repo files. Else PATCH the mapped field or description; POST comment when the map is `comment`. Body from `--file` or stdin. Log mapped to a field is appended. |

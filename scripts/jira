@@ -42,12 +42,22 @@ case $verb in
     load_jira
     _project=$(jira_json project-key "$SEH_JIRA_CFG")
     _st=$(mktemp)
-    trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_st" "${_fl-}"' EXIT
+    trap 'rm -rf "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_st" "${_fl-}"' EXIT
     jira_http GET "/rest/api/3/project/${_project}/statuses"
     cp "$SEH_JIRA_BODY" "$_st"
-    _fl=$(mktemp)
-    jira_http GET "/rest/api/3/field"
-    cp "$SEH_JIRA_BODY" "$_fl"
+    # Fields come from the project's create screens (createmeta per issue
+    # type), not /rest/api/3/field, which lists every field on the site.
+    _fl=$(mktemp -d)
+    _n=0
+    for _tid in $(jira_json issue-type-ids "$_st"); do
+      _start=0
+      while [ -n "$_start" ]; do
+        jira_http GET "/rest/api/3/issue/createmeta/${_project}/issuetypes/${_tid}?startAt=${_start}&maxResults=200"
+        _n=$((_n + 1))
+        cp "$SEH_JIRA_BODY" "$_fl/$_n.json"
+        _start=$(jira_json next-start "$SEH_JIRA_BODY" "$_start")
+      done
+    done
     _out=$(jira_json format-meta "$_st" "$_fl")
     _pk=$(jira_json project-key "$SEH_JIRA_CFG")
     printf 'OK\n'
