@@ -98,8 +98,12 @@ function mapped(t, kind) {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function readOnly(t) {
+  return t.readOnly === true;
+}
+
 function artifactsOnTrackerOnly(t) {
-  return t.artifactsOnTrackerOnly !== false;
+  return !readOnly(t) && t.artifactsOnTrackerOnly !== false;
 }
 
 function readArtifactFile(root, rel) {
@@ -417,6 +421,17 @@ if (cmd === "format-meta") {
     lines.push(`field.${fi}: ${f.id} | ${name}`);
   }
   process.stdout.write(`${lines.join("\n")}\n`);
+  process.exit(0);
+}
+
+if (cmd === "read-only") {
+  let on = false;
+  try {
+    on = readOnly(trackerFrom(JSON.parse(fs.readFileSync(process.argv[3], "utf8"))));
+  } catch {
+    on = false;
+  }
+  process.stdout.write(on ? "true\n" : "false\n");
   process.exit(0);
 }
 

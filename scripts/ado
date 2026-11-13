@@ -91,6 +91,7 @@ case $verb in
     ;;
 
   create)
+    guard_read_only
     _type=
     _title=
     while [ $# -gt 0 ]; do
@@ -138,6 +139,7 @@ case $verb in
     ;;
 
   set)
+    guard_read_only
     if [ $# -lt 2 ]; then
       blocked "unexpected arguments" "usage: ado set <work-item-id> spec|prompt|log [--file <path>]"
     fi
@@ -185,6 +187,7 @@ case $verb in
     ;;
 
   comment)
+    guard_read_only
     if [ $# -lt 1 ]; then
       blocked "unexpected arguments" "usage: ado comment <work-item-id> [--file <path>]"
     fi
@@ -204,6 +207,7 @@ case $verb in
     ;;
 
   transition)
+    guard_read_only
     if [ $# -ne 2 ]; then
       blocked "unexpected arguments" "usage: ado transition <work-item-id> todo|inProgress|codeReview|inReview|done"
     fi
@@ -245,6 +249,7 @@ case $verb in
     ;;
 
   link)
+    guard_read_only
     if [ $# -ne 3 ]; then
       blocked "unexpected arguments" "usage: ado link <work-item-id> depends|relates <other-id>"
     fi

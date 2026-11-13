@@ -904,5 +904,89 @@ describe("ado", () => {
         );
       });
     });
+
+    describe("readOnly", () => {
+      const verbsFor = (cwd) => {
+        const body = path.join(cwd, "ro-body.md");
+        return [
+          ["create", "--type", "feature", "--title", "t"],
+          ["set", ID, "spec", "--file", body],
+          ["set", ID, "prompt", "--file", body],
+          ["set", ID, "log", "--file", body],
+          ["comment", ID, "--file", body],
+          ["transition", ID, "codeReview"],
+          ["link", ID, "depends", "48214"],
+        ];
+      };
+
+      for (const token of [FIX.token, null]) {
+        test(`write verbs BLOCKED with zero requests when readOnly true (credentials ${token === null ? "absent" : "present"})`, () => {
+          withTempDir((cwd) => {
+            writeProject(cwd, { trackerOver: { readOnly: true }, token });
+            fs.writeFileSync(path.join(cwd, "ro-body.md"), "x\n");
+            for (const args of verbsFor(cwd)) {
+              const stub = writeCurlStub(cwd, defaultRoutes());
+              fs.rmSync(stub.logFile, { force: true });
+              const result = runAdo(cwd, args, stub.env);
+              assertBlocked(result, /read-only/);
+              assert.equal(fs.existsSync(stub.logFile), false, `curl ran for ${args[0]}`);
+            }
+          });
+        });
+      }
+
+      test("readOnly false explicitly still writes", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { readOnly: false } });
+          const route = witPath(`/_apis/wit/workitems/%24${encodeURIComponent(FIX.bugType)}`);
+          const stub = writeCurlStub(cwd, defaultRoutes({ [`POST ${route}`]: { code: 200, body: { id: 5521 } } }));
+          const result = runAdo(cwd, ["create", "--type", "bug", "--title", "t"], stub.env);
+          assertOk(result, { id: "5521" });
+          assert.equal(fs.existsSync(stub.logFile), true);
+        });
+      });
+
+      test("get takes bodies from files even when artifactsOnTrackerOnly is true; scalars from tracker", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { readOnly: true, artifactsOnTrackerOnly: true } });
+          writeFile(cwd, "docs/features/48213.feature.md", "---\nx: 1\n---\nro file spec 7q\n");
+          writeFile(cwd, "docs/prompt/48213.prompt.md", "ro file prompt 7q\n");
+          writeFile(cwd, "docs/feature-log/48213.log.md", "ro file log 7q\n");
+          const stub = writeCurlStub(
+            cwd,
+            defaultRoutes({
+              [`GET ${itemPath()}`]: { code: 200, body: workItem },
+              [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [{ text: "tracker comment" }] } },
+            })
+          );
+          const result = runAdo(cwd, ["get", ID], stub.env);
+          assert.equal(result.status, 0, result.stdout + result.stderr);
+          assert.match(result.stdout, /^OK\n/);
+          assert.match(result.stdout, /status: QX9 Backlog New\n/);
+          assert.match(result.stdout, /BEGIN spec\nro file spec 7q\nEND spec/);
+          assert.match(result.stdout, /BEGIN prompt\nro file prompt 7q\nEND prompt/);
+          assert.match(result.stdout, /BEGIN log\nro file log 7q\nEND log/);
+          assert.doesNotMatch(result.stdout, /QX9 spec body|QX9 prompt body|tracker comment/);
+        });
+      });
+
+      test("get with no local files gives empty bodies and OK", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { readOnly: true } });
+          const stub = writeCurlStub(
+            cwd,
+            defaultRoutes({
+              [`GET ${itemPath()}`]: { code: 200, body: workItem },
+              [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [] } },
+            })
+          );
+          const result = runAdo(cwd, ["get", ID], stub.env);
+          assert.match(result.stdout, /^OK\n/);
+          assert.match(result.stdout, /BEGIN spec\n\nEND spec/);
+          assert.match(result.stdout, /BEGIN prompt\n\nEND prompt/);
+          assert.match(result.stdout, /BEGIN log\n\nEND log/);
+        });
+      });
+    });
   });
 });

@@ -477,4 +477,77 @@ describe("jira", () => {
       );
     });
   });
+  describe("readOnly", () => {
+    const KEY = "QX7-42";
+    const verbsFor = (cwd) => {
+      const body = path.join(cwd, "ro-body.md");
+      return [
+        ["create", "--type", "feature", "--title", "t"],
+        ["set", KEY, "spec", "--file", body],
+        ["set", KEY, "prompt", "--file", body],
+        ["set", KEY, "log", "--file", body],
+        ["comment", KEY, "--file", body],
+        ["transition", KEY, "codeReview"],
+        ["link", KEY, "depends", "QX7-43"],
+      ];
+    };
+
+    for (const token of [FIX.token, null]) {
+      test(`write verbs BLOCKED with zero requests when readOnly true (credentials ${token === null ? "absent" : "present"})`, () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { readOnly: true }, token });
+          fs.writeFileSync(path.join(cwd, "ro-body.md"), "x\n");
+          const stub = writeCurlStub(cwd, defaultRoutes());
+          for (const args of verbsFor(cwd)) {
+            const result = runJira(cwd, args, stub.env);
+            assertBlocked(result, /read-only/);
+            assert.equal(fs.existsSync(stub.logFile), false, `curl ran for ${args[0]}`);
+          }
+        });
+      });
+    }
+
+    test("readOnly false explicitly still writes", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { readOnly: false } });
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        const result = runJira(cwd, ["create", "--type", "feature", "--title", "t"], stub.env);
+        assertOk(result, { key: "QX7-99" });
+        const link = runJira(cwd, ["link", KEY, "relates", "QX7-43"], stub.env);
+        assertOk(link, { key: KEY });
+      });
+    });
+
+    test("get takes bodies from files even when artifactsOnTrackerOnly is true; scalars from tracker", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { readOnly: true, artifactsOnTrackerOnly: true } });
+        writeFile(cwd, "docs/features/QX7-42.feature.md", "---\nid: QX7-42\n---\n\nro file spec 7q\n");
+        writeFile(cwd, "docs/prompt/QX7-42.prompt.md", "ro file prompt 7q\n");
+        writeFile(cwd, "docs/feature-log/QX7-42.log.md", "ro file log 7q\n");
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        const result = runJira(cwd, ["get", KEY], stub.env);
+        assert.equal(result.status, 0, result.stderr + result.stdout);
+        assert.match(result.stdout, /^OK\n/);
+        assert.match(result.stdout, /summary: Unique title from QX7\n/);
+        assert.match(result.stdout, new RegExp(`status: ${FIX.todoStatus}\\n`));
+        assert.match(result.stdout, /BEGIN spec\nro file spec 7q\nEND spec/);
+        assert.match(result.stdout, /BEGIN prompt\nro file prompt 7q\nEND prompt/);
+        assert.match(result.stdout, /BEGIN log\nro file log 7q\nEND log/);
+        assert.doesNotMatch(result.stdout, /spec body qx7|prompt body qx7|log row qx7/);
+      });
+    });
+
+    test("get with no local files gives empty bodies and OK", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { readOnly: true } });
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        const result = runJira(cwd, ["get", KEY], stub.env);
+        assert.match(result.stdout, /^OK\n/);
+        assert.match(result.stdout, /BEGIN spec\n\nEND spec/);
+        assert.match(result.stdout, /BEGIN prompt\n\nEND prompt/);
+        assert.match(result.stdout, /BEGIN log\n\nEND log/);
+        assert.doesNotMatch(result.stdout, /body qx7|row qx7/);
+      });
+    });
+  });
 });

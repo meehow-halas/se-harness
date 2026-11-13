@@ -32,7 +32,7 @@ A phase is `done` when its checklist is true **and**:
 | Phase | Slice | Depends on | Status |
 |-------|--------|------------|--------|
 | 1 | PRD + references (`readOnly`, two-store exception, script table) | — | done |
-| 2 | `jira` / `ado`: write verbs `BLOCKED`, `get` from files | 1 | todo |
+| 2 | `jira` / `ado`: write verbs `BLOCKED`, `get` from files | 1 | done |
 | 3 | `/<prefix>setit-se` question, skipped maps, toggle | 1, 2 | todo |
 | 4 | Agents, work skills, consumer `AGENTS.md`, `start-task` check | 2, 3 | todo |
 | 5 | Manual end-to-end scenario + full `npm test` | 4 | todo |
