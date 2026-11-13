@@ -260,6 +260,28 @@ describe("start-task", () => {
     });
   });
 
+  for (const key of ["ABC-7", "42"]) {
+    test(`copies the three files named by tracker key ${key} and only those`, () => {
+      withTempDir((cwd) => {
+        initGitRepo(cwd);
+        writeFile(cwd, `docs/features/${key}.feature.md`, `spec-${key}\n`);
+        writeFile(cwd, `docs/prompt/${key}.prompt.md`, `prompt-${key}\n`);
+        writeFile(cwd, `docs/feature-log/${key}.log.md`, `log-${key}\n`);
+        writeFile(cwd, "docs/features/ABC-8.feature.md", "other-key\n");
+        const wt = startWorktree(cwd, key);
+        assert.equal(currentBranch(wt), key);
+        assert.equal(fs.readFileSync(path.join(wt, `docs/features/${key}.feature.md`), "utf8"), `spec-${key}\n`);
+        assert.equal(fs.readFileSync(path.join(wt, `docs/prompt/${key}.prompt.md`), "utf8"), `prompt-${key}\n`);
+        assert.equal(fs.readFileSync(path.join(wt, `docs/feature-log/${key}.log.md`), "utf8"), `log-${key}\n`);
+        assert.equal(fs.existsSync(path.join(cwd, `docs/features/${key}.feature.md`)), false);
+        assert.equal(fs.existsSync(path.join(cwd, `docs/prompt/${key}.prompt.md`)), false);
+        assert.equal(fs.existsSync(path.join(cwd, `docs/feature-log/${key}.log.md`)), false);
+        assert.equal(fs.existsSync(path.join(wt, "docs/features/ABC-8.feature.md")), false);
+        assert.equal(fs.readFileSync(path.join(cwd, "docs/features/ABC-8.feature.md"), "utf8"), "other-key\n");
+      });
+    });
+  }
+
   test("restores tracked dirty file-tracker files on launch after copying into the worktree", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);
