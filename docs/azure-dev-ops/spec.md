@@ -47,7 +47,7 @@ Skeleton lives in `references/harness.tracker.ado.json` (phase 1). Fields:
 | `workItemTypes.feature` / `.bug` | Exact type names from process template |
 | `fields.spec` / `prompt` / `log` | `referenceName`, `description`, `comment`, or `history` |
 | `fetchFields` | Extra field refs for `get` |
-| `statuses` | Maps `todo`, `inProgress`, `codeReview`, `inReview`, `done`, `blocker` → state string or `null` |
+| `statuses` | Maps `todo`, `inProgress`, `codeReview`, `inReview`, `done`, `blocker` → state string or `null`; `todo`…`done` mean the same as in Jira (table “Azure DevOps tracker” in `docs/prd.md`: todo = Architect ready; inProgress = Implementer starts or rework; codeReview = Implementer finishes; inReview = Reviewer starts a round; done = clean review, PR open) |
 | `artifactsOnTrackerOnly` | Boolean; default `true` when missing |
 
 Credentials: `{ "adoPat": "…" }` in `harness.credentials.local.json` (may coexist with empty `jiraToken` keys only when unused; setup docs should not require both).

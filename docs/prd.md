@@ -223,9 +223,9 @@ The five seh steps are the same as on files. **Which ADO state each step uses is
 |-----|-----------------------------------|--------|
 | `todo` | Architect has created spec + prompt | State string or `null` |
 | `inProgress` | Implementer starts | State string or `null` |
-| `codeReview` | Reviewer starts the first round | State string or `null` |
-| `inReview` | User accepted a clean review (commit/PR) | State string or `null` |
-| `done` | PR merged and close confirmed | State string or `null` |
+| `codeReview` | Implementer finishes (`implemented`) | State string or `null` |
+| `inReview` | Reviewer starts a review round (`in review`) | State string or `null` |
+| `done` | Clean review accepted: commit, push and PR opened (feature finished) | State string or `null` |
 | `blocker` (optional extra) | State a **depends** work item must already have before this one may start | State string; required if `depends` is used |
 
 `null` = this step does not PATCH state. There is no file fallback and no invented name. If the mapped state does not exist on that work item type, stop and tell the user to fix the mapping in `/<prefix>setit-se`. Current state already matches → `UNCHANGED`.
@@ -239,10 +239,11 @@ While Azure DevOps is connected and `artifactsOnTrackerOnly` is `true`, `agents.
 | Implementer starts | PATCH state to mapped `inProgress` when not `null`. |
 | Consultant pass | Nowhere on the work item (noise). |
 | User decision `Q<n>` | Comment via `ado comment`. |
-| Reviewer starts (first round) | PATCH state to mapped `codeReview` when not `null`. |
+| Implementer finishes (`implemented`) | PATCH state to mapped `codeReview` when not `null`. |
+| Reviewer starts a review round | PATCH state to mapped `inReview` when not `null`. |
 | Reviewer report (✅/❌/⚠️) | Comment. |
-| Acceptance (clean review) | PATCH state to mapped `inReview` when not `null`. |
-| Close after merge | PATCH state to mapped `done` when not `null`. |
+| Fix round (❌ sends the task back) | PATCH state to mapped `inProgress` when not `null`. |
+| Acceptance (clean review), PR opened | PATCH state to mapped `done` when not `null`. |
 | Other log rows (Architect summary, debt `C<id>: accepted`, …) | Comment, or append when `fields.log` maps to a field. |
 
 `depends` / `relates`: work item links (`System.LinkTypes.Dependency-*` / `Related`) when the project allows them. If linking fails, comment that fact; do not write a feature file and do not block the task.
