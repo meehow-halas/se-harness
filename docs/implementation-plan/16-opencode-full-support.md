@@ -122,7 +122,8 @@ Read from source, not run: OpenCode is not installed locally. The final manual t
 
 ## Progress
 
-- Scope item 3 (plugin V2) is done (2026-11-13), with `references/opencode-check-update.test.js` in `npm test`. The manual check is still open: no `Plugin failed` in the OpenCode TUI, and `/plugins` lists `seh-check-update`.
+- Scope item 3 (plugin V2) is done (2026-11-13), with `references/opencode-check-update.test.js` in `npm test`. Manual check passed in `seh-test-jira` (2026-11-13): the plugin loads.
+- Scope item 1 (commands, F1) is done (2026-11-13). The template is `references/host-command.md` (one host-neutral wrapper, not `opencode-command.md`). PRD, CLI, tests, `/<prefix>setit-se`, and consumer `AGENTS.md` are updated. Manual check: `/_setit-se` appears in OpenCode. On a later run, `/_setit-se` did not generate the work-skill commands, because VERSION was equal to `generatedFrom`. Fix: a repair rule in `/<prefix>setit-se` that regenerates when a generated agent, work skill, or host command is missing. Re-check passed in `seh-test-jira` (2026-11-13): after `/_setit-se`, the work-skill commands appear in OpenCode.
 
 ## User decisions (2026-11-13)
 

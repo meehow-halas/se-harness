@@ -8,6 +8,10 @@ Version reset from `2.0.0`: seh has no production users yet. First changelog ent
 
 ### Added
 
+- OpenCode slash commands. OpenCode does not turn skills into `/` commands, so `/_setit-se` did not exist there. The host table now has `commandsDir` (`.opencode/commands` for OpenCode, `null` elsewhere).
+  - `seh install` writes `<commandsDir>/<prefix>setit-se.md` from `references/host-command.md`, a thin wrapper that loads the skill and passes `$ARGUMENTS`. A prefix change moves it. `seh uninstall` removes it.
+  - `/<prefix>setit-se` writes the same wrapper for each work skill.
+- `/<prefix>setit-se` repairs incomplete host trees on a later run. If a live agent, work skill, or host command is missing while the version and prefix are unchanged (for example a new host row or `commandsDir`), it regenerates them and names the missing paths.
 - Jira and Azure DevOps read-only mode (`agents.tracker.readOnly`). seh only reads the tracker; spec, prompt, log, and status live in repo files. Every write verb of `.seh/scripts/jira` and `.seh/scripts/ado` is `BLOCKED:`.
 
 ### Changed

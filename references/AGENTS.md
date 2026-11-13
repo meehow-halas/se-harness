@@ -4,7 +4,7 @@ This project uses **seh**. Read `harness.config.json` at run time for the one-li
 
 The product and CLI binary are `seh`. The npm package is `se-harness`. Run the CLI only in this project. Never `npm install -g`. Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, or any other machine-wide path.
 
-Supported hosts are the rows in `.seh/references/hosts.json`. Live skills, agents, rules, and brainstorm files are copies under **every** listed `skillsDir` / `agentsDir` / `rulesDir` / `brainstormDir`. In this session use the copy this host loaded. Bodies match across copies. Role `model` is a map keyed by host `id` in `harness.config.json`; this host’s live agent file gets that host’s string only.
+Supported hosts are the rows in `.seh/references/hosts.json`. Live skills, agents, rules, and brainstorm files are copies under **every** listed `skillsDir` / `agentsDir` / `rulesDir` / `brainstormDir`. On a host whose row has `commandsDir` (OpenCode), each `/{{prefix}}<name>` is also a command file there that only loads the skill of the same name. In this session use the copy this host loaded. Bodies match across copies. Role `model` is a map keyed by host `id` in `harness.config.json`; this host’s live agent file gets that host’s string only.
 
 ## Binding flow
 
