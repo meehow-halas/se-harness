@@ -302,20 +302,18 @@ describe("seh install", () => {
     });
   });
 
-  test("copied git helpers stay executable", () => {
+  test("copied entry-point scripts stay executable", () => {
     withTempDir((project) => {
       const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
       assert.equal(result.status, 0, result.stderr);
-      for (const name of [
-        "start-task",
-        "commit-task",
-        "push-task",
-        "open-pr",
-        "update-from-base",
-        "return-to-base",
-        "check-update",
-        "fanout-plan",
-      ]) {
+      // Every extensionless file in scripts/ is a command skills invoke directly.
+      const entryPoints = fs
+        .readdirSync(path.join(REPO_ROOT, "scripts"))
+        .filter((name) => !name.includes("."));
+      for (const name of ["start-task", "jira", "ado", "check-update"]) {
+        assert.ok(entryPoints.includes(name), name);
+      }
+      for (const name of entryPoints) {
         const mode = fs.statSync(path.join(project, ".seh", "scripts", name)).mode;
         assert.notEqual(mode & 0o111, 0, name);
       }
