@@ -203,6 +203,72 @@ case $verb in
     ok "id: ${_id}"
     ;;
 
+  transition)
+    if [ $# -ne 2 ]; then
+      blocked "unexpected arguments" "usage: ado transition <work-item-id> todo|inProgress|codeReview|inReview|done"
+    fi
+    require_task "$1"
+    _id=$1
+    _step=$2
+    case $_step in
+      todo|inProgress|codeReview|inReview|done) ;;
+      *)
+        blocked "invalid status key $_step" "usage: ado transition <work-item-id> todo|inProgress|codeReview|inReview|done"
+        ;;
+    esac
+    require_node
+    require_tracker_config
+    SEH_ADO_CFG=$(config_path)
+    if ! _want=$(ado_json status-map "$SEH_ADO_CFG" "$_step"); then
+      blocked "invalid status key $_step" "fix agents.tracker.statuses in /<prefix>setit-se"
+    fi
+    if [ "$_want" = "NULL" ]; then
+      unchanged "id: ${_id}" "step: ${_step}" "status: skipped"
+    fi
+    load_ado
+    _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
+    _wit="/${_seg}/_apis/wit"
+    _api=$(ado_json api-version)
+    _item=$(mktemp)
+    _payload=$(mktemp)
+    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_item" "$_payload"' EXIT
+    ado_http GET "${_wit}/workitems/${_id}?fields=System.State&api-version=${_api}"
+    cp "$SEH_ADO_BODY" "$_item"
+    _cur=$(ado_json current-state "$_item")
+    if [ "$_cur" = "$_want" ]; then
+      unchanged "id: ${_id}" "status: ${_want}"
+    fi
+    # No transitions API: PATCH the mapped state and let ADO reject illegal ones.
+    ado_json state-body "$_want" > "$_payload"
+    ado_http PATCH "${_wit}/workitems/${_id}?api-version=${_api}" "$_payload" "$(ado_json patch-content-type)"
+    ok "id: ${_id}" "status: ${_want}"
+    ;;
+
+  link)
+    if [ $# -ne 3 ]; then
+      blocked "unexpected arguments" "usage: ado link <work-item-id> depends|relates <other-id>"
+    fi
+    require_task "$1"
+    require_task "$3"
+    _id=$1
+    _rel=$2
+    _other=$3
+    case $_rel in
+      depends|relates) ;;
+      *)
+        blocked "invalid link type $_rel" "usage: ado link <work-item-id> depends|relates <other-id>"
+        ;;
+    esac
+    load_ado
+    _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
+    _api=$(ado_json api-version)
+    _payload=$(mktemp)
+    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_payload"' EXIT
+    ado_json link-body "$_rel" "$SEH_ADO_URL" "$_other" > "$_payload"
+    ado_http PATCH "/${_seg}/_apis/wit/workitems/${_id}?api-version=${_api}" "$_payload" "$(ado_json patch-content-type)"
+    ok "id: ${_id}" "link: ${_rel}" "other: ${_other}"
+    ;;
+
   *)
     usage
     ;;

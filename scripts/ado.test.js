@@ -8,6 +8,7 @@ const path = require("path");
 const {
   assertBlocked,
   assertOk,
+  assertUnchanged,
   initGitRepo,
   pathHidingCommand,
   runScript,
@@ -654,6 +655,116 @@ describe("ado", () => {
         assert.equal(r.status, 0, r.stdout + r.stderr);
         assert.equal(argvLines(stub).length, 1);
         assert.equal(r.stdout.includes(FIX.token), false);
+      });
+    });
+
+    test("transition with a null map is UNCHANGED and makes no HTTP call", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, {});
+        const r = runAdo(cwd, ["transition", ID, "inProgress"], stub.env);
+        assertUnchanged(r, { id: ID, step: "inProgress", status: "skipped" });
+        assert.equal(fs.existsSync(stub.logFile), false);
+      });
+    });
+
+    test("transition already at the mapped state is UNCHANGED with no PATCH", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { statuses: { done: "ZY3 Closed Out" } } });
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: { code: 200, body: { id: 48213, fields: { "System.State": "ZY3 Closed Out" } } },
+        });
+        const r = runAdo(cwd, ["transition", ID, "done"], stub.env);
+        assertUnchanged(r, { id: ID, status: "ZY3 Closed Out" });
+        assert.equal(dataLines(stub).filter((d) => d.key.startsWith("PATCH")).length, 0);
+      });
+    });
+
+    test("transition PATCHes System.State with the mapped string and reads fields=System.State", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { statuses: { codeReview: "ZY3 Peer Check" } } });
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: { code: 200, body: { id: 48213, fields: { "System.State": "Other" } } },
+          [`PATCH ${itemPath()}`]: { code: 200, body: {} },
+        });
+        const r = runAdo(cwd, ["transition", ID, "codeReview"], stub.env);
+        assertOk(r, { id: ID, status: "ZY3 Peer Check" });
+        const rows = dataLines(stub);
+        assert.ok(rows[0].search.includes("fields=System.State"));
+        const patch = rows.find((d) => d.key.startsWith("PATCH"));
+        assert.deepEqual(JSON.parse(patch.data), [
+          { op: "add", path: "/fields/System.State", value: "ZY3 Peer Check" },
+        ]);
+      });
+    });
+
+    test("transition to a state the API rejects is BLOCKED with the API message", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, {
+          [`GET ${itemPath()}`]: { code: 200, body: { id: 48213, fields: { "System.State": "New" } } },
+          [`PATCH ${itemPath()}`]: { code: 400, body: { message: "QX9 state Shipped is invalid" } },
+        });
+        assertBlocked(runAdo(cwd, ["transition", ID, "done"], stub.env), /400: QX9 state Shipped is invalid/);
+      });
+    });
+
+    test("transition rejects bad ids and unknown step keys", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        assertBlocked(runAdo(cwd, ["transition", "x1", "done"]), /invalid task id/);
+        assertBlocked(runAdo(cwd, ["transition", ID, "nope"]), /invalid status key nope/);
+      });
+    });
+
+    test("transition with an empty-string status mapping is BLOCKED, not skipped", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { statuses: { done: "  " } } });
+        const stub = writeCurlStub(cwd, {});
+        assertBlocked(runAdo(cwd, ["transition", ID, "done"], stub.env), /invalid status key done/);
+        assert.equal(fs.existsSync(stub.logFile), false);
+      });
+    });
+
+    test("link depends PATCHes Dependency-Reverse to the other item URL under organizationUrl", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, { [`PATCH ${itemPath()}`]: { code: 200, body: {} } });
+        const r = runAdo(cwd, ["link", ID, "depends", "777"], stub.env);
+        assertOk(r, { id: ID, link: "depends", other: "777" });
+        const patch = dataLines(stub).find((d) => d.key.startsWith("PATCH"));
+        assert.deepEqual(JSON.parse(patch.data), [
+          {
+            op: "add",
+            path: "/relations/-",
+            value: {
+              rel: "System.LinkTypes.Dependency-Reverse",
+              url: `${FIX.organizationUrl}/_apis/wit/workItems/777`,
+            },
+          },
+        ]);
+      });
+    });
+
+    test("link relates uses System.LinkTypes.Related", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, { [`PATCH ${itemPath()}`]: { code: 200, body: {} } });
+        assertOk(runAdo(cwd, ["link", ID, "relates", "9"], stub.env), { link: "relates" });
+        const patch = dataLines(stub).find((d) => d.key.startsWith("PATCH"));
+        assert.equal(JSON.parse(patch.data)[0].value.rel, "System.LinkTypes.Related");
+      });
+    });
+
+    test("link failure is BLOCKED with the API fact; bad ids and types rejected", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, {
+          [`PATCH ${itemPath()}`]: { code: 400, body: { message: "QX9 cycle detected" } },
+        });
+        assertBlocked(runAdo(cwd, ["link", ID, "depends", "5"], stub.env), /400: QX9 cycle detected/);
+        assertBlocked(runAdo(cwd, ["link", ID, "depends", "abc"]), /invalid task id abc/);
+        assertBlocked(runAdo(cwd, ["link", ID, "blocks", "5"]), /invalid link type blocks/);
       });
     });
 

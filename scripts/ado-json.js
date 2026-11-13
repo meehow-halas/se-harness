@@ -371,6 +371,69 @@ if (cmd === "set-body") {
   process.exit(0);
 }
 
+if (cmd === "status-map") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  const statuses = t.statuses || {};
+  const key = process.argv[4];
+  if (!Object.prototype.hasOwnProperty.call(statuses, key)) {
+    fail("unknown-status-key");
+  }
+  const v = statuses[key];
+  if (v == null) {
+    process.stdout.write("NULL\n");
+    process.exit(0);
+  }
+  if (typeof v !== "string" || !v.trim()) {
+    fail("invalid-status-map");
+  }
+  process.stdout.write(`${v.trim()}\n`);
+  process.exit(0);
+}
+
+if (cmd === "current-state") {
+  const item = readJson(process.argv[3]);
+  process.stdout.write(`${scalar(((item && item.fields) || {})["System.State"])}\n`);
+  process.exit(0);
+}
+
+if (cmd === "state-body") {
+  process.stdout.write(
+    JSON.stringify([
+      { op: "add", path: "/fields/System.State", value: process.argv[3] },
+    ])
+  );
+  process.exit(0);
+}
+
+// Link direction: "A depends B" is stored on A as Dependency-Reverse
+// (Predecessor): B must finish before A. Same mental model as jira-json.js
+// link-body, where depends = "this issue is blocked by other".
+if (cmd === "link-body") {
+  const rel = process.argv[3];
+  const base = process.argv[4].replace(/\/+$/, "");
+  const other = process.argv[5];
+  const types = {
+    depends: "System.LinkTypes.Dependency-Reverse",
+    relates: "System.LinkTypes.Related",
+  };
+  if (!types[rel]) {
+    fail("unknown-link");
+  }
+  process.stdout.write(
+    JSON.stringify([
+      {
+        op: "add",
+        path: "/relations/-",
+        value: {
+          rel: types[rel],
+          url: `${base}/_apis/wit/workItems/${other}`,
+        },
+      },
+    ])
+  );
+  process.exit(0);
+}
+
 if (cmd === "format-get") {
   const cfgPath = process.argv[3];
   const t = trackerFrom(readJson(cfgPath));
