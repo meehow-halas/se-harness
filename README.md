@@ -60,7 +60,7 @@ Skills are installed with a name prefix. `seh install --prefix P` sets it; the d
 npx -p se-harness seh install --prefix my-
 ```
 
-Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag. Installing again with another prefix removes the old `/_setit-se` skill; the next `/_setit-se` run regenerates the work skills under the new prefix and removes the old ones.
+Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag, and a later `seh install` without `--prefix` keeps it. Installing again with another prefix removes the old `/_setit-se` skill; the next `/_setit-se` run regenerates the work skills under the new prefix and removes the old ones.
 
 | Skill | Was (1.x) |
 |---|---|
@@ -114,6 +114,24 @@ Removes `.seh/` and the install-owned `/_setit-se` skill from every `skillsDir`.
 ## After a package update
 
 Run install again from the same source, then `/_setit-se`, so generated files match the installed templates (`.seh/VERSION` vs `seh.generatedFrom`). That regeneration copies `/_shipit` and deletes leftover live `seh-feature` and the old `seh-*` skills. It does not rewrite project `AGENTS.md`.
+
+```text
+npx -p se-harness@latest seh install
+```
+
+Then run `/_setit-se` in the project.
+
+- **Pin the version you want.** `npx` may reuse a cached copy of an unpinned package. Use `se-harness@latest` or `se-harness@<version>` for npm, and `github:meehow-halas/se-harness#<tag>` for GitHub. Check the printed `seh install: OK <version>` line.
+- **No need to repeat `--prefix`.** A reinstall without the flag keeps the prefix from `.seh/PREFIX`. Pass `--prefix` only to change it.
+- `.seh/` (including `.seh/scripts/`) is replaced right away. Live agents, work skills, and rules change only when `/_setit-se` regenerates them.
+
+### Force a reinstall when the version did not change
+
+`seh install` always overwrites `.seh/` and the `/_setit-se` skill. It does not compare versions. `/_setit-se` regenerates live files only when `.seh/VERSION` differs from `seh.generatedFrom` (or the prefix changed). To regenerate everything anyway, for example after a hand edit to a live agent or when installing from a branch whose version was not bumped:
+
+1. Run `seh install` as above.
+2. In `harness.config.json`, set `seh.generatedFrom` to `""`.
+3. Run `/_setit-se`. It sees the mismatch and regenerates live agents, work skills, and rule packs in every host tree. Your config values, including role models, are kept.
 
 ## Skills
 
