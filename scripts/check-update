@@ -31,7 +31,7 @@ fi
 ROOT=${SEH_CHECK_ROOT:-$(pwd)}
 VERSION_FILE=$ROOT/.seh/VERSION
 CACHE_FILE=$ROOT/.seh/update-check.json
-REMOTE=${SEH_CHECK_REMOTE:-https://github.com/nbmh/dev-harness-layer.git}
+REMOTE=${SEH_CHECK_REMOTE:-https://github.com/meehow-halas/se-harness.git}
 TTL=${SEH_CHECK_TTL:-86400}
 
 if [ ! -f "$VERSION_FILE" ]; then
@@ -189,7 +189,7 @@ fi
 
 msg=$(
   printf \
-    'seh %s is installed; %s is available (GitHub tag). Run npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install, then /{{prefix}}setit-se.' \
+    'seh %s is installed; %s is available (GitHub tag). Run npx -p se-harness seh install or npx -p github:meehow-halas/se-harness seh install, then /{{prefix}}setit-se.' \
     "$INSTALLED" "$LATEST"
 )
 

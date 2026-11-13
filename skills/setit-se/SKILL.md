@@ -12,7 +12,7 @@ Generate from `.seh/` only. Do not invent CLI commands. Do not `npm install -g`.
 Read `.seh/references/hosts.json`. Install and this skill **always write every row**. Do not ask which hosts to use. If that file is missing, stop:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se again
+BLOCKED: seh install has not been run here — run seh install (npx -p se-harness seh install or npx -p github:meehow-halas/se-harness seh install), then /{{prefix}}setit-se again
 ```
 
 Ask **one question at a time**. Wait. Do not dump a questionnaire. Stops (not questions) are one line:
@@ -28,7 +28,7 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 1. If `.seh/` is missing, or `/{{prefix}}setit-se` is absent from **every** `skillsDir` in `.seh/references/hosts.json` (present in **any** listed `skillsDir` is enough):
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se again
+BLOCKED: seh install has not been run here — run seh install (npx -p se-harness seh install or npx -p github:meehow-halas/se-harness seh install), then /{{prefix}}setit-se again
 ```
 
 2. If `.seh/VERSION` is missing: same stop.
@@ -154,7 +154,7 @@ After writing config and generating files (and after the agents-file step), offe
 If `.seh/VERSION` is missing:
 
 ```text
-BLOCKED: seh install has not been run here — run seh install (npx -p dev-harness-layer seh install or npx -p github:nbmh/dev-harness-layer seh install), then /{{prefix}}setit-se again
+BLOCKED: seh install has not been run here — run seh install (npx -p se-harness seh install or npx -p github:meehow-halas/se-harness seh install), then /{{prefix}}setit-se again
 ```
 
 If any role `model` is still a string, or a map is missing a `hosts.json` `id`, finish **Role model maps** first. Do not regenerate live agents until every role has a complete map.

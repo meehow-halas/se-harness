@@ -33,7 +33,7 @@ Cite PRD sections instead of copying long procedure. Phase 5 and 6 are the longe
 
 ## Product invariants
 
-- The product and CLI binary are **`seh`**. The npm package is **`dev-harness-layer`**.
+- The product and CLI binary are **`seh`**. The npm package is **`se-harness`**.
 - CLI in v1: `seh install` and `seh uninstall` only. No `seh agent`, `seh git`, `seh check`, status, or Jira subcommand. Never `npm install -g`.
 - Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, or any other machine-wide path. Run only in the target project.
 - Setup is `/<prefix>setit-se`.
@@ -66,7 +66,7 @@ Published sources live at the package root. Do not invent a wrapping `templates/
 
 The only supported adoption path:
 
-1. **Bootstrap** — `npx -p dev-harness-layer seh install` (npm or GitHub). Result: `.seh/` plus the install-owned `/<prefix>setit-se` skill in every `skillsDir` from `references/hosts.json`, plus a merged session-start hook in each host `hooksFile`. Setup is not done. Work skills must not exist yet and must not be offered.
+1. **Bootstrap** — `npx -p se-harness seh install` (npm or GitHub). Result: `.seh/` plus the install-owned `/<prefix>setit-se` skill in every `skillsDir` from `references/hosts.json`, plus a merged session-start hook in each host `hooksFile`. Setup is not done. Work skills must not exist yet and must not be offered.
 2. **Finish setup** — `/<prefix>setit-se` only. CLI does not configure the project.
 3. **Work** — `/<prefix>shipit`, `/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>grillit`, or later `/<prefix>setit-se`.
 4. **Remove bootstrap (optional)** — `seh uninstall` with the **same source** as install. Removes `.seh/`, the install-owned `/<prefix>setit-se` skill, and the install-owned hook command. Leaves `harness.config.json` and files `/<prefix>setit-se` generated.
