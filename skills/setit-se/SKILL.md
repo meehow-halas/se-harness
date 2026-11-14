@@ -33,6 +33,12 @@ BLOCKED: seh install has not been run here — run seh install (npx -p se-harnes
 
 2. If `.seh/VERSION` is missing: same stop.
 
+These are the only two reasons for that stop. Check each with its own plain command; never chain checks with `&&` / `||`, and never fold a git probe into them: a failing command is not “seh install has not been run”.
+
+**Setup skill check.** The skill lives in the directory `{{prefix}}setit-se` (the skill name, not what the user types). Test the literal path in single quotes, for example `test -e '<skillsDir>/{{prefix}}setit-se/SKILL.md'`. Never write the typed invocation (`$`, `/` plus the name) inside a shell command: with the default prefix `_`, a shell reads `$_setit-se` as the special parameter `$_` followed by `setit-se`, the path comes out wrong, and a good install looks missing.
+
+Git is optional. A project that is not a git repository is normal (git disabled, `agents.baseBranch` empty), never a `BLOCKED`. When a later step needs to know, probe git alone with `git rev-parse --is-inside-work-tree 2>/dev/null || echo no-git` and treat `no-git` as “git not detected”.
+
 3. If `harness.config.json` is **missing** → **First run**. If it is **present** → **Later run**.
 
 Do not overwrite keys the user did not confirm. Do not regenerate generated files as a silent first-run repeat. A later-run template mismatch (`.seh/VERSION` ≠ `seh.generatedFrom`) is not a first-run repeat: finish incomplete role `model` maps first, then regenerate live agents, work skills, and rules, then continue the later-run path.

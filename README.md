@@ -33,7 +33,8 @@ Codex differences:
 - Live agents are TOML, `.codex/agents/<name>.toml`. `model` is written only when one is set; otherwise the session model is inherited. A Codex subagent inherits the parent sandbox, so Consultant read-only is an instruction, not enforced.
 - Work skills get `agents/openai.yaml` with `allow_implicit_invocation: false`, so the model does not start them on its own.
 - Rules go to `.codex/rules/*.md`; `$_setit-se` keeps one seh-managed section in `AGENTS.md` that points at them. Path scoping is soft (instruction only).
-- The session-start update check is a `.codex/hooks.json` `SessionStart` hook. Codex loads it only in a **trusted project**, and you must review it in `/hooks` before it runs.
+- The session-start update check is a `.codex/hooks.json` `SessionStart` hook. Codex loads it only in a **trusted project**.
+- **Approve the hook:** after `seh install`, opening the project in Codex shows a notification that hooks need review. Open `/hooks` and accept the seh `SessionStart` hook, otherwise the update check never runs.
 - Sessions per key are not started automatically; one command is printed per key.
 
 One session per key (multi-key `/_planit`, `/_doit`, `/_checkit`, `/_shipit`) starts automatically only in the Claude Code desktop app. Cursor and OpenCode print one command per key.

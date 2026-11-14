@@ -16,6 +16,10 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
   - `modelSuggest`: architect `gpt-6-sol`, implementer, reviewer and brainstorm `gpt-6.1-sol`, consultant `gpt-6-luna`. Availability per account is unverified; "no change" omits `model`. Reasoning effort is not configured.
   - `/<prefix>grillit` no longer takes the host from a `skillsDir` shared by several rows (`.agents/skills`): it uses the tool it runs in, or asks once. On Codex the brainstorm model is requested in the persona launch prompt (`Use model <id>.`); the Codex docs name no per-launch model parameter, so the runtime may not honour it.
 
+### Fixed
+
+- Codex: `$_setit-se` stopped with `BLOCKED: seh install has not been run here` although the install was complete. With the default prefix `_`, the model put the typed invocation into a shell path check, and the shell read `$_setit-se` as `$_` plus `setit-se`, so every `skillsDir` looked empty. The entry check now names the skill directory `<prefix>setit-se`, tells the model to test the literal quoted path and never to put the typed invocation in a shell command, and says a missing git repository is git disabled, never `BLOCKED`.
+
 ## [1.1.0] - 2026-11-13
 
 Version reset from `2.0.0`: seh has no production users yet. First changelog entry.
