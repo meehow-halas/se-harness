@@ -161,6 +161,14 @@ If any role `model` is still a string, or a map is missing a `hosts.json` `id`, 
 
 If `.seh/VERSION` (trimmed) does not equal `seh.generatedFrom`: regenerate live agents, work skills, and rule packs from `.seh/` (same copy rules as first run), set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed package templates changed. That message must name the work-skill renames: `/seh-feature` and `/seh-shipit` are now `/{{prefix}}shipit`; `/seh-setup` is `/{{prefix}}setit-se`, `/seh-planit` is `/{{prefix}}planit`, `/seh-doit` is `/{{prefix}}doit`, `/seh-checkit` is `/{{prefix}}checkit`, `/seh-brainstorm` is `/{{prefix}}grillit`; leftover live `seh-*` skill directories were removed from every `skillsDir`. Do not rewrite `AGENTS.md` or `CLAUDE.md`; mention they may still contain the old name. Then continue below.
 
+**Missing generated files (repair).** VERSION and prefix may be equal while a host tree is still incomplete, for example after a package added a host row or `commandsDir` without a version change, or after someone deleted a file. Check every row in `.seh/references/hosts.json`:
+
+- the four agents in its `agentsDir`, each in this host's frontmatter shape from **Live agents** (for example an OpenCode copy that still has `name:` or `tools:`, or lacks `mode: subagent`, counts as missing);
+- `<skillsDir>/<prefix><name>/SKILL.md` for every work-skill template present in `.seh/skills/`, with `disable-model-invocation: true` where **Work skills** requires it for this host;
+- when `commandsDir` is set, `<commandsDir>/<prefix><name>.md` for those same skills, matching what the current `.seh/references/host-command.md` renders (a command without the `Host:` line counts as missing).
+
+If any of these is missing, regenerate live agents, work skills, and host commands for **every** row, with the same copy rules as first run. Tell the user in one line which paths were missing. Do not show the rename message and do not regenerate rule packs for this reason. Then continue below.
+
 **Status migration (once, on a later run).** If `agents.statuses` has the key `code review` and no `implemented` key, the flow changed. Rename it to `implemented` (key and value) in config and tell the user. Do not edit spec files. List every spec under `docs/features/` (or the mapped tracker) whose `status:` is `code review`, and tell the user to set it to `implemented`, or to `in review` if a review is running. `in review` stays valid.
 
 Then **one change at a time**. Show current and new value, wait for confirmation, then write. Do not overwrite keys the user did not confirm.
@@ -250,11 +258,11 @@ Copy `.seh/agents/` files into **each** `agentsDir`. **Copies, not symlinks.**
 | `.seh/agents/consultant.md` | `<agentsDir>/consultant.md` | `consultant` |
 | `.seh/agents/reviewer.md` | `<agentsDir>/reviewer.md` | `reviewer` |
 
-Set frontmatter `model:` from `agents.roles.<key>.model[<host.id>]`. If that entry is missing or empty, stop with `BLOCKED: role model missing for host <id> — run /{{prefix}}setit-se`. Do not copy another host’s model. Leave `name`, `description`, and `tools` as in the template. Hosts that ignore `tools:` still get the field.
+Set frontmatter `model:` from `agents.roles.<key>.model[<host.id>]`. If that entry is missing or empty, stop with `BLOCKED: role model missing for host <id> — run /{{prefix}}setit-se`. Do not copy another host’s model. Leave `name`, `description`, and `tools` as in the template, except on OpenCode (below). Claude Code and Cursor keep `tools:`.
 
 When the host `id` is `cursor` and the role is `consultant`, also set `readonly: true`. Do not set `readonly` on architect, implementer, or reviewer.
 
-When the host `id` is `opencode`, set `mode: subagent` on each of the four copies. When the host `id` is `opencode` and the role is `consultant`, also set:
+When the host `id` is `opencode`, remove the `name:` and `tools:` lines from each of the four copies and set `mode: subagent`. OpenCode takes the agent name from the file name. It skips an agent file whose `tools:` is a comma list ("agent file skipped"), so the copy must not carry it. Keep `description` and `model`. When the host `id` is `opencode` and the role is `consultant`, also set:
 
 ```yaml
 permissions:
@@ -267,7 +275,7 @@ Do not set those `permissions` on architect, implementer, or reviewer.
 
 Do not add a fifth agent. Do not copy brainstorm templates from `.seh/brainstorm/` into any `agentsDir`.
 
-On VERSION mismatch regeneration: replace those four live files in **every** `agentsDir` from `.seh/agents/` and re-apply `model:` from `agents.roles.<key>.model[<host.id>]` (and Cursor `readonly` on consultant, OpenCode `mode: subagent` and consultant `permissions`) from **current** config.
+On VERSION mismatch regeneration: replace those four live files in **every** `agentsDir` from `.seh/agents/` and re-apply `model:` from `agents.roles.<key>.model[<host.id>]` (and Cursor `readonly` on consultant, OpenCode without `name` / `tools` plus `mode: subagent` and consultant `permissions`) from **current** config.
 
 On a confirmed role `model` cell change only: rewrite that one file’s `model:` line in **that** host’s `agentsDir`.
 
@@ -287,7 +295,15 @@ Do **not** overwrite the install-owned `/{{prefix}}setit-se` skill from this cop
 
 Cleanup in **each** `skillsDir`: delete a leftover `seh-feature` directory and the pre-prefix names `seh-setup`, `seh-planit`, `seh-doit`, `seh-checkit`, `seh-shipit`, `seh-brainstorm`. If `seh.generatedPrefix` in `harness.config.json` is set and differs from `.seh/PREFIX`, also delete the live directories made with that old prefix (only `setit-se`, `planit`, `doit`, `checkit`, `shipit`, `grillit` with that prefix). Never delete a directory whose name is not on these lists. Do not leave aliases. After generating, set `seh.generatedPrefix` to the `.seh/PREFIX` value (empty string allowed). A prefix change alone (VERSION equal, `seh.generatedPrefix` different) also triggers this regeneration.
 
-When the host `id` is `cursor`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/{{prefix}}setit-se`). The package templates may omit that field.
+When the host `id` is `cursor` or `opencode`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/{{prefix}}setit-se`). The package templates may omit that field.
+
+**Host commands.** On a row whose `commandsDir` is a non-empty string (today OpenCode: a skill there is not a slash command), also write `<commandsDir>/<prefix><name>.md` for each work skill you copied, from `.seh/references/host-command.md`:
+
+- Replace `{{name}}` with the source name (`planit`, `doit`, …), `{{description}}` with the `description:` value of that copied `SKILL.md` (unchanged), and `{{host}}` with that row's `id`. The prefix is already rendered in `.seh/`.
+- Write nothing else into the command. The skill holds the procedure.
+- Rows with `commandsDir` `null` or missing get no command files.
+- Do not write or overwrite `<prefix>setit-se.md`. Install owns it.
+- Cleanup in **each** `commandsDir` follows the skill cleanup above. When `seh.generatedPrefix` differs from `.seh/PREFIX`, delete `<oldprefix><name>.md` for `planit`, `doit`, `checkit`, `shipit`, `grillit`. Never delete another file.
 
 ### Rule packs
 

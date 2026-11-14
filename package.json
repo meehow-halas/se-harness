@@ -16,7 +16,7 @@
     "!**/*.test.js"
   ],
   "scripts": {
-    "test": "node --test src/cli.test.js scripts/*.test.js"
+    "test": "node --test src/cli.test.js scripts/*.test.js references/*.test.js"
   },
   "repository": {
     "type": "git",

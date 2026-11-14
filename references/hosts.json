@@ -3,6 +3,7 @@
     {
       "id": "claude-code",
       "skillsDir": ".claude/skills",
+      "commandsDir": null,
       "agentsDir": ".claude/agents",
       "rulesDir": ".claude/rules",
       "rulesExt": ".md",
@@ -24,6 +25,7 @@
     {
       "id": "cursor",
       "skillsDir": ".cursor/skills",
+      "commandsDir": null,
       "agentsDir": ".cursor/agents",
       "rulesDir": ".cursor/rules",
       "rulesExt": ".mdc",
@@ -45,6 +47,7 @@
     {
       "id": "opencode",
       "skillsDir": ".opencode/skills",
+      "commandsDir": ".opencode/commands",
       "agentsDir": ".opencode/agents",
       "rulesDir": ".opencode/rules",
       "rulesExt": ".md",
@@ -55,9 +58,9 @@
       "hooksHostArg": "opencode",
       "sessionSpawn": "manual",
       "modelSuggest": {
-        "architect": "anthropic/claude-opus-4-5",
+        "architect": "anthropic/claude-opus-5-5",
         "implementer": "anthropic/claude-sonnet-5-5",
-        "consultant": "anthropic/claude-haiku-4-5",
+        "consultant": "anthropic/claude-haiku-5-5",
         "reviewer": "anthropic/claude-sonnet-5-5",
         "brainstorm": "anthropic/claude-sonnet-5-5"
       }

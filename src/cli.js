@@ -21,6 +21,7 @@ const PREFIX_PATTERN = /^[A-Za-z0-9_-]*$/;
 const HOSTS_FILE = "hosts.json";
 const CHECK_UPDATE_SCRIPT = ".seh/scripts/check-update";
 const OPENCODE_PLUGIN_SRC = path.join("references", "opencode-check-update.js");
+const HOST_COMMAND_SRC = path.join("references", "host-command.md");
 const GITIGNORE_ENTRIES = [
   {
     line: ".seh/",
@@ -106,6 +107,16 @@ function loadHosts(packageRoot) {
       console.error("seh: references/hosts.json host is missing skillsDir");
       process.exit(1);
     }
+    if (
+      host.commandsDir !== undefined &&
+      host.commandsDir !== null &&
+      (typeof host.commandsDir !== "string" || host.commandsDir === "")
+    ) {
+      console.error(
+        "seh: references/hosts.json host commandsDir must be a non-empty string or null"
+      );
+      process.exit(1);
+    }
     if (host.hooksFile) {
       if (
         typeof host.hooksFile !== "string" ||
@@ -134,6 +145,41 @@ function loadHosts(packageRoot) {
 
 function setupSkillDir(cwd, host, prefix) {
   return path.join(cwd, posixJoin(host.skillsDir), `${prefix}${SETUP_SKILL}`);
+}
+
+// Hosts whose slash commands are not skills (OpenCode) get a command file
+// that loads the skill. Null when the row has no commandsDir.
+function setupCommandFile(cwd, host, prefix) {
+  if (!host.commandsDir) {
+    return null;
+  }
+  return path.join(cwd, posixJoin(host.commandsDir), `${prefix}${SETUP_SKILL}.md`);
+}
+
+function frontmatterField(text, field) {
+  const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  if (!block) {
+    return "";
+  }
+  const line = new RegExp(`^${field}:[ \\t]*(.*)$`, "m").exec(block[1]);
+  return line ? line[1].trim() : "";
+}
+
+function renderHostCommand(template, { prefix, name, description, host }) {
+  return template
+    .split("{{host}}").join(host)
+    .split("{{description}}").join(description)
+    .split("{{name}}").join(name)
+    .split(PREFIX_TOKEN).join(prefix);
+}
+
+function readHostCommandTemplate(packageRoot) {
+  const src = path.join(packageRoot, HOST_COMMAND_SRC);
+  if (!fs.existsSync(src)) {
+    console.error("seh install: missing package file at references/host-command.md");
+    process.exit(1);
+  }
+  return fs.readFileSync(src, "utf8");
 }
 
 function isPackageTestFile(filePath) {
@@ -489,6 +535,11 @@ function install(ctx, prefixArg) {
       const old = setupSkillDir(cwd, host, previousPrefix);
       fs.rmSync(old, { recursive: true, force: true });
       pruneEmptyAncestors(path.dirname(old), cwd);
+      const oldCommand = setupCommandFile(cwd, host, previousPrefix);
+      if (oldCommand) {
+        fs.rmSync(oldCommand, { force: true });
+        pruneEmptyAncestors(path.dirname(oldCommand), cwd);
+      }
     }
   }
 
@@ -511,10 +562,25 @@ function install(ctx, prefixArg) {
     );
     process.exit(1);
   }
+  const commandTemplate = hosts.some((host) => host.commandsDir)
+    ? readHostCommandTemplate(packageRoot)
+    : null;
   for (const host of hosts) {
     const dest = setupSkillDir(cwd, host, prefix);
     copyTree(skillSrc, dest, prefix);
     renameSkill(dest, `${prefix}${SETUP_SKILL}`);
+    const commandFile = setupCommandFile(cwd, host, prefix);
+    if (commandFile) {
+      const description = frontmatterField(
+        fs.readFileSync(path.join(dest, "SKILL.md"), "utf8"),
+        "description"
+      );
+      fs.mkdirSync(path.dirname(commandFile), { recursive: true });
+      fs.writeFileSync(
+        commandFile,
+        renderHostCommand(commandTemplate, { prefix, name: SETUP_SKILL, description, host: host.id })
+      );
+    }
     ensureHostHook(cwd, host, packageRoot);
   }
 
@@ -539,6 +605,11 @@ function uninstall(ctx) {
     const skillDir = setupSkillDir(cwd, host, prefix);
     fs.rmSync(skillDir, { recursive: true, force: true });
     pruneEmptyAncestors(path.dirname(skillDir), cwd);
+    const commandFile = setupCommandFile(cwd, host, prefix);
+    if (commandFile) {
+      fs.rmSync(commandFile, { force: true });
+      pruneEmptyAncestors(path.dirname(commandFile), cwd);
+    }
     removeHostHook(cwd, host);
   }
 }

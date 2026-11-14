@@ -877,6 +877,111 @@ describe("seh install --prefix", () => {
     });
   });
 
+  const COMMAND_DIRS = { ".claude": false, ".cursor": false, ".opencode": true };
+
+  function commandFile(project, host, prefix) {
+    return path.join(project, host, "commands", `${prefix}setit-se.md`);
+  }
+
+  test("install writes the setup command only for hosts with commandsDir, named and pointing by prefix", () => {
+    for (const prefix of ["_", "my-", ""]) {
+      withTempDir((root) => {
+        const { pkg, project } = setupPackage(root);
+        fs.writeFileSync(
+          path.join(pkg, "skills", "setit-se", "SKILL.md"),
+          "---\nname: setit-se\ndescription: Configure seh; run /{{prefix}}setit-se again later.\n---\nbody\n"
+        );
+        const result = runCli(["install", "--prefix", prefix], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        for (const [host, has] of Object.entries(COMMAND_DIRS)) {
+          assert.equal(exists(commandFile(project, host, prefix)), has, `${host} ${prefix}`);
+          if (!has) {
+            assert.equal(exists(path.join(project, host, "commands")), false, host);
+          }
+        }
+        const text = read(commandFile(project, ".opencode", prefix));
+        assert.match(
+          text,
+          new RegExp(`^---\\ndescription: Configure seh; run /${prefix}setit-se again later\\.\\n---\\n`)
+        );
+        assert.ok(text.includes(`skill \`${prefix}setit-se\``), text);
+        assert.match(text, /\$ARGUMENTS/);
+        assert.doesNotMatch(text, /\{\{/);
+      });
+    }
+  });
+
+  test("each host command names its own host row id", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      const hostsFile = path.join(pkg, "references", "hosts.json");
+      const table = JSON.parse(read(hostsFile));
+      for (const host of table.hosts) {
+        if (host.id === "cursor") host.commandsDir = ".cursor/cmds";
+      }
+      fs.writeFileSync(hostsFile, `${JSON.stringify(table, null, 2)}\n`);
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      const cursorCmd = read(path.join(project, ".cursor", "cmds", "_setit-se.md"));
+      const opencodeCmd = read(commandFile(project, ".opencode", "_"));
+      assert.match(cursorCmd, /^Host: `cursor` /m);
+      assert.match(opencodeCmd, /^Host: `opencode` /m);
+      assert.equal(exists(path.join(project, ".claude", "commands")), false);
+    });
+  });
+
+  test("second install rewrites the setup command in place and keeps other commands", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      const first = read(commandFile(project, ".opencode", "_"));
+      fs.writeFileSync(path.join(project, ".opencode", "commands", "mine.md"), "keep\n");
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(read(commandFile(project, ".opencode", "_")), first);
+      assert.deepEqual(
+        fs.readdirSync(path.join(project, ".opencode", "commands")).sort(),
+        ["_setit-se.md", "mine.md"]
+      );
+    });
+  });
+
+  test("reinstall with another prefix moves the setup command and keeps other commands", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      assert.equal(runCli(["install", "--prefix", "a_"], { cwd: project, packageRoot: pkg }).status, 0);
+      fs.writeFileSync(path.join(project, ".opencode", "commands", "a_mine.md"), "keep\n");
+      assert.equal(runCli(["install", "--prefix", "b_"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(exists(commandFile(project, ".opencode", "a_")), false);
+      assert.match(read(commandFile(project, ".opencode", "b_")), /skill `b_setit-se`/);
+      assert.equal(read(path.join(project, ".opencode", "commands", "a_mine.md")), "keep\n");
+    });
+  });
+
+  test("uninstall removes the setup command, keeps other commands, prunes an empty commands dir", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      assert.equal(runCli(["install", "--prefix", "zz_"], { cwd: project, packageRoot: pkg }).status, 0);
+      fs.writeFileSync(path.join(project, ".opencode", "commands", "mine.md"), "keep\n");
+      assert.equal(runCli(["uninstall"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(exists(commandFile(project, ".opencode", "zz_")), false);
+      assert.equal(read(path.join(project, ".opencode", "commands", "mine.md")), "keep\n");
+
+      fs.rmSync(path.join(project, ".opencode", "commands", "mine.md"));
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(runCli(["uninstall"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(exists(path.join(project, ".opencode", "commands")), false);
+    });
+  });
+
+  test("fails when references/host-command.md is missing", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      fs.rmSync(path.join(pkg, "references", "host-command.md"));
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /missing package file at references\/host-command\.md/);
+    });
+  });
+
   test("real package: no unrendered token left, work-skill templates keep source names", () => {
     withTempDir((project) => {
       const result = runCli(["install", "--prefix", "q_"], { cwd: project });
