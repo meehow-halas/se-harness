@@ -1,35 +1,50 @@
-# Phase 1 — PRD admission and references
+# 01 — PRD admission and references
 
 ## Goal
 
-Move Azure DevOps from “idea in chat” to **documented product scope**: PRD admits one `ado` tracker, references ship a config skeleton, and docs point agents at future `scripts/ado`.
+Move Azure DevOps from "idea in chat" to documented product scope: PRD admits one `ado` tracker, references ship a config skeleton, docs point agents at a future `scripts/ado`.
 
-## In scope
+## Scope in
 
-- PRD edits: remove ADO from Deferred (or narrow Deferred to “trackers beyond Jira **and ADO**” → only “other trackers”); add `ado` script table rows parallel to `jira`; `/<prefix>setit-se` tracker section for ADO; one-tracker rule includes `kind`.
-- `agents.tracker.kind`: **`"jira"`** | **`"ado"`** (existing projects without `kind` treated as Jira when `url`+`user` present).
-- `references/harness.tracker.ado.json` skeleton per [spec.md](spec.md).
-- `references/harness.config.md` — document `kind`, `adoPat`, mutual exclusion with Jira fields.
-- `references/harness.tracker.json` — add `"kind": "jira"` note or field for new setups (backward compatible).
-- This plan folder already exists; link from a short note in `docs/implementation-plan.md` **Out of this v1 plan** or a new “Post-v1” line (one paragraph, no backlog drift).
+- PRD: remove ADO from Deferred (or narrow Deferred to "other trackers"); add `ado` script table rows parallel to `jira`; `/<prefix>setit-se` tracker section for ADO; one-tracker rule includes `kind`.
+- `agents.tracker.kind`: `"jira"` | `"ado"` (existing projects without `kind` treated as Jira when `url` + `user` present).
+- `references/harness.tracker.ado.json` skeleton (field names per README "Config shape").
+- `references/harness.config.md`: document `kind`, `adoPat`, mutual exclusion with Jira fields.
+- `references/harness.tracker.json`: `"kind": "jira"` note or field for new setups (backward compatible).
+- Short cross-link from `docs/implementation-plan/README.md` ("Out of this v1 plan" or a "Post-v1" line, one paragraph).
 
-## Out of scope
+## Scope out
 
 - Implementing `scripts/ado`.
-- Changing live `harness.config.json` in consuming repos automatically.
-- README unless user asks.
+- Changing live `harness.config.json` in consuming repos.
+- README.md unless the user asks.
 
-## Outputs
+## Decisions taken
 
-| Path | What |
-|------|------|
-| `docs/prd.md` | ADO tracker + scripts + setup |
-| `references/harness.tracker.ado.json` | Skeleton |
-| `references/harness.config.md` | Tracker kinds |
-| `docs/implementation-plan.md` | Optional cross-link to `docs/azure-dev-ops/plan.md` |
+- `kind` values `"jira"` | `"ado"`; missing `kind` with `url` + `user` = Jira (backward compatible). Source: spec, Recommended.
 
-## Done when
+## Files likely touched
 
-- PRD explicitly allows **files | Jira | ADO**, still exactly one external tracker.
-- Skeleton validates as JSON; field names match [spec.md](spec.md).
-- No implementation code in `scripts/ado` yet (phase 2+).
+- `docs/prd.md`
+- `references/harness.tracker.ado.json` (new)
+- `references/harness.config.md`
+- `references/harness.tracker.json`
+- `docs/implementation-plan/README.md` (cross-link only)
+
+## Acceptance criteria
+
+- PRD explicitly allows files | Jira | ADO, still exactly one external tracker.
+- Skeleton is valid JSON; field names match the config shape in README.
+- No implementation code in `scripts/ado` (phase 2+).
+
+## Tests
+
+- JSON validity of the skeleton (`node -e` parse or existing test). No behaviour tests in this stage.
+
+## Versioning
+
+Changes `references/` (shipped). Per CLAUDE.md: patch bump without asking if wording only; minor if new config key (`kind`, `adoPat`) → propose level to the user. Not recorded in the legacy plan.
+
+## Depends on
+
+- None.

@@ -1,31 +1,43 @@
-# Phase 14 — `artifactsOnTrackerOnly`
+# 14 — `artifactsOnTrackerOnly`
 
 ## Goal
 
-When Jira is connected, allow spec, prompt, and log in repo files while Jira keeps issue key, workflow, and metadata reads. Default remains full ticket storage (`artifactsOnTrackerOnly: true`).
+When Jira is connected, allow spec, prompt and log in repo files while Jira keeps issue key, workflow and metadata reads. Default stays full ticket storage (`artifactsOnTrackerOnly: true`).
 
-## In scope
+## Scope in
 
-- `agents.tracker.artifactsOnTrackerOnly` in [`references/harness.tracker.json`](../../references/harness.tracker.json) and docs.
-- `/<prefix>setit-se` question after `jira meta` (PL/EN per product plan).
-- `jira get` reads file bodies when `false`; `jira set` spec/prompt/log `BLOCKED` when `false`.
-- Agent and work-skill runtime instructions (read config at run time).
+- `agents.tracker.artifactsOnTrackerOnly` in `references/harness.tracker.json` and docs.
+- `/<prefix>setit-se` question after `jira meta`.
+- `jira get` reads file bodies when `false`; `jira set` spec/prompt/log → `BLOCKED` when `false`.
+- Agent and work-skill runtime instructions read the config at run time.
 - PRD feature-tracking and script table.
 
-## Out of scope
+## Scope out
 
-- Non-Jira trackers, content migration when toggling the flag, README sync.
+- Non-Jira trackers. Content migration when toggling the flag. README sync.
 
-## Done when
+## Decisions taken
+
+- Same flag shape can serve future external trackers without renaming the key.
+
+## Files likely touched
+
+- `references/harness.tracker.json`, `scripts/jira`, `scripts/jira-json.js`, `scripts/jira.test.js`, `skills/setit-se/SKILL.md`, `references/AGENTS.md`, `docs/prd.md`
+
+## Acceptance criteria
 
 - Default `true` preserves existing Jira behaviour and tests.
 - `false` path covered by `jira.test.js` get/set tests.
-- PRD, setup skill, and consumer `references/AGENTS.md` match behaviour.
+- PRD, setup skill and consumer `references/AGENTS.md` match the behaviour.
 
-## Handoff
+## Tests
 
-Same flag shape for future external trackers without renaming the key.
+- `scripts/jira.test.js`.
 
-## Status
+## Versioning
 
-`done` (landed in package sources and tests).
+Landed in package sources and tests (status `done`). Not recorded in the legacy plan.
+
+## Depends on
+
+- 12, 05 = `done`.

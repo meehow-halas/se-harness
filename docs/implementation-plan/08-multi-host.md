@@ -1,58 +1,48 @@
-# Phase 8 — Multi-host (Claude Code + Cursor)
+# 08 — Multi-host (Claude Code + Cursor)
 
 ## Goal
 
-Write live `/<prefix>setit-se`, work skills, agents, and rule packs into **every** supported host tree. Supported hosts are the rows in `references/hosts.json`. This version: Claude Code and Cursor Agent. A later host is a new row plus a format adapter, not a second product.
+Write live `/<prefix>setit-se`, work skills, agents and rule packs into every supported host tree. Supported hosts are the rows in `references/hosts.json`. This version: Claude Code and Cursor Agent. A later host is a new row plus a format adapter, not a second product.
 
-## In scope
+## Scope in
 
-- `references/hosts.json` as the host table (copied to `.seh/references/` on install).
-- CLI `install` / `uninstall` writes and removes `/<prefix>setit-se` in **every** `skillsDir`.
-- `/<prefix>setit-se` generates live agents, work skills, and rules for every host.
+- `references/hosts.json` as the host table (copied to `.seh/references/`).
+- CLI `install` / `uninstall` writes and removes `/<prefix>setit-se` in every `skillsDir`.
+- Setup generates live agents, work skills and rules for every host.
 - Cursor rule files as `.mdc` (`description`, `globs`, `alwaysApply: false`).
-- Cursor consultant copies: `readonly: true`. Cursor work-skill copies: `disable-model-invocation: true`.
-- Work skills, brainstorm, and consumer `AGENTS.md` read paths from the host table.
+- Cursor consultant copies `readonly: true`; Cursor work-skill copies `disable-model-invocation: true`.
+- Work skills, brainstorm and consumer `AGENTS.md` read paths from the host table.
 - Brainstorm live members and app context written to every `brainstormDir`.
 
-## Out of scope
+Rules: CLI reads `hosts.json` from the package (uninstall works after `.seh/` is gone). Missing or empty `hosts.json` → missing-file error. `rulesExt` drives the rule adapter. No `if (id === "claude-code")`, except the Cursor skill/agent frontmatter adapter (`readonly` / `disable-model-invocation`). Live files stay copies. Install still does not generate agents, work skills or rules.
 
-- A Codex adapter (TOML agents, `.codex/` or `.agents/skills`). Leave the table as the hook.
-- Per-host role models.
-- Extra CLI commands (`seh host`).
-- Global / machine-wide paths (`~/.claude/`, `~/.cursor/`).
-- README sync.
-- Asking the user which hosts to write (always all rows).
+## Scope out
 
-## Inputs
+- Codex adapter. Per-host role models (phase 9). Extra CLI commands. Global paths. README sync. Asking which hosts to write (always all rows).
 
-- PRD: Package layout (`hosts.json`); Binding flow; What install writes; Runtime config; `/<prefix>setit-se` generation; Decisions 17–19; Deferred (Codex, per-host models).
-- Phase 1 CLI; phase 5 `/<prefix>setit-se`; phase 6 work skills; phase 7 brainstorm.
+## Decisions taken
 
-## Outputs
+- Host table drives paths; no host-id branches except the field-named adapters above.
 
-| Path | What |
-|------|------|
-| `references/hosts.json` | Host table |
-| `src/cli.js` | Install/uninstall loop over `skillsDir` |
-| `skills/setit-se/SKILL.md` | Generation loop and rule/frontmatter adapters |
-| Work skills + `/<prefix>grillit` + `references/AGENTS.md` | Host-table paths |
+## Files likely touched
 
-## Behaviour
+- `references/hosts.json`, `src/cli.js`, `skills/setit-se/SKILL.md`, work skills, `references/AGENTS.md`
 
-Cite the PRD. Do not restate every question.
-
-- CLI reads `references/hosts.json` from the **package**, not from the consuming `.seh/` (uninstall still works after `.seh/` is gone).
-- Missing or empty `hosts.json` → install/uninstall fails with a missing-file error.
-- `rulesExt === ".mdc"` vs `".md"` drives the rule adapter. Do not `if (id === "claude-code")` except where a field in the row already names the difference (`readonly` / `disable-model-invocation` for `id === "cursor"` is allowed as the Cursor skill/agent frontmatter adapter).
-- Live files stay **copies**. Install still does not generate agents, work skills, or rules.
-
-## Done when
+## Acceptance criteria
 
 - `seh install` writes `/<prefix>setit-se` under both `.claude/skills/` and `.cursor/skills/`.
 - `seh uninstall` removes those setup skills and prunes empty host dirs; leaves generated files and other skills.
-- `/<prefix>setit-se` documents the loop over `.seh/references/hosts.json`.
+- Setup documents the loop over `.seh/references/hosts.json`.
 - Consumer `AGENTS.md` and work skills do not treat `.claude/` as the only live location.
 
-## Handoff
+## Tests
 
-A later Codex slice adds a row and a TOML/agents adapter. Do not invent that row here.
+- `src/cli.test.js` with temp directories for both hosts.
+
+## Versioning
+
+Not recorded in the legacy plan.
+
+## Depends on
+
+- 01–07 = `done`.

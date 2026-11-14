@@ -1,29 +1,48 @@
-# Phase 5 — `/<prefix>setit-se` for ADO
+# 05 — `/<prefix>setit-se` for ADO
 
 ## Goal
 
-Connect, change, or remove ADO tracker; map types, fields, statuses; verify with `ado meta`.
+Connect, change, or remove the ADO tracker; map types, fields, statuses; verify with `ado meta`.
 
-## In scope
+## Scope in
 
-- `skills/setit-se/SKILL.md` — tracker offer: **files | Jira | ADO** (one at a time); ADO questions (`organizationUrl`, `project`, PAT file `adoPat`); `ado meta` verify loop; mapping questions parallel to Jira.
-- Config writes: `agents.tracker` with `kind: "ado"`, clear Jira-only keys on ADO connect and vice versa on remove.
-- `adoOffer` or generalize `jiraOffer` → `trackerOffer` **only if** PRD phase 1 chose that shape; **(Recommended)** extend setup copy to handle `kind` without breaking declined Jira offer semantics.
+- `skills/setit-se/SKILL.md`: tracker offer `files | Jira | ADO` (one at a time); ADO questions (`organizationUrl`, `project`, PAT in local credentials file as `adoPat`); `ado meta` verify loop; mapping questions parallel to Jira.
+- Config writes: `agents.tracker` with `kind: "ado"`; clear Jira-only keys on ADO connect and ADO keys on Jira connect; remove clears tracker and PAT.
+- Generalize `jiraOffer` → `trackerOffer` only if stage 01 chose that shape. Recommended: extend setup copy to handle `kind` without breaking declined-Jira-offer semantics.
 
-## Out of scope
+## Scope out
 
-- Agent bodies (phase 6).
-- Live consumer regen for every config tweak (PRD rule).
+- Agent bodies (stage 06).
+- Live consumer regeneration for every config tweak (PRD rule).
 
-## Options
+## Decisions taken
 
-| Topic | Recommended |
-|-------|-------------|
-| Offer declined memory | Keep `jiraOffer: declined` meaning “declined external tracker on first ask” OR add `externalTrackerOffer: declined` in PRD phase 1 — follow PRD after phase 1 |
+| Topic | Chosen (Recommended) |
+|-------|----------------------|
+| Offer declined memory | Follow the PRD as updated in stage 01 |
 | Credential keys | `adoPat` only for ADO; empty string until user fills |
+| Tracker list order | Azure DevOps (for Azure Boards teams) vs Jira vs files, only if all three are in scope |
 
-## Done when
+Do not offer Jira and ADO in one project. Switching does not migrate tasks.
+
+## Files likely touched
+
+- `skills/setit-se/SKILL.md`
+
+## Acceptance criteria
 
 - Skill text matches PRD setup table for ADO.
 - No instruction to use `az devops` or MCP.
-- Documented loop: user fixes token/URL/project → `ado meta` until `OK`.
+- Documented loop: user fixes token / URL / project → `ado meta` until `OK`.
+
+## Tests
+
+- Docs/skill change; verify by grep and by reading the skill. No `npm test` requirement beyond shipped-dir rules.
+
+## Versioning
+
+Changes `skills/` (shipped). Minor bump (new config value `kind: "ado"`), propose to user.
+
+## Depends on
+
+- 02 = `done`, 04 = `done`.

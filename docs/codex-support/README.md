@@ -1,12 +1,18 @@
-# Codex support — plan
+# Codex support
 
-Status: planned. PRD (`docs/prd.md`) is updated first (stage 1) and wins over this file.
+Goal: add Codex as a fourth host. A row in `references/hosts.json` plus format adapters. Same product and templates, no second tree. Opens a new version scope: Codex leaves PRD **Deferred** and the plan's **Out of this v1 plan**.
 
-## Goal
+Planning: complete
 
-Add Codex as a fourth host: a row in `references/hosts.json` plus format adapters. Same product and templates, no second tree. This opens a new version scope: Codex leaves PRD **Deferred** and the plan's **Out of this v1 plan**.
+Migrated from the pre-`_make-plan` layout (`plan.md`, `prompt.md`, `01-prd.md` … `05-release.md`). Stage statuses below are the statuses recorded in the original plan. They were not re-verified during migration.
 
-## Findings (Codex docs, read 2026-11-14; doc summaries, re-read the primary pages before coding)
+## Open questions
+
+None.
+
+## Findings
+
+Codex docs, read 2026-11-14. Doc summaries: re-read primary pages before coding.
 
 | # | Area | Codex | Impact |
 |---|------|-------|--------|
@@ -37,17 +43,17 @@ Add Codex as a fourth host: a row in `references/hosts.json` plus format adapter
 
 New optional row fields: `hooksMatcher` (`"startup|resume"` for Codex), `invokePrefix` (`"$"` for Codex, `"/"` for the others), `skillHide` (`"openai-yaml"` for Codex; Cursor and OpenCode keep frontmatter).
 
-## Stages
+## Stage table
 
-| # | File | What | Status |
-|---|------|------|--------|
-| 1 | `01-prd.md` | PRD and plan updated first; Codex leaves Deferred | done |
-| 2 | `02-host-row-cli.md` | Host row, new fields, CLI install/uninstall, `check-update --host codex` | done |
-| 3 | `03-setup-adapters.md` | `/<prefix>setit-se`: TOML agents, `openai.yaml`, rules + `AGENTS.md` section, model keys | done |
-| 4 | `04-runtime-wording.md` | `invokePrefix` in skills, grillit host detection and per-persona model | done |
-| 5 | `05-release.md` | Version, changelog, full test run, README last | done |
+| NN | name | status | verification |
+|----|------|--------|--------------|
+| 01 | [prd](01-prd.md) | done | legacy: not re-run |
+| 02 | [host-row-cli](02-host-row-cli.md) | done | legacy: not re-run |
+| 03 | [setup-adapters](03-setup-adapters.md) | done | legacy: not re-run |
+| 04 | [runtime-wording](04-runtime-wording.md) | done | legacy: not re-run |
+| 05 | [release](05-release.md) | done | legacy: not re-run |
 
-Order is strict: each stage builds on the previous one. Each stage has a `NN-*.prompt.md` sibling; [prompt.md](prompt.md) has the read order and shared constraints.
+Order is strict: each stage builds on the previous one.
 
 ## Out of scope
 
@@ -63,3 +69,11 @@ Order is strict: each stage builds on the previous one. Each stage has a `NN-*.p
 - `gpt-6-sol` and `gpt-6.1-sol` availability varies per account.
 - The hook does not run until the project is trusted and the hook is reviewed in `/hooks`.
 - `.agents/skills` may be shared with other tools: identical content is fine, never delete foreign entries.
+
+## Shared constraints (all stages)
+
+- Host-table model: new row fields and format adapters, no `if (id === "codex")` scattered through skills, no second template tree.
+- No new `seh` CLI subcommands; no `npm install -g`; never write to `~/.codex/` or any machine-wide path.
+- Tests per CLAUDE.md "Tests". Run the narrowest test, then `npm test` at stage end. Do not weaken or delete tests.
+- Versioning: one minor bump for the whole change set, done in stage 05. Earlier stages do not bump.
+- `README.md` only in stage 05, last, Codex additions only.

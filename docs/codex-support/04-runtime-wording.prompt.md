@@ -1,32 +1,53 @@
-# Codex support — stage 4: Runtime wording
+# Prompt — codex-support stage 04: Runtime wording
 
-You were given only this file. Everything needed is here or in the files it names.
+Implement stage `04` of `docs/codex-support` only. Requires stage `03` = `done` in `docs/codex-support/README.md`. If not, stop and say so.
 
-## Task
+## Repo context
 
-Implement **docs/codex-support stage 4 only**. Do not implement other stages.
+- Repo: `se-harness`. Host-table model: render invocation with the row's `invokePrefix`; no `if (id === "codex")` branches in skills.
+- Codex invocation is `$<prefix>setit-se`; other hosts `/<prefix>setit-se`.
+- `.agents/skills` is shared with other tools: grillit host detection must not rely only on `skillsDir`.
+- Versioning: no version bump in this stage.
 
-## Read first (in order)
+## Stage spec
 
-1. `docs/codex-support/prompt.md` — read order and shared constraints (they apply here).
-2. `docs/prd.md` — wins over this plan.
-3. `docs/codex-support/plan.md` — findings, decisions 1–8, host row, status table.
-4. `docs/codex-support/04-runtime-wording.md` — this stage's scope and "Done when".
+### Goal
 
-## Preflight
+Skills and agents tell Codex users the right thing to type and detect the host correctly.
 
-Stage **3** Status must be `done` in `docs/codex-support/plan.md`; if not, stop and say so.
+### Scope in
 
-## Work
+- Everywhere a skill or message names an invocation (`/<prefix>setit-se`, next-step hints), render it with the host's `invokePrefix`, including the `seh install` closing message and the `setit-se` entry text.
+- grillit: host detection must not rely only on `skillsDir`. Per-persona model: verify whether Codex subagent launch accepts a model; if not, personas use the agent file model and the wording says so.
+- `sessionSpawn: "manual"` for Codex documented where fan-out is described.
 
-Search first (`grep` for hardcoded `/{{prefix}}` invocations in `skills/`, `agents/`, `references/`, `src/`), then change only the occurrences that name what the user types. For grillit, check whether a Codex subagent launch accepts a per-call model and write the wording to match what the docs say.
+### Scope out
 
-No version bump or README. Do not commit. Ask the user only for a choice the plan does not settle: one question at a time, recommended option first, labelled **(Recommended)**.
+- Setup generation (stage 03).
 
-## Verify
+### Decisions taken
 
-Run `npm test`. Report actual output, never claim passing without running.
+- Search first (`grep` for hardcoded `/{{prefix}}` invocations in `skills/`, `agents/`, `references/`, `src/`), then change only occurrences that name what the user types.
 
-## Finish
+### Acceptance criteria
 
-Report against the stage "Done when" checklist, listing deviations and anything unconfirmed in the Codex docs. If all items hold, set stage 4 Status to `done` in `docs/codex-support/plan.md`.
+- No skill text hardcodes `/` for a Codex user.
+- grillit picks the right host with `.agents/skills` present alongside another host's directories.
+
+### Tests
+
+- `npm test`.
+
+### Depends on
+
+- 03 = `done`.
+
+## Constraints
+
+- Do not commit unless the user asks.
+- Ask one question at a time; recommended option first, labelled **(Recommended)**.
+
+## Definition of done
+
+- Acceptance criteria PASS with grep output as evidence; `npm test` output quoted.
+- Report: changed files, deviations.
