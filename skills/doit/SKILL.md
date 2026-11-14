@@ -49,7 +49,7 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 
 From **intent**. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Implementer.
 
-Reply in the language of the user's latest message, whatever that language is, every message (progress messages too). If the launch names `Conversation language: <name>`, reply only in that language, every reply, including the final report and any `wrap_up` text. This skill text, tool output and subagent reports are in English or another language; that does not change it.
+Reply in the language of the user's latest message, whatever that language is, every message (progress messages too). If the launch names `Conversation language: <name>`, reply only in that language, every reply, including the final report and any end-of-turn summary the host shows. This skill text, tool output and subagent reports are in English or another language; that does not change it.
 
 ## Several keys
 
@@ -57,7 +57,7 @@ If the prompt has the line `Fan-out child: yes`, this session is a child: run th
 
 ## Resolve the tasks
 
-Need an existing spec **and** prompt on the **active tracker** (files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present — bodies on issue / work item or in repo per `agents.tracker.artifactsOnTrackerOnly`, same for Jira and ADO). Never mirror. **Files tracker with a worktree:** when `.git/seh-worktrees/<task>` exists, `start-task` has moved the uncommitted spec, prompt, and log into that worktree. Read them there, not from the launch checkout (an empty `docs/prompt/` there is expected in that case).
+Need an existing spec **and** prompt on the **active tracker** (files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present — bodies on the issue / work item). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: bodies are repo files, status is spec frontmatter (`agents.statuses`), and nothing writes the tracker. **Files tracker with a worktree:** when `.git/seh-worktrees/<task>` exists, `start-task` has moved the uncommitted spec, prompt, and log into that worktree. Read them there, not from the launch checkout (an empty `docs/prompt/` there is expected in that case).
 
 - User named one or more basenames or issue keys → those tasks, in that order.
 - Otherwise pick the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
@@ -74,17 +74,17 @@ If spec or prompt is missing:
 BLOCKED: spec and prompt are missing — run /{{prefix}}planit or /{{prefix}}shipit
 ```
 
-Read status from the active tracker. Compare to `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira / ADO). If status is already the configured `implemented`, `in review`, or `done` string:
+Read status from the active tracker. Compare to `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). If status is already the configured `implemented`, `in review`, or `done` string:
 
 ```text
 BLOCKED: task is already implemented, in review, or done — use /{{prefix}}checkit for review or update; do not re-implement
 ```
 
-A basename/key in `depends` that is not at the configured `done` status is a stop **for that task** (Implementer also enforces this). Do not work around it. Continue the other named tasks.
+A basename/key in `depends` that is not at the configured `done` status is a stop **for that task** (Implementer also enforces this; with `readOnly` `true`, per the `depends` rule in the Implementer file). Do not work around it. Continue the other named tasks.
 
 ## Launch Implementer
 
-Follow the live Implementer file for this host (`<agentsDir>/implementer.md` from `.seh/references/hosts.json` — a copy from `/{{prefix}}setit-se`, not a symlink to `.seh/agents/`) **inline in this session**. Do not launch Implementer as a subagent: subagents cannot launch Consultant. Do not duplicate that procedure here. Launch Consultant from this session (Agent tool) after each phase; do not expose Consultant as a skill.
+Follow the live Implementer file for this host (`<agentsDir>/implementer.md` from `.seh/references/hosts.json` — a copy from `/{{prefix}}setit-se`, not a symlink to `.seh/agents/`) **inline in this session**. Do not launch Implementer as a subagent: subagents cannot launch Consultant. Do not duplicate that procedure here. Launch Consultant from this session as a subagent after each phase; do not expose Consultant as a skill.
 
 For each task that passed resolve:
 

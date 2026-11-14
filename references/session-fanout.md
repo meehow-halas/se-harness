@@ -41,7 +41,7 @@ Only when `sessionSpawn` is `start_session`. For each key in `ready`, one `mcp__
 
 Do not start sessions for keys in `waiting`, `blocked`, or `queued`.
 
-For `manual` (other hosts): print one block per ready key with the exact command to run in a new session, and stop. Do not guess a host API.
+For `manual` (other hosts, Codex included: it has no host API to start a session): print one block per ready key with the exact command to run in a new session, and stop. Do not guess a host API.
 
 ## 4. Per-skill placement
 
@@ -66,7 +66,7 @@ One table: key, session link (`[title](#local_<id>)`), state (done, `BLOCKED: ..
 
 ## Rules
 
-- Children never spawn children. A session whose prompt has the line `Fan-out child: yes` runs exactly its one key in place: it never runs this procedure and never calls `start_session`. Subagents (Architect, Implementer, Consultant, Reviewer, brainstorm personae launched with the Agent tool) are not sessions and are allowed inside a child, as in a normal single-key run.
+- Children never spawn children. A session whose prompt has the line `Fan-out child: yes` runs exactly its one key in place: it never runs this procedure and never calls `start_session`. Subagents (Architect, Implementer, Consultant, Reviewer, brainstorm personae launched as subagents) are not sessions and are allowed inside a child, as in a normal single-key run.
 - The parent does not do the children's work and does not merge PRs.
 - Run only the skill the user named. The parent never starts another skill's session, for example `planit` for a missing spec. A missing spec or prompt is `BLOCKED` for that key, with the one-line fix (`run /{{prefix}}planit <KEY> first`).
 - A child's `BLOCKED:` or `Q<n>` does not stop siblings.

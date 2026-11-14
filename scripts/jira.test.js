@@ -103,7 +103,7 @@ for (let i = 0; i < args.length; i++) {
 const u = new URL(url);
 const key = method + " " + u.pathname;
 const routes = JSON.parse(fs.readFileSync(routesFile, "utf8"));
-const hit = routes[key] || routes[key.replace(/\\/$/, "")] || { code: 404, body: { errorMessages: ["no stub for " + key] } };
+const hit = routes[key + u.search] || routes[key] || routes[key.replace(/\\/$/, "")] || { code: 404, body: { errorMessages: ["no stub for " + key] } };
 fs.appendFileSync(dataLog, JSON.stringify({ key, data, search: u.search }) + "\\n");
 const body = typeof hit.body === "string" ? hit.body : JSON.stringify(hit.body || {});
 if (out) fs.writeFileSync(out, body);
@@ -118,12 +118,43 @@ if (writeFmt === "%{http_code}") process.stdout.write(String(hit.code || 200));
   };
 }
 
+function createMetaRoutes(projectKey) {
+  return {
+    [`GET /rest/api/3/issue/createmeta/${projectKey}/issuetypes/10731`]: {
+      code: 200,
+      body: {
+        startAt: 0,
+        maxResults: 200,
+        total: 3,
+        fields: [
+          { fieldId: "summary", key: "summary", name: "Summary" },
+          { fieldId: FIX.specField, key: FIX.specField, name: FIX.specName },
+          { fieldId: "customfield_48300", key: "customfield_48300", name: "QX7 Shared" },
+        ],
+      },
+    },
+    [`GET /rest/api/3/issue/createmeta/${projectKey}/issuetypes/10732`]: {
+      code: 200,
+      body: {
+        startAt: 0,
+        maxResults: 200,
+        total: 2,
+        fields: [
+          { fieldId: "customfield_48300", key: "customfield_48300", name: "QX7 Shared" },
+          { fieldId: "customfield_48301", key: "customfield_48301", name: "QX7 Defect Only" },
+        ],
+      },
+    },
+  };
+}
+
 function defaultRoutes(extra = {}) {
   return {
     [`GET /rest/api/3/project/${FIX.projectKey}/statuses`]: {
       code: 200,
       body: [
         {
+          id: "10731",
           name: FIX.featureType,
           statuses: [
             { name: FIX.todoStatus },
@@ -132,16 +163,20 @@ function defaultRoutes(extra = {}) {
           ],
         },
         {
+          id: "10732",
           name: FIX.bugType,
           statuses: [{ name: FIX.todoStatus }, { name: "Shipped" }],
         },
       ],
     },
+    ...createMetaRoutes(FIX.projectKey),
+    // Site-wide field list: includes fields no screen in this project uses.
     "GET /rest/api/3/field": {
       code: 200,
       body: [
         { id: "summary", name: "Summary" },
         { id: FIX.specField, name: FIX.specName },
+        { id: "customfield_99001", name: "Other Project Only" },
       ],
     },
     "GET /rest/api/3/issue/QX7-42": {
@@ -255,6 +290,70 @@ describe("jira", () => {
     });
   });
 
+  test("meta lists only custom fields on the project's issue types, once each", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd);
+      const stub = writeCurlStub(cwd, defaultRoutes());
+      const result = runJira(cwd, ["meta"], stub.env);
+      assertOk(result, { projectKey: FIX.projectKey });
+      const fieldLines = result.stdout.split("\n").filter((l) => l.startsWith("field."));
+      assert.deepEqual(fieldLines, [
+        "field.1: description | Description",
+        "field.2: comment | Comment",
+        `field.3: ${FIX.specField} | ${FIX.specName}`,
+        "field.4: customfield_48300 | QX7 Shared",
+        "field.5: customfield_48301 | QX7 Defect Only",
+      ]);
+      const urls = fs.readFileSync(stub.logFile, "utf8");
+      assert.equal(urls.includes("/rest/api/3/field"), false);
+    });
+  });
+
+  test("meta follows createmeta pages until total is reached", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd);
+      const base = `GET /rest/api/3/issue/createmeta/${FIX.projectKey}/issuetypes/10731`;
+      const routes = defaultRoutes({
+        [`${base}?startAt=0&maxResults=200`]: {
+          code: 200,
+          body: {
+            startAt: 0,
+            maxResults: 2,
+            total: 3,
+            fields: [
+              { fieldId: "customfield_51001", name: "Page One A" },
+              { fieldId: "customfield_51002", name: "Page One B" },
+            ],
+          },
+        },
+        [`${base}?startAt=2&maxResults=200`]: {
+          code: 200,
+          body: {
+            startAt: 2,
+            maxResults: 2,
+            total: 3,
+            fields: [{ fieldId: "customfield_51003", name: "Page Two" }],
+          },
+        },
+      });
+      const stub = writeCurlStub(cwd, routes);
+      const result = runJira(cwd, ["meta"], stub.env);
+      assertOk(result, { projectKey: FIX.projectKey });
+      assert.match(result.stdout, /customfield_51001 \| Page One A/);
+      assert.match(result.stdout, /customfield_51003 \| Page Two/);
+      const hits = fs
+        .readFileSync(stub.dataFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(l))
+        .filter((h) => h.key === base);
+      assert.deepEqual(
+        hits.map((h) => h.search),
+        ["?startAt=0&maxResults=200", "?startAt=2&maxResults=200"]
+      );
+    });
+  });
+
   test("meta lists statuses, issue types, and custom fields from the configured project", () => {
     withTempDir((cwd) => {
       writeProject(cwd);
@@ -319,11 +418,9 @@ describe("jira", () => {
     });
   });
 
-  test("get reads spec prompt and log from repo files when artifactsOnTrackerOnly is false", () => {
+  test("full write: get takes bodies from the issue even when repo files exist", () => {
     withTempDir((cwd) => {
-      writeProject(cwd, {
-        trackerOver: { artifactsOnTrackerOnly: false },
-      });
+      writeProject(cwd);
       writeFile(
         cwd,
         "docs/features/QX7-42.feature.md",
@@ -334,29 +431,10 @@ describe("jira", () => {
       const stub = writeCurlStub(cwd, defaultRoutes());
       const result = runJira(cwd, ["get", "QX7-42"], stub.env);
       assert.equal(result.status, 0, result.stderr + result.stdout);
-      assert.match(result.stdout, /^OK\n/);
-      assert.match(result.stdout, /BEGIN spec\nrepo spec body qx7 unique\nEND spec/);
-      assert.match(result.stdout, /BEGIN prompt\nrepo prompt body qx7 unique\nEND prompt/);
-      assert.match(result.stdout, /BEGIN log\nrepo log body qx7 unique\nEND log/);
-      assert.doesNotMatch(result.stdout, /BEGIN spec\nspec body qx7\nEND spec/);
-    });
-  });
-
-  test("set BLOCKED when artifactsOnTrackerOnly is false", () => {
-    withTempDir((cwd) => {
-      writeProject(cwd, {
-        trackerOver: { artifactsOnTrackerOnly: false },
-      });
-      const specFile = path.join(cwd, "spec.md");
-      fs.writeFileSync(specFile, "ignored\n");
-      const stub = writeCurlStub(cwd, defaultRoutes());
-      const result = runJira(
-        cwd,
-        ["set", "QX7-42", "spec", "--file", specFile],
-        stub.env
-      );
-      assertBlocked(result, /artifact content is stored in repository files/);
-      assert.equal(fs.existsSync(stub.dataFile), false);
+      assert.match(result.stdout, /BEGIN spec\nspec body qx7\nEND spec/);
+      assert.equal(result.stdout.includes("repo spec body qx7 unique"), false);
+      assert.equal(result.stdout.includes("repo prompt body qx7 unique"), false);
+      assert.equal(result.stdout.includes("repo log body qx7 unique"), false);
     });
   });
 
@@ -462,6 +540,7 @@ describe("jira", () => {
       const routes = defaultRoutes();
       routes["GET /rest/api/3/project/ZY3/statuses"] =
         routes[`GET /rest/api/3/project/${FIX.projectKey}/statuses`];
+      Object.assign(routes, createMetaRoutes("ZY3"));
       const stub = writeCurlStub(cwd, routes);
       const result = runJira(cwd, ["meta"], stub.env);
       assertOk(result, { projectKey: "ZY3" });
@@ -475,6 +554,79 @@ describe("jira", () => {
         argv.some((a) => String(a).includes(FIX.url)),
         false
       );
+    });
+  });
+  describe("readOnly", () => {
+    const KEY = "QX7-42";
+    const verbsFor = (cwd) => {
+      const body = path.join(cwd, "ro-body.md");
+      return [
+        ["create", "--type", "feature", "--title", "t"],
+        ["set", KEY, "spec", "--file", body],
+        ["set", KEY, "prompt", "--file", body],
+        ["set", KEY, "log", "--file", body],
+        ["comment", KEY, "--file", body],
+        ["transition", KEY, "codeReview"],
+        ["link", KEY, "depends", "QX7-43"],
+      ];
+    };
+
+    for (const token of [FIX.token, null]) {
+      test(`write verbs BLOCKED with zero requests when readOnly true (credentials ${token === null ? "absent" : "present"})`, () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { readOnly: true }, token });
+          fs.writeFileSync(path.join(cwd, "ro-body.md"), "x\n");
+          const stub = writeCurlStub(cwd, defaultRoutes());
+          for (const args of verbsFor(cwd)) {
+            const result = runJira(cwd, args, stub.env);
+            assertBlocked(result, /read-only/);
+            assert.equal(fs.existsSync(stub.logFile), false, `curl ran for ${args[0]}`);
+          }
+        });
+      });
+    }
+
+    test("readOnly false explicitly still writes", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { readOnly: false } });
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        const result = runJira(cwd, ["create", "--type", "feature", "--title", "t"], stub.env);
+        assertOk(result, { key: "QX7-99" });
+        const link = runJira(cwd, ["link", KEY, "relates", "QX7-43"], stub.env);
+        assertOk(link, { key: KEY });
+      });
+    });
+
+    test("get takes bodies from files; scalars from tracker", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { readOnly: true } });
+        writeFile(cwd, "docs/features/QX7-42.feature.md", "---\nid: QX7-42\n---\n\nro file spec 7q\n");
+        writeFile(cwd, "docs/prompt/QX7-42.prompt.md", "ro file prompt 7q\n");
+        writeFile(cwd, "docs/feature-log/QX7-42.log.md", "ro file log 7q\n");
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        const result = runJira(cwd, ["get", KEY], stub.env);
+        assert.equal(result.status, 0, result.stderr + result.stdout);
+        assert.match(result.stdout, /^OK\n/);
+        assert.match(result.stdout, /summary: Unique title from QX7\n/);
+        assert.match(result.stdout, new RegExp(`status: ${FIX.todoStatus}\\n`));
+        assert.match(result.stdout, /BEGIN spec\nro file spec 7q\nEND spec/);
+        assert.match(result.stdout, /BEGIN prompt\nro file prompt 7q\nEND prompt/);
+        assert.match(result.stdout, /BEGIN log\nro file log 7q\nEND log/);
+        assert.doesNotMatch(result.stdout, /spec body qx7|prompt body qx7|log row qx7/);
+      });
+    });
+
+    test("get with no local files gives empty bodies and OK", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { readOnly: true } });
+        const stub = writeCurlStub(cwd, defaultRoutes());
+        const result = runJira(cwd, ["get", KEY], stub.env);
+        assert.match(result.stdout, /^OK\n/);
+        assert.match(result.stdout, /BEGIN spec\n\nEND spec/);
+        assert.match(result.stdout, /BEGIN prompt\n\nEND prompt/);
+        assert.match(result.stdout, /BEGIN log\n\nEND log/);
+        assert.doesNotMatch(result.stdout, /body qx7|row qx7/);
+      });
     });
   });
 });

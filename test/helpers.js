@@ -270,6 +270,10 @@ function makePackageRoot(dir, { payload, setupSkill = true, version = "1.2.3" } 
   const refsDir = path.join(dir, "references");
   fs.mkdirSync(refsDir, { recursive: true });
   fs.copyFileSync(hostsSrc, path.join(refsDir, "hosts.json"));
+  const commandSrc = path.join(REPO_ROOT, "references", "host-command.md");
+  if (fs.existsSync(commandSrc)) {
+    fs.copyFileSync(commandSrc, path.join(refsDir, "host-command.md"));
+  }
   const pluginSrc = path.join(REPO_ROOT, "references", "opencode-check-update.js");
   if (fs.existsSync(pluginSrc)) {
     fs.copyFileSync(

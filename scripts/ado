@@ -47,13 +47,12 @@ case $verb in
     _wit="/${_seg}/_apis/wit"
     _api=$(ado_json api-version)
     _types=$(mktemp)
-    _fl=$(mktemp)
-    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_types" "$_fl"' EXIT
+    trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_types"' EXIT
+    # Fields come from the project's work item types, not /_apis/wit/fields,
+    # which lists every field in the organization.
     ado_http GET "${_wit}/workitemtypes?api-version=${_api}&%24expand=states"
     cp "$SEH_ADO_BODY" "$_types"
-    ado_http GET "/_apis/wit/fields?api-version=${_api}"
-    cp "$SEH_ADO_BODY" "$_fl"
-    _out=$(ado_json format-meta "$_types" "$_fl")
+    _out=$(ado_json format-meta "$_types")
     _proj=$(ado_json project "$SEH_ADO_CFG")
     printf 'OK\n'
     printf 'project: %s\n' "$_proj"
@@ -91,6 +90,7 @@ case $verb in
     ;;
 
   create)
+    guard_read_only
     _type=
     _title=
     while [ $# -gt 0 ]; do
@@ -138,6 +138,7 @@ case $verb in
     ;;
 
   set)
+    guard_read_only
     if [ $# -lt 2 ]; then
       blocked "unexpected arguments" "usage: ado set <work-item-id> spec|prompt|log [--file <path>]"
     fi
@@ -153,9 +154,6 @@ case $verb in
     esac
     parse_file_opt "$@"
     load_ado
-    if [ "$(ado_json artifacts-on-tracker-only "$SEH_ADO_CFG")" = "false" ]; then
-      blocked "artifact content is stored in repository files" "edit docs/features docs/prompt docs/feature-log"
-    fi
     _loc=$(ado_json mapped-field "$SEH_ADO_CFG" "$_kind")
     if [ -z "$_loc" ]; then
       blocked "$_kind is not mapped" "set agents.tracker.fields in /<prefix>setit-se"
@@ -185,6 +183,7 @@ case $verb in
     ;;
 
   comment)
+    guard_read_only
     if [ $# -lt 1 ]; then
       blocked "unexpected arguments" "usage: ado comment <work-item-id> [--file <path>]"
     fi
@@ -204,6 +203,7 @@ case $verb in
     ;;
 
   transition)
+    guard_read_only
     if [ $# -ne 2 ]; then
       blocked "unexpected arguments" "usage: ado transition <work-item-id> todo|inProgress|codeReview|inReview|done"
     fi
@@ -245,6 +245,7 @@ case $verb in
     ;;
 
   link)
+    guard_read_only
     if [ $# -ne 3 ]; then
       blocked "unexpected arguments" "usage: ado link <work-item-id> depends|relates <other-id>"
     fi

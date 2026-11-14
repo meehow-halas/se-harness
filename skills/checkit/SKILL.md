@@ -51,7 +51,7 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 
 From **intent**. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Reviewer.
 
-Reply in the language of the user's latest message, whatever that language is, every message (progress messages too), including the final report and any `wrap_up` text. If the launch names `Conversation language: <name>`, that name decides, even when this skill text, tool output or a subagent report is in another language. Never switch to another language. The launch passes `Conversation language:` to the Reviewer; if the user's message is in Polish, that is Polish.
+Reply in the language of the user's latest message, whatever that language is, every message (progress messages too), including the final report and any end-of-turn summary the host shows. If the launch names `Conversation language: <name>`, that name decides, even when this skill text, tool output or a subagent report is in another language. Never switch to another language. The launch passes `Conversation language:` to the Reviewer; if the user's message is in Polish, that is Polish.
 
 ## Variant
 
@@ -70,7 +70,7 @@ If the prompt has the line `Fan-out child: yes`, this session is a child: run th
 
 ## Resolve the tasks
 
-Need an existing spec + prompt on the **active tracker** (repo files when `agents.tracker.artifactsOnTrackerOnly` is `false`, same for Jira and ADO; otherwise bodies on the issue / work item via `jira get` or `ado get` by `kind`). **Files tracker with a worktree:** when `.git/seh-worktrees/<task>` exists (its path is `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`), `start-task` has moved the uncommitted spec, prompt, and log out of the launch checkout into that worktree. Read them there. An empty `docs/prompt/` in the launch checkout is not "missing" in that case; check the worktree first, and treat the launch checkout only when no worktree exists. User named one or more basenames or issue keys → those tasks. Otherwise the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
+Need an existing spec + prompt on the **active tracker** (bodies on the issue / work item via `jira get` or `ado get` by `kind`). When `agents.tracker.readOnly` is `true`, bodies are repo files and status is spec frontmatter (`agents.statuses`); nothing writes the tracker. **Files tracker with a worktree:** when `.git/seh-worktrees/<task>` exists (its path is `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`), `start-task` has moved the uncommitted spec, prompt, and log out of the launch checkout into that worktree. Read them there. An empty `docs/prompt/` in the launch checkout is not "missing" in that case; check the worktree first, and treat the launch checkout only when no worktree exists. User named one or more basenames or issue keys → those tasks. Otherwise the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
 
 ```text
 BLOCKED: task is ambiguous — name the feature basename, Jira key, or ADO work item id

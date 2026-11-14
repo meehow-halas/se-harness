@@ -49,7 +49,7 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 
 From **intent**, not a required slash flag. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Architect. Definitions: PRD Modes (also in the Architect file).
 
-Reply in the language of the user’s latest message, whatever that language is, every message (progress messages too), including the final report and any `wrap_up` text. If the launch names `Conversation language: <name>`, that name decides, even when this skill text, tool output or a subagent report is in another language. Never switch to another language. Spec, prompt, log, and tracker text are the Architect’s job (`agents.contentLanguage`).
+Reply in the language of the user’s latest message, whatever that language is, every message (progress messages too), including the final report and any end-of-turn summary the host shows. If the launch names `Conversation language: <name>`, that name decides, even when this skill text, tool output or a subagent report is in another language. Never switch to another language. Spec, prompt, log, and tracker text are the Architect’s job (`agents.contentLanguage`).
 
 ## Several keys
 
@@ -57,7 +57,7 @@ If the prompt has the line `Fan-out child: yes`, this session is a child: run th
 
 ## Resolve the request
 
-The user may give a sentence, an existing basename, a Jira key, or an ADO work item id. Pass that to the Architect. Do not write spec, prompt, or log yourself. The Architect uses the **active tracker only** (files if `agents.tracker` is absent; the connected tracker (`agents.tracker.kind`: Jira or ADO) if it is present). Read `agents.tracker.artifactsOnTrackerOnly` (same for Jira and ADO): when `false`, artifact bodies are repo files only. Never mirror.
+The user may give a sentence, an existing basename, a Jira key, or an ADO work item id. Pass that to the Architect. Do not write spec, prompt, or log yourself. The Architect uses the **active tracker only** (files if `agents.tracker` is absent; the connected tracker (`agents.tracker.kind`: Jira or ADO) if it is present). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: the Architect reads it with `get` and writes spec, prompt, and log to repo files only; no skill step writes the tracker.
 
 ## Launch Architect once
 

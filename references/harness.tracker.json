@@ -1,6 +1,6 @@
 {
   "kind": "jira",
-  "artifactsOnTrackerOnly": true,
+  "readOnly": false,
   "url": "",
   "user": "",
   "projectKey": "",

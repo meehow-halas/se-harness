@@ -62,8 +62,8 @@ function fieldRef(loc) {
   return loc;
 }
 
-function artifactsOnTrackerOnly(t) {
-  return t.artifactsOnTrackerOnly !== false;
+function readOnly(t) {
+  return t.readOnly === true;
 }
 
 function escapeHtml(s) {
@@ -227,7 +227,6 @@ if (cmd === "http-error") {
 
 if (cmd === "format-meta") {
   const typesBody = readJson(process.argv[3]);
-  const fieldsBody = readJson(process.argv[4]);
   const statusNames = [];
   const typeNames = [];
   const types = Array.isArray(typesBody.value) ? typesBody.value : [];
@@ -259,7 +258,14 @@ if (cmd === "format-meta") {
     fi += 1;
     lines.push(`field.${fi}: ${id} | ${name}`);
   }
-  const fields = Array.isArray(fieldsBody.value) ? fieldsBody.value : [];
+  const fields = [];
+  for (const it of types) {
+    const own = (it && (Array.isArray(it.fields) ? it.fields : it.fieldInstances)) || [];
+    if (Array.isArray(own)) {
+      fields.push(...own);
+    }
+  }
+  const seenFields = new Set();
   for (const f of fields) {
     if (!f || typeof f.referenceName !== "string") {
       continue;
@@ -267,6 +273,10 @@ if (cmd === "format-meta") {
     if (!f.referenceName.startsWith("Custom.")) {
       continue;
     }
+    if (seenFields.has(f.referenceName)) {
+      continue;
+    }
+    seenFields.add(f.referenceName);
     const name = typeof f.name === "string" ? f.name : f.referenceName;
     fi += 1;
     lines.push(`field.${fi}: ${f.referenceName} | ${name}`);
@@ -284,7 +294,7 @@ if (cmd === "needs-comments") {
   const t = trackerFrom(readJson(process.argv[3]));
   const kinds = ["spec", "prompt", "log"];
   const need =
-    artifactsOnTrackerOnly(t) &&
+    !readOnly(t) &&
     (kinds.some((k) => mapped(t, k) === "comment") || !mapped(t, "log"));
   process.stdout.write(need ? "true\n" : "false\n");
   process.exit(0);
@@ -301,9 +311,14 @@ if (cmd === "mapped-field") {
   process.exit(0);
 }
 
-if (cmd === "artifacts-on-tracker-only") {
-  const t = trackerFrom(readJson(process.argv[3]));
-  process.stdout.write(artifactsOnTrackerOnly(t) ? "true\n" : "false\n");
+if (cmd === "read-only") {
+  let on = false;
+  try {
+    on = readOnly(trackerFrom(JSON.parse(fs.readFileSync(process.argv[3], "utf8"))));
+  } catch {
+    on = false;
+  }
+  process.stdout.write(on ? "true\n" : "false\n");
   process.exit(0);
 }
 
@@ -488,7 +503,7 @@ if (cmd === "format-get") {
   let spec;
   let prompt;
   let log;
-  if (!artifactsOnTrackerOnly(t)) {
+  if (readOnly(t)) {
     const root = path.dirname(cfgPath);
     spec = stripYamlFrontmatter(
       readArtifactFile(root, `docs/features/${id}.feature.md`)

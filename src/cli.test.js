@@ -273,6 +273,7 @@ describe("seh install", () => {
         "claude-code": "start_session",
         cursor: "manual",
         opencode: "manual",
+        codex: "manual",
       });
     });
   });
@@ -302,20 +303,18 @@ describe("seh install", () => {
     });
   });
 
-  test("copied git helpers stay executable", () => {
+  test("copied entry-point scripts stay executable", () => {
     withTempDir((project) => {
       const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
       assert.equal(result.status, 0, result.stderr);
-      for (const name of [
-        "start-task",
-        "commit-task",
-        "push-task",
-        "open-pr",
-        "update-from-base",
-        "return-to-base",
-        "check-update",
-        "fanout-plan",
-      ]) {
+      // Every extensionless file in scripts/ is a command skills invoke directly.
+      const entryPoints = fs
+        .readdirSync(path.join(REPO_ROOT, "scripts"))
+        .filter((name) => !name.includes("."));
+      for (const name of ["start-task", "jira", "ado", "check-update"]) {
+        assert.ok(entryPoints.includes(name), name);
+      }
+      for (const name of entryPoints) {
         const mode = fs.statSync(path.join(project, ".seh", "scripts", name)).mode;
         assert.notEqual(mode & 0o111, 0, name);
       }
@@ -717,6 +716,166 @@ describe("seh uninstall", () => {
     });
   });
 
+  describe("codex host", () => {
+    function setup(root) {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      return { pkg, project };
+    }
+    const hooksPath = (project) => path.join(project, ".codex", "hooks.json");
+
+    test("install writes the setup skill under .agents/skills with the stored prefix, no commands dir", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        const result = runCli(["install", "--prefix", "zx_"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        const skill = path.join(project, ".agents", "skills", "zx_setit-se", "SKILL.md");
+        assert.equal(exists(skill), true);
+        assert.equal(exists(path.join(project, ".agents", "skills", "_setit-se")), false);
+        assert.equal(exists(path.join(project, ".codex", "commands")), false);
+        assert.equal(exists(path.join(project, ".codex", "skills")), false);
+      });
+    });
+
+    test("hook is SessionStart with matcher startup|resume; Claude keeps matcher startup", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        const codex = JSON.parse(read(hooksPath(project)));
+        assert.deepEqual(codex, {
+          hooks: {
+            SessionStart: [
+              {
+                matcher: "startup|resume",
+                hooks: [{ type: "command", command: ".seh/scripts/check-update --host codex" }],
+              },
+            ],
+          },
+        });
+        const claude = JSON.parse(read(path.join(project, ".claude", "settings.json")));
+        assert.equal(claude.hooks.SessionStart[0].matcher, "startup");
+      });
+    });
+
+    test("setup skill text and next-step line use the row's invokePrefix; other hosts keep /", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        fs.writeFileSync(
+          path.join(pkg, "skills", "setit-se", "SKILL.md"),
+          "---\nname: setit-se\ndescription: x\n---\nRun /{{prefix}}doit, see .seh/x/{{prefix}}doit, /skills, /other.\n"
+        );
+        const hostsFile = path.join(pkg, "references", "hosts.json");
+        const table = JSON.parse(read(hostsFile));
+        for (const h of table.hosts) if (h.id === "codex") h.invokePrefix = "%";
+        fs.writeFileSync(hostsFile, JSON.stringify(table));
+        const result = runCli(["install", "--prefix", "zx_"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(
+          read(path.join(project, ".agents", "skills", "zx_setit-se", "SKILL.md")),
+          /Run %zx_doit, see \.seh\/x\/zx_doit, \/skills, \/other\./
+        );
+        assert.match(
+          read(path.join(project, ".claude", "skills", "zx_setit-se", "SKILL.md")),
+          /Run \/zx_doit, see/
+        );
+        assert.match(result.stdout, /Next: run \/zx_setit-se in the project\. In codex type %zx_setit-se instead\./);
+      });
+    });
+
+    test("hook matcher comes from the row, not a hardcoded value", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        const hostsFile = path.join(pkg, "references", "hosts.json");
+        const table = JSON.parse(read(hostsFile));
+        for (const h of table.hosts) if (h.id === "codex") h.hooksMatcher = "clear|fork";
+        fs.writeFileSync(hostsFile, JSON.stringify(table));
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        assert.equal(JSON.parse(read(hooksPath(project))).hooks.SessionStart[0].matcher, "clear|fork");
+      });
+    });
+
+    test("merges beside a foreign hook and keeps unrelated keys; second install is idempotent", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        fs.mkdirSync(path.join(project, ".codex"));
+        fs.writeFileSync(
+          hooksPath(project),
+          JSON.stringify({
+            description: "mine",
+            hooks: {
+              SessionStart: [
+                { matcher: "clear", hooks: [{ type: "command", command: "echo foreign" }] },
+              ],
+              Stop: [{ hooks: [{ type: "command", command: "echo stop" }] }],
+            },
+          })
+        );
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        const data = JSON.parse(read(hooksPath(project)));
+        assert.equal(data.description, "mine");
+        assert.equal(data.hooks.Stop[0].hooks[0].command, "echo stop");
+        assert.equal(data.hooks.SessionStart.length, 2);
+        assert.equal(data.hooks.SessionStart[0].hooks[0].command, "echo foreign");
+        assert.equal(data.hooks.SessionStart[1].hooks[0].command, ".seh/scripts/check-update --host codex");
+      });
+    });
+
+    test("uninstall removes only seh entries: foreign hook and foreign skills survive", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        fs.mkdirSync(path.join(project, ".codex"));
+        fs.writeFileSync(
+          hooksPath(project),
+          JSON.stringify({
+            hooks: {
+              SessionStart: [
+                { matcher: "clear", hooks: [{ type: "command", command: "echo foreign" }] },
+              ],
+            },
+          })
+        );
+        const foreign = path.join(project, ".agents", "skills", "other-tool", "SKILL.md");
+        fs.mkdirSync(path.dirname(foreign), { recursive: true });
+        fs.writeFileSync(foreign, "keep me\n");
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(read(foreign), "keep me\n");
+        assert.equal(exists(path.join(project, ".agents", "skills", "_setit-se")), false);
+        const data = JSON.parse(read(hooksPath(project)));
+        assert.equal(data.hooks.SessionStart.length, 1);
+        assert.equal(data.hooks.SessionStart[0].hooks[0].command, "echo foreign");
+      });
+    });
+
+    test("uninstall in a clean project leaves no .agents or .codex dirs", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        assert.equal(runCli(["uninstall"], { cwd: project, packageRoot: pkg }).status, 0);
+        assert.equal(exists(path.join(project, ".agents")), false);
+        assert.equal(exists(path.join(project, ".codex")), false);
+      });
+    });
+
+    test("rejects an empty hooksMatcher in the host table", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        const hostsFile = path.join(pkg, "references", "hosts.json");
+        const table = JSON.parse(read(hostsFile));
+        for (const h of table.hosts) if (h.id === "codex") h.hooksMatcher = "";
+        fs.writeFileSync(hostsFile, JSON.stringify(table));
+        const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /hooksMatcher/);
+      });
+    });
+  });
+
   test("second uninstall is idempotent", () => {
     withTempDir((root) => {
       const pkg = path.join(root, "pkg");
@@ -847,6 +1006,140 @@ describe("seh install --prefix", () => {
       for (const host of HOST_DIRS) {
         assert.equal(exists(path.join(project, host, "skills", "a_setit-se")), false);
       }
+    });
+  });
+
+  test("reinstall without --prefix keeps the stored prefix, including empty", () => {
+    for (const stored of ["my-", ""]) {
+      withTempDir((root) => {
+        const { pkg, project } = setupPackage(root);
+        assert.equal(runCli(["install", "--prefix", stored], { cwd: project, packageRoot: pkg }).status, 0);
+        const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0);
+        assert.equal(read(path.join(project, ".seh", "PREFIX")), `${stored}\n`);
+        assert.match(result.stdout, new RegExp(`run /${stored}setit-se`));
+        assert.equal(read(path.join(project, ".seh", "agents", "a.md")), `go: /${stored}shipit\n`);
+        for (const host of HOST_DIRS) {
+          assert.equal(exists(path.join(project, host, "skills", `${stored}setit-se`)), true, host);
+          assert.equal(exists(path.join(project, host, "skills", "_setit-se")), false, host);
+        }
+      });
+    }
+  });
+
+  test("reinstall without --prefix falls back to _ when stored PREFIX is invalid", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      runCli(["install", "--prefix", "a_"], { cwd: project, packageRoot: pkg });
+      fs.writeFileSync(path.join(project, ".seh", "PREFIX"), "../x\n");
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(read(path.join(project, ".seh", "PREFIX")), "_\n");
+      assert.equal(exists(path.join(project, ".claude", "skills", "_setit-se")), true);
+    });
+  });
+
+  const COMMAND_DIRS = { ".claude": false, ".cursor": false, ".opencode": true };
+
+  function commandFile(project, host, prefix) {
+    return path.join(project, host, "commands", `${prefix}setit-se.md`);
+  }
+
+  test("install writes the setup command only for hosts with commandsDir, named and pointing by prefix", () => {
+    for (const prefix of ["_", "my-", ""]) {
+      withTempDir((root) => {
+        const { pkg, project } = setupPackage(root);
+        fs.writeFileSync(
+          path.join(pkg, "skills", "setit-se", "SKILL.md"),
+          "---\nname: setit-se\ndescription: Configure seh; run /{{prefix}}setit-se again later.\n---\nbody\n"
+        );
+        const result = runCli(["install", "--prefix", prefix], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        for (const [host, has] of Object.entries(COMMAND_DIRS)) {
+          assert.equal(exists(commandFile(project, host, prefix)), has, `${host} ${prefix}`);
+          if (!has) {
+            assert.equal(exists(path.join(project, host, "commands")), false, host);
+          }
+        }
+        const text = read(commandFile(project, ".opencode", prefix));
+        assert.match(
+          text,
+          new RegExp(`^---\\ndescription: Configure seh; run /${prefix}setit-se again later\\.\\n---\\n`)
+        );
+        assert.ok(text.includes(`skill \`${prefix}setit-se\``), text);
+        assert.match(text, /\$ARGUMENTS/);
+        assert.doesNotMatch(text, /\{\{/);
+      });
+    }
+  });
+
+  test("each host command names its own host row id", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      const hostsFile = path.join(pkg, "references", "hosts.json");
+      const table = JSON.parse(read(hostsFile));
+      for (const host of table.hosts) {
+        if (host.id === "cursor") host.commandsDir = ".cursor/cmds";
+      }
+      fs.writeFileSync(hostsFile, `${JSON.stringify(table, null, 2)}\n`);
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      const cursorCmd = read(path.join(project, ".cursor", "cmds", "_setit-se.md"));
+      const opencodeCmd = read(commandFile(project, ".opencode", "_"));
+      assert.match(cursorCmd, /^Host: `cursor` /m);
+      assert.match(opencodeCmd, /^Host: `opencode` /m);
+      assert.equal(exists(path.join(project, ".claude", "commands")), false);
+    });
+  });
+
+  test("second install rewrites the setup command in place and keeps other commands", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      const first = read(commandFile(project, ".opencode", "_"));
+      fs.writeFileSync(path.join(project, ".opencode", "commands", "mine.md"), "keep\n");
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(read(commandFile(project, ".opencode", "_")), first);
+      assert.deepEqual(
+        fs.readdirSync(path.join(project, ".opencode", "commands")).sort(),
+        ["_setit-se.md", "mine.md"]
+      );
+    });
+  });
+
+  test("reinstall with another prefix moves the setup command and keeps other commands", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      assert.equal(runCli(["install", "--prefix", "a_"], { cwd: project, packageRoot: pkg }).status, 0);
+      fs.writeFileSync(path.join(project, ".opencode", "commands", "a_mine.md"), "keep\n");
+      assert.equal(runCli(["install", "--prefix", "b_"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(exists(commandFile(project, ".opencode", "a_")), false);
+      assert.match(read(commandFile(project, ".opencode", "b_")), /skill `b_setit-se`/);
+      assert.equal(read(path.join(project, ".opencode", "commands", "a_mine.md")), "keep\n");
+    });
+  });
+
+  test("uninstall removes the setup command, keeps other commands, prunes an empty commands dir", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      assert.equal(runCli(["install", "--prefix", "zz_"], { cwd: project, packageRoot: pkg }).status, 0);
+      fs.writeFileSync(path.join(project, ".opencode", "commands", "mine.md"), "keep\n");
+      assert.equal(runCli(["uninstall"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(exists(commandFile(project, ".opencode", "zz_")), false);
+      assert.equal(read(path.join(project, ".opencode", "commands", "mine.md")), "keep\n");
+
+      fs.rmSync(path.join(project, ".opencode", "commands", "mine.md"));
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(runCli(["uninstall"], { cwd: project, packageRoot: pkg }).status, 0);
+      assert.equal(exists(path.join(project, ".opencode", "commands")), false);
+    });
+  });
+
+  test("fails when references/host-command.md is missing", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      fs.rmSync(path.join(pkg, "references", "host-command.md"));
+      const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /missing package file at references\/host-command\.md/);
     });
   });
 

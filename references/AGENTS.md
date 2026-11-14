@@ -4,7 +4,7 @@ This project uses **seh**. Read `harness.config.json` at run time for the one-li
 
 The product and CLI binary are `seh`. The npm package is `se-harness`. Run the CLI only in this project. Never `npm install -g`. Never write skills, templates, or a CLI to `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, or any other machine-wide path.
 
-Supported hosts are the rows in `.seh/references/hosts.json`. Live skills, agents, rules, and brainstorm files are copies under **every** listed `skillsDir` / `agentsDir` / `rulesDir` / `brainstormDir`. In this session use the copy this host loaded. Bodies match across copies. Role `model` is a map keyed by host `id` in `harness.config.json`; this host’s live agent file gets that host’s string only.
+Supported hosts are the rows in `.seh/references/hosts.json`. Live skills, agents, rules, and brainstorm files are copies under **every** listed `skillsDir` / `agentsDir` / `rulesDir` / `brainstormDir`. On a host whose row has `commandsDir` (OpenCode), each `/{{prefix}}<name>` is also a command file there that only loads the skill of the same name. In this session use the copy this host loaded. Bodies match across copies. Role `model` is a map keyed by host `id` in `harness.config.json`; this host’s live agent file gets that host’s string only.
 
 ## Binding flow
 
@@ -49,7 +49,7 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 
 One tracker connection: files-only when `agents.tracker` is absent, or Jira / Azure DevOps (`agents.tracker.kind`: `jira` or `ado`) when it is present. Do not mirror the same artifact text in two places.
 
-Which mode is active is in `harness.config.json`. If `agents.tracker` is present, the tracker (`kind` `jira`: issue key; `kind` `ado`: numeric work item id) holds the key, workflow, and reads via `.seh/scripts/jira` (Jira Cloud REST) or `.seh/scripts/ado` (Azure DevOps WIT REST) by `kind` — **`.seh/scripts/ado` (Recommended)** for ADO over raw REST / `curl` / `az boards`; not MCP. When `agents.tracker.artifactsOnTrackerOnly` is `true` (default), spec, prompt, and log live on the issue. When it is `false`, those three live only in `docs/features/`, `docs/prompt/`, and `docs/feature-log/` named by issue key; `jira set` / `ado set` on spec/prompt/log is `BLOCKED`. Do not invent Jira or ADO status names. Credentials are in a local ignored file, never in git and never in chat.
+Which mode is active is in `harness.config.json`. If `agents.tracker` is present, the tracker (`kind` `jira`: issue key; `kind` `ado`: numeric work item id) holds the key, workflow, and reads via `.seh/scripts/jira` (Jira Cloud REST) or `.seh/scripts/ado` (Azure DevOps WIT REST) by `kind` — **`.seh/scripts/ado` (Recommended)** for ADO over raw REST / `curl` / `az boards`; not MCP. Unless `agents.tracker.readOnly` is `true`, spec, prompt, log, and status live only on the issue / work item; no repo files for them. Do not invent Jira or ADO status names. When `agents.tracker.readOnly` is `true`, the tracker is read-only: agents `get` items but never create, set, comment, transition, or link; spec, prompt, log, and status live in the repo files under the task key (or a files basename for a task with no tracker item). Credentials are in a local ignored file, never in git and never in chat.
 
 If `agents.tracker` is absent, the files tracker is active. Same basename for all three files (example: `001-feature-example-name`):
 
@@ -79,6 +79,8 @@ Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/script
 | `return-to-base` | Reviewer, after PR opened (removes the seh worktree) |
 | `jira` | `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 | `ado` | Same who-calls-what as `jira`, when `agents.tracker.kind` is `ado`: `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress` / `codeReview`, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
+
+With `agents.tracker.readOnly` `true`, only `meta` and `get` apply to `jira` / `ado`; every other verb in the rows above is `BLOCKED:` and agents do not call it.
 
 **Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR, `update`), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with changelog and status written to files. The scripts also answer `UNCHANGED` + `git: disabled`.
 

@@ -1,6 +1,9 @@
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
+
+// OpenCode V2 server plugin. The loader requires a default export of
+// { id: string, setup: function }; a bare function fails with "Plugin failed".
 
 function projectRoot(start) {
   let dir = start;
@@ -14,65 +17,75 @@ function projectRoot(start) {
 }
 
 function updateNotice(cwd) {
-  try {
-    const script = path.join(cwd, ".seh", "scripts", "check-update");
-    const result = spawnSync("sh", [script, "--host", "opencode"], {
-      cwd,
-      encoding: "utf8",
-      timeout: 15000,
-      env: { ...process.env, SEH_CHECK_ROOT: cwd },
-    });
-    return String(result.stdout || "").trim();
-  } catch {
-    return "";
+  const script = path.join(cwd, ".seh", "scripts", "check-update");
+  if (!existsSync(script)) {
+    return Promise.resolve("");
   }
-}
-
-function sessionIdFrom(event) {
-  if (!event || typeof event !== "object") {
-    return "";
-  }
-  const data = event.data || event.properties || {};
-  return String(data.sessionID || event.sessionID || "").trim();
-}
-
-async function injectNotice(ctx, sessionID, text) {
-  if (!text) {
-    return;
-  }
-  const put = ctx && ctx.session && ctx.session.instructions && ctx.session.instructions.entry
-    ? ctx.session.instructions.entry.put
-    : null;
-  if (typeof put !== "function") {
-    return;
-  }
-  await put.call(ctx.session.instructions.entry, {
-    sessionID,
-    key: "seh-update",
-    value: text,
+  return new Promise((resolve) => {
+    try {
+      const child = execFile(
+        "sh",
+        [script, "--host", "opencode"],
+        {
+          cwd,
+          encoding: "utf8",
+          timeout: 15000,
+          env: { ...process.env, SEH_CHECK_ROOT: cwd },
+        },
+        (_error, stdout) => resolve(String(stdout || "").trim())
+      );
+      // check-update drains a piped stdin (hook payload); close it so it does not wait.
+      if (child.stdin) child.stdin.end();
+    } catch {
+      resolve("");
+    }
   });
 }
 
-export async function SehCheckUpdate(ctx) {
-  return {
-    event: async ({ event } = {}) => {
-      try {
-        if (!event || event.type !== "session.created") {
-          return;
-        }
-        const cwd = projectRoot(
-          (ctx && (ctx.directory || ctx.worktree)) || process.cwd()
-        );
-        const text = updateNotice(cwd);
-        if (!text) {
-          return;
-        }
-        await injectNotice(ctx, sessionIdFrom(event), text);
-      } catch {
-        // fail-open
-      }
-    },
-  };
+function startDirectory(ctx) {
+  const location = ctx && ctx.location;
+  return (location && (location.directory || (location.project && location.project.directory))) || process.cwd();
 }
 
-export default SehCheckUpdate;
+function entryApi(ctx) {
+  const entry = ctx && ctx.session && ctx.session.instructions && ctx.session.instructions.entry;
+  return entry && typeof entry.put === "function" ? entry : null;
+}
+
+async function watchSessions(ctx, signal) {
+  const entry = entryApi(ctx);
+  if (!entry || !ctx.event || typeof ctx.event.subscribe !== "function") {
+    return;
+  }
+  const cwd = projectRoot(startDirectory(ctx));
+  for await (const event of ctx.event.subscribe({ types: ["session.created"], signal })) {
+    if (!event || event.type !== "session.created") {
+      continue;
+    }
+    const data = event.data || {};
+    const sessionID = String(data.sessionID || "").trim();
+    // Subagent sessions have a parent; the notice belongs to the top-level session only.
+    if (!sessionID || data.parentID) {
+      continue;
+    }
+    try {
+      // Per session, not per process: the OpenCode server can outlive many
+      // sessions. check-update keeps its own 24h cache, so this stays cheap.
+      const notice = await updateNotice(cwd);
+      if (notice) {
+        await entry.put({ sessionID, key: "seh-update", value: notice });
+      }
+    } catch {
+      // fail-open
+    }
+  }
+}
+
+export default {
+  id: "seh-check-update",
+  setup(ctx) {
+    const controller = new AbortController();
+    watchSessions(ctx, controller.signal).catch(() => {});
+    return () => controller.abort();
+  },
+};

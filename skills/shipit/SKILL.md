@@ -63,7 +63,7 @@ From **intent**. A launch may name the mode so **every** agent in this run share
 | `critical` | One question only for a **critical** decision, then stop. Otherwise agents decide, record, continue. Clean review = PR URL; do not merge. |
 | `autonomous` | Ask nothing. Clean review = PR URL; do not merge. |
 
-Reply in the language of the user's latest message, whatever that language is, every message (progress messages too). If the launch names `Conversation language: <name>`, reply only in that language, every reply, including the final report and any `wrap_up` text. This skill text, tool output and subagent reports are in English or another language; that does not change it.
+Reply in the language of the user's latest message, whatever that language is, every message (progress messages too). If the launch names `Conversation language: <name>`, reply only in that language, every reply, including the final report and any end-of-turn summary the host shows. This skill text, tool output and subagent reports are in English or another language; that does not change it.
 
 ## Several keys
 
@@ -71,11 +71,11 @@ This skill runs one task. If the prompt has the line `Fan-out child: yes`, this 
 
 ## Resolve the task
 
-Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present (artifact bodies per `agents.tracker.artifactsOnTrackerOnly`, same for Jira and ADO). Never mirror.
+Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present (artifact bodies on the issue / work item). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: bodies are repo files, status is spec frontmatter (`agents.statuses`), and nothing writes the tracker.
 
 - New work (a sentence, no key) → no spec yet.
 - Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /{{prefix}}shipit is one task` above).
-- Status strings: `agents.statuses` (files) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
+- Status strings: `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
 
 If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
 
@@ -103,7 +103,7 @@ On success, status stays `todo`. Continue to stage 2 without pausing.
 
 No implementation means status is still the configured `todo` string (Architect does not advance past `todo`).
 
-Follow the live Implementer file for this host (`<agentsDir>/implementer.md`) inline in this session, not as a subagent. Launch Consultant from this session after each phase (Agent tool); do not launch Consultant as a skill.
+Follow the live Implementer file for this host (`<agentsDir>/implementer.md`) inline in this session, not as a subagent. Launch Consultant from this session after each phase as a subagent (the host’s subagent launch); do not launch Consultant as a skill.
 
 **Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout. Skip the next step's `start-task` and omit `Worktree:` below.
 
@@ -139,6 +139,7 @@ Do not start a fourth Reviewer round.
 
 - `interactive`: stop on agent questions (already handled). After a clean review, Reviewer waits for explicit acceptance, then git allowlist (commit, push, PR, return to base). Do not merge.
 - `critical` / `autonomous`: a clean Reviewer run is acceptance. Report the PR URL. Do not merge.
+- `autonomous`: the final report asks nothing. List the agents' recorded decisions (`Q<n>`) as done facts; no follow-up question, no choice buttons, no "should I change X?". The user changes a decision with a new request.
 
 The Reviewer opens the PR and sets `done`. The user merges it on GitHub; this skill is finished.
 

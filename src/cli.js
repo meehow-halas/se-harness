@@ -17,9 +17,11 @@ const SETUP_SKILL = "setit-se";
 const DEFAULT_PREFIX = "_";
 const PREFIX_FILE = "PREFIX";
 const PREFIX_TOKEN = "{{prefix}}";
+const PREFIX_PATTERN = /^[A-Za-z0-9_-]*$/;
 const HOSTS_FILE = "hosts.json";
 const CHECK_UPDATE_SCRIPT = ".seh/scripts/check-update";
 const OPENCODE_PLUGIN_SRC = path.join("references", "opencode-check-update.js");
+const HOST_COMMAND_SRC = path.join("references", "host-command.md");
 const GITIGNORE_ENTRIES = [
   {
     line: ".seh/",
@@ -37,7 +39,7 @@ const GITIGNORE_ENTRIES = [
 function usage() {
   return [
     "Usage: seh <install|uninstall> [--prefix P]",
-    "  --prefix P   (install) prefix for installed skill names, default _ (/_setit-se). \"\" for none",
+    "  --prefix P   (install) prefix for installed skill names, default: .seh/PREFIX if present, else _ (/_setit-se). \"\" for none",
   ].join("\n");
 }
 
@@ -55,7 +57,7 @@ function parseArgs(argv) {
       } else {
         value = arg.slice("--prefix=".length);
       }
-      if (!/^[A-Za-z0-9_-]*$/.test(value)) {
+      if (!PREFIX_PATTERN.test(value)) {
         return { error: "seh: --prefix may contain only letters, digits, _ and -" };
       }
       out.prefix = value;
@@ -105,6 +107,25 @@ function loadHosts(packageRoot) {
       console.error("seh: references/hosts.json host is missing skillsDir");
       process.exit(1);
     }
+    if (
+      host.commandsDir !== undefined &&
+      host.commandsDir !== null &&
+      (typeof host.commandsDir !== "string" || host.commandsDir === "")
+    ) {
+      console.error(
+        "seh: references/hosts.json host commandsDir must be a non-empty string or null"
+      );
+      process.exit(1);
+    }
+    if (
+      host.hooksMatcher !== undefined &&
+      (typeof host.hooksMatcher !== "string" || host.hooksMatcher === "")
+    ) {
+      console.error(
+        "seh: references/hosts.json host hooksMatcher must be a non-empty string"
+      );
+      process.exit(1);
+    }
     if (host.hooksFile) {
       if (
         typeof host.hooksFile !== "string" ||
@@ -135,6 +156,41 @@ function setupSkillDir(cwd, host, prefix) {
   return path.join(cwd, posixJoin(host.skillsDir), `${prefix}${SETUP_SKILL}`);
 }
 
+// Hosts whose slash commands are not skills (OpenCode) get a command file
+// that loads the skill. Null when the row has no commandsDir.
+function setupCommandFile(cwd, host, prefix) {
+  if (!host.commandsDir) {
+    return null;
+  }
+  return path.join(cwd, posixJoin(host.commandsDir), `${prefix}${SETUP_SKILL}.md`);
+}
+
+function frontmatterField(text, field) {
+  const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  if (!block) {
+    return "";
+  }
+  const line = new RegExp(`^${field}:[ \\t]*(.*)$`, "m").exec(block[1]);
+  return line ? line[1].trim() : "";
+}
+
+function renderHostCommand(template, { prefix, name, description, host }) {
+  return template
+    .split("{{host}}").join(host)
+    .split("{{description}}").join(description)
+    .split("{{name}}").join(name)
+    .split(PREFIX_TOKEN).join(prefix);
+}
+
+function readHostCommandTemplate(packageRoot) {
+  const src = path.join(packageRoot, HOST_COMMAND_SRC);
+  if (!fs.existsSync(src)) {
+    console.error("seh install: missing package file at references/host-command.md");
+    process.exit(1);
+  }
+  return fs.readFileSync(src, "utf8");
+}
+
 function isPackageTestFile(filePath) {
   return /\.test\.[cm]?js$/.test(filePath);
 }
@@ -155,6 +211,33 @@ function renderTokens(tree, prefix) {
       }
     }
   }
+}
+
+const INVOKE_SKILLS = ["setit-se", "planit", "doit", "checkit", "shipit", "grillit"];
+
+// Skills and messages name what the user types as `/<prefix><skill>`. A host
+// whose row has another `invokePrefix` (Codex: `$`) gets that character instead.
+function rewriteInvocations(tree, prefix, invokePrefix) {
+  if (!invokePrefix || invokePrefix === "/") {
+    return;
+  }
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`(^|[^A-Za-z0-9_.\\-/])/(${escaped}(?:${INVOKE_SKILLS.join("|")}))(?![A-Za-z0-9_-])`, "gm");
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (entry.isFile() && /\.(md|yaml|yml|toml)$/.test(entry.name)) {
+        const text = fs.readFileSync(full, "utf8");
+        const next = text.replace(pattern, (_m, lead, name) => `${lead}${invokePrefix}${name}`);
+        if (next !== text) {
+          fs.writeFileSync(full, next);
+        }
+      }
+    }
+  };
+  walk(tree);
 }
 
 function copyTree(src, dest, prefix) {
@@ -281,13 +364,13 @@ function claudeEntryHasCheckUpdate(entry) {
   );
 }
 
-function ensureClaudeHook(data, eventName, command) {
+function ensureClaudeHook(data, eventName, command, matcher) {
   const list = eventList(data, eventName);
   if (list.some(claudeEntryHasCheckUpdate)) {
     return;
   }
   list.push({
-    matcher: "startup",
+    matcher: matcher || "startup",
     hooks: [{ type: "command", command }],
   });
 }
@@ -408,7 +491,7 @@ function ensureHostHook(cwd, host, packageRoot) {
   if (host.hooksShape === "cursor-flat") {
     ensureCursorHook(data, host.hooksEvent, command);
   } else if (host.hooksShape === "claude-nested") {
-    ensureClaudeHook(data, host.hooksEvent, command);
+    ensureClaudeHook(data, host.hooksEvent, command, host.hooksMatcher);
   } else {
     console.error(
       `seh: references/hosts.json unknown hooksShape ${host.hooksShape}`
@@ -470,18 +553,29 @@ function pruneEmptyAncestors(startDir, cwd) {
 
 function install(ctx, prefixArg) {
   const { cwd, packageRoot } = resolveCtx(ctx);
-  const prefix = prefixArg === undefined ? DEFAULT_PREFIX : prefixArg;
   const hosts = loadHosts(packageRoot);
   const sehDir = path.join(cwd, ".seh");
   const previousPrefix = fs.existsSync(path.join(sehDir, PREFIX_FILE))
     ? readPrefix(sehDir)
     : undefined;
+  // A reinstall without --prefix keeps the stored prefix, so an update does
+  // not silently rename the project's skills back to the default.
+  const storedPrefix =
+    previousPrefix !== undefined && PREFIX_PATTERN.test(previousPrefix)
+      ? previousPrefix
+      : DEFAULT_PREFIX;
+  const prefix = prefixArg === undefined ? storedPrefix : prefixArg;
   fs.mkdirSync(sehDir, { recursive: true });
-  if (previousPrefix !== undefined && previousPrefix !== prefix) {
+  if (previousPrefix !== undefined && PREFIX_PATTERN.test(previousPrefix) && previousPrefix !== prefix) {
     for (const host of hosts) {
       const old = setupSkillDir(cwd, host, previousPrefix);
       fs.rmSync(old, { recursive: true, force: true });
       pruneEmptyAncestors(path.dirname(old), cwd);
+      const oldCommand = setupCommandFile(cwd, host, previousPrefix);
+      if (oldCommand) {
+        fs.rmSync(oldCommand, { force: true });
+        pruneEmptyAncestors(path.dirname(oldCommand), cwd);
+      }
     }
   }
 
@@ -504,21 +598,46 @@ function install(ctx, prefixArg) {
     );
     process.exit(1);
   }
+  const commandTemplate = hosts.some((host) => host.commandsDir)
+    ? readHostCommandTemplate(packageRoot)
+    : null;
   for (const host of hosts) {
     const dest = setupSkillDir(cwd, host, prefix);
     copyTree(skillSrc, dest, prefix);
+    rewriteInvocations(dest, prefix, host.invokePrefix);
     renameSkill(dest, `${prefix}${SETUP_SKILL}`);
+    const commandFile = setupCommandFile(cwd, host, prefix);
+    if (commandFile) {
+      const description = frontmatterField(
+        fs.readFileSync(path.join(dest, "SKILL.md"), "utf8"),
+        "description"
+      );
+      fs.mkdirSync(path.dirname(commandFile), { recursive: true });
+      fs.writeFileSync(
+        commandFile,
+        renderHostCommand(commandTemplate, { prefix, name: SETUP_SKILL, description, host: host.id })
+      );
+    }
     ensureHostHook(cwd, host, packageRoot);
   }
 
   ensureGitignore(cwd);
 
   console.log(`seh install: OK ${version} in ${cwd}`);
-  console.log(`Next: run /${prefix}${SETUP_SKILL} in the project.`);
+  const invokeOf = (host) => host.invokePrefix || "/";
+  const slashHosts = hosts.filter((host) => invokeOf(host) === "/");
+  const otherPrefixes = [...new Set(hosts.map(invokeOf).filter((p) => p !== "/"))];
+  const primary = slashHosts.length > 0 ? "/" : otherPrefixes.shift();
+  const alternates = otherPrefixes.map((p) => {
+    const ids = hosts.filter((host) => invokeOf(host) === p).map((host) => host.id);
+    return `In ${ids.join(", ")} type ${p}${prefix}${SETUP_SKILL} instead.`;
+  });
+  const alsoText = alternates.length > 0 ? ` ${alternates.join(" ")}` : "";
+  console.log(`Next: run ${primary}${prefix}${SETUP_SKILL} in the project.${alsoText}`);
 
   if (fs.existsSync(path.join(cwd, "harness.config.json"))) {
     console.log(
-      `harness.config.json is present. Run /${prefix}${SETUP_SKILL} to apply the new templates.`
+      `harness.config.json is present. Run ${primary}${prefix}${SETUP_SKILL} to apply the new templates.${alsoText}`
     );
   }
 }
@@ -532,6 +651,11 @@ function uninstall(ctx) {
     const skillDir = setupSkillDir(cwd, host, prefix);
     fs.rmSync(skillDir, { recursive: true, force: true });
     pruneEmptyAncestors(path.dirname(skillDir), cwd);
+    const commandFile = setupCommandFile(cwd, host, prefix);
+    if (commandFile) {
+      fs.rmSync(commandFile, { force: true });
+      pruneEmptyAncestors(path.dirname(commandFile), cwd);
+    }
     removeHostHook(cwd, host);
   }
 }

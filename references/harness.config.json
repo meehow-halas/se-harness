@@ -22,28 +22,32 @@
         "model": {
           "claude-code": "opus",
           "cursor": "cursor-grok-4.6-medium",
-          "opencode": "anthropic/claude-opus-4-5"
+          "opencode": "anthropic/claude-opus-5-5",
+          "codex": "gpt-6-sol"
         }
       },
       "implementer": {
         "model": {
           "claude-code": "sonnet",
           "cursor": "cursor-grok-4.6-medium",
-          "opencode": "anthropic/claude-sonnet-5-5"
+          "opencode": "anthropic/claude-sonnet-5-5",
+          "codex": "gpt-6.1-sol"
         }
       },
       "consultant": {
         "model": {
           "claude-code": "haiku",
           "cursor": "composer-2.5",
-          "opencode": "anthropic/claude-haiku-4-5"
+          "opencode": "anthropic/claude-haiku-5-5",
+          "codex": "gpt-6-luna"
         }
       },
       "reviewer": {
         "model": {
           "claude-code": "sonnet",
           "cursor": "cursor-grok-4.6-medium",
-          "opencode": "anthropic/claude-sonnet-5-5"
+          "opencode": "anthropic/claude-sonnet-5-5",
+          "codex": "gpt-6.1-sol"
         }
       }
     },

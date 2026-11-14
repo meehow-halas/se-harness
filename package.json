@@ -1,6 +1,6 @@
 {
   "name": "se-harness",
-  "version": "2.0.0",
+  "version": "1.2.0",
   "description": "SE harness layer",
   "bin": {
     "seh": "./src/cli.js"
@@ -16,7 +16,7 @@
     "!**/*.test.js"
   ],
   "scripts": {
-    "test": "node --test src/cli.test.js scripts/*.test.js"
+    "test": "node --test src/cli.test.js scripts/*.test.js references/*.test.js"
   },
   "repository": {
     "type": "git",

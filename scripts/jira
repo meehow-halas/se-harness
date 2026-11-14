@@ -42,12 +42,22 @@ case $verb in
     load_jira
     _project=$(jira_json project-key "$SEH_JIRA_CFG")
     _st=$(mktemp)
-    trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_st" "${_fl-}"' EXIT
+    trap 'rm -rf "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_st" "${_fl-}"' EXIT
     jira_http GET "/rest/api/3/project/${_project}/statuses"
     cp "$SEH_JIRA_BODY" "$_st"
-    _fl=$(mktemp)
-    jira_http GET "/rest/api/3/field"
-    cp "$SEH_JIRA_BODY" "$_fl"
+    # Fields come from the project's create screens (createmeta per issue
+    # type), not /rest/api/3/field, which lists every field on the site.
+    _fl=$(mktemp -d)
+    _n=0
+    for _tid in $(jira_json issue-type-ids "$_st"); do
+      _start=0
+      while [ -n "$_start" ]; do
+        jira_http GET "/rest/api/3/issue/createmeta/${_project}/issuetypes/${_tid}?startAt=${_start}&maxResults=200"
+        _n=$((_n + 1))
+        cp "$SEH_JIRA_BODY" "$_fl/$_n.json"
+        _start=$(jira_json next-start "$SEH_JIRA_BODY" "$_start")
+      done
+    done
     _out=$(jira_json format-meta "$_st" "$_fl")
     _pk=$(jira_json project-key "$SEH_JIRA_CFG")
     printf 'OK\n'
@@ -78,6 +88,7 @@ case $verb in
     ;;
 
   create)
+    guard_read_only
     _type=
     _title=
     while [ $# -gt 0 ]; do
@@ -123,6 +134,7 @@ case $verb in
     ;;
 
   set)
+    guard_read_only
     if [ $# -lt 2 ]; then
       blocked "unexpected arguments" "usage: jira set <issue-key> spec|prompt|log [--file <path>]"
     fi
@@ -138,9 +150,6 @@ case $verb in
     esac
     parse_file_opt "$@"
     load_jira
-    if [ "$(jira_json artifacts-on-tracker-only "$SEH_JIRA_CFG")" = "false" ]; then
-      blocked "artifact content is stored in repository files" "edit docs/features docs/prompt docs/feature-log"
-    fi
     _loc=$(jira_json mapped-field "$SEH_JIRA_CFG" "$_kind")
     if [ -z "$_loc" ]; then
       blocked "$_kind is not mapped" "set agents.tracker.fields in /{{prefix}}setit-se"
@@ -168,6 +177,7 @@ case $verb in
     ;;
 
   comment)
+    guard_read_only
     if [ $# -lt 1 ]; then
       blocked "unexpected arguments" "usage: jira comment <issue-key> [--file <path>]"
     fi
@@ -185,6 +195,7 @@ case $verb in
     ;;
 
   transition)
+    guard_read_only
     if [ $# -ne 2 ]; then
       blocked "unexpected arguments" "usage: jira transition <issue-key> todo|inProgress|codeReview|inReview|done"
     fi
@@ -228,6 +239,7 @@ case $verb in
     ;;
 
   link)
+    guard_read_only
     if [ $# -ne 3 ]; then
       blocked "unexpected arguments" "usage: jira link <issue-key> depends|relates <other-key>"
     fi

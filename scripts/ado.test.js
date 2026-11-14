@@ -135,20 +135,31 @@ function defaultRoutes(extra = {}) {
               { name: "QX9 In Review" },
               { name: "QX9 Shipped" },
             ],
+            fields: [
+              { referenceName: "System.Title", name: "Title" },
+              { referenceName: FIX.specField, name: FIX.specName },
+              { referenceName: "Custom.QX9Shared", name: "QX9 Shared" },
+            ],
           },
           {
             name: FIX.bugType,
             states: [{ name: FIX.todoStatus }, { name: "QX9 Shipped" }],
+            fields: [
+              { referenceName: "Custom.QX9Shared", name: "QX9 Shared" },
+              { referenceName: "Custom.QX9BugOnly", name: "QX9 Bug Only" },
+            ],
           },
         ],
       },
     },
+    // Organization-wide field list: includes fields no type in this project uses.
     "GET /qx9-ado-fixture-org/_apis/wit/fields": {
       code: 200,
       body: {
         value: [
           { referenceName: "System.Title", name: "Title" },
           { referenceName: FIX.specField, name: FIX.specName },
+          { referenceName: "Custom.OtherProjectOnly", name: "Other Project Only" },
         ],
       },
     },
@@ -217,6 +228,26 @@ describe("ado", () => {
     });
   });
 
+  test("meta lists only custom fields of the project's work item types, once each", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd);
+      const stub = writeCurlStub(cwd, defaultRoutes());
+      const result = runAdo(cwd, ["meta"], stub.env);
+      assertOk(result, { project: FIX.project });
+      const fieldLines = result.stdout.split("\n").filter((l) => l.startsWith("field."));
+      assert.deepEqual(fieldLines, [
+        "field.1: description | Description",
+        "field.2: comment | Comment",
+        "field.3: history | History",
+        `field.4: ${FIX.specField} | ${FIX.specName}`,
+        "field.5: Custom.QX9Shared | QX9 Shared",
+        "field.6: Custom.QX9BugOnly | QX9 Bug Only",
+      ]);
+      const urls = fs.readFileSync(stub.logFile, "utf8");
+      assert.equal(urls.includes("/_apis/wit/fields"), false);
+    });
+  });
+
   test("meta lists statuses, work item types, and custom fields for the configured project", () => {
     withTempDir((cwd) => {
       writeProject(cwd);
@@ -273,8 +304,6 @@ describe("ado", () => {
       const routes = defaultRoutes();
       routes[`GET /zy3-other-org-fixture/${otherProject}/_apis/wit/workitemtypes`] =
         routes[`GET ${witPath("/_apis/wit/workitemtypes")}`];
-      routes["GET /zy3-other-org-fixture/_apis/wit/fields"] =
-        routes["GET /qx9-ado-fixture-org/_apis/wit/fields"];
       const stub = writeCurlStub(cwd, routes);
       const result = runAdo(cwd, ["meta"], stub.env);
       assertOk(result, { project: otherProject });
@@ -451,9 +480,9 @@ describe("ado", () => {
       });
     });
 
-    test("get reads repo files by id when artifactsOnTrackerOnly is false", () => {
+    test("full write: get takes bodies from the work item even when repo files exist", () => {
       withTempDir((cwd) => {
-        writeProject(cwd, { trackerOver: { artifactsOnTrackerOnly: false } });
+        writeProject(cwd);
         writeFile(cwd, "docs/features/48213.feature.md", "---\nx: 1\n---\nrepo spec\n");
         writeFile(cwd, "docs/prompt/48213.prompt.md", "repo prompt\n");
         writeFile(cwd, "docs/feature-log/48213.log.md", "repo log\n");
@@ -465,10 +494,11 @@ describe("ado", () => {
           })
         );
         const result = runAdo(cwd, ["get", ID], stub.env);
-        assert.match(result.stdout, /BEGIN spec\nrepo spec\nEND spec/);
-        assert.match(result.stdout, /BEGIN prompt\nrepo prompt\nEND prompt/);
-        assert.match(result.stdout, /BEGIN log\nrepo log\nEND log/);
-        assert.equal(result.stdout.includes("QX9 spec body"), false);
+        assert.equal(result.status, 0, result.stderr + result.stdout);
+        assert.match(result.stdout, /QX9 spec body/);
+        assert.equal(result.stdout.includes("repo spec"), false);
+        assert.equal(result.stdout.includes("repo prompt"), false);
+        assert.equal(result.stdout.includes("repo log"), false);
       });
     });
 
@@ -662,25 +692,13 @@ describe("ado", () => {
       });
     });
 
-    test("set BLOCKED when field unmapped or artifacts live in the repo", () => {
+    test("set BLOCKED when field unmapped", () => {
       withTempDir((cwd) => {
         writeProject(cwd, { trackerOver: { fields: { spec: "", prompt: "description", log: "comment" } } });
         const stub = writeCurlStub(cwd, defaultRoutes());
         writeFile(cwd, "b.md", "x\n");
         const f = path.join(cwd, "b.md");
         assertBlocked(runAdo(cwd, ["set", ID, "spec", "--file", f], stub.env), /spec is not mapped/);
-        assert.equal(fs.existsSync(stub.dataFile), false);
-      });
-      withTempDir((cwd) => {
-        writeProject(cwd, { trackerOver: { artifactsOnTrackerOnly: false } });
-        const stub = writeCurlStub(cwd, defaultRoutes());
-        writeFile(cwd, "b.md", "x\n");
-        for (const kind of ["spec", "prompt", "log"]) {
-          assertBlocked(
-            runAdo(cwd, ["set", ID, kind, "--file", path.join(cwd, "b.md")], stub.env),
-            /stored in repository files/
-          );
-        }
         assert.equal(fs.existsSync(stub.dataFile), false);
       });
     });
@@ -902,6 +920,90 @@ describe("ado", () => {
           runAdo(cwd, ["comment", ID, "--file", path.join(cwd, "c.md")], stub.env),
           /404: QX9 no such item/
         );
+      });
+    });
+
+    describe("readOnly", () => {
+      const verbsFor = (cwd) => {
+        const body = path.join(cwd, "ro-body.md");
+        return [
+          ["create", "--type", "feature", "--title", "t"],
+          ["set", ID, "spec", "--file", body],
+          ["set", ID, "prompt", "--file", body],
+          ["set", ID, "log", "--file", body],
+          ["comment", ID, "--file", body],
+          ["transition", ID, "codeReview"],
+          ["link", ID, "depends", "48214"],
+        ];
+      };
+
+      for (const token of [FIX.token, null]) {
+        test(`write verbs BLOCKED with zero requests when readOnly true (credentials ${token === null ? "absent" : "present"})`, () => {
+          withTempDir((cwd) => {
+            writeProject(cwd, { trackerOver: { readOnly: true }, token });
+            fs.writeFileSync(path.join(cwd, "ro-body.md"), "x\n");
+            for (const args of verbsFor(cwd)) {
+              const stub = writeCurlStub(cwd, defaultRoutes());
+              fs.rmSync(stub.logFile, { force: true });
+              const result = runAdo(cwd, args, stub.env);
+              assertBlocked(result, /read-only/);
+              assert.equal(fs.existsSync(stub.logFile), false, `curl ran for ${args[0]}`);
+            }
+          });
+        });
+      }
+
+      test("readOnly false explicitly still writes", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { readOnly: false } });
+          const route = witPath(`/_apis/wit/workitems/%24${encodeURIComponent(FIX.bugType)}`);
+          const stub = writeCurlStub(cwd, defaultRoutes({ [`POST ${route}`]: { code: 200, body: { id: 5521 } } }));
+          const result = runAdo(cwd, ["create", "--type", "bug", "--title", "t"], stub.env);
+          assertOk(result, { id: "5521" });
+          assert.equal(fs.existsSync(stub.logFile), true);
+        });
+      });
+
+      test("get takes bodies from files; scalars from tracker", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { readOnly: true } });
+          writeFile(cwd, "docs/features/48213.feature.md", "---\nx: 1\n---\nro file spec 7q\n");
+          writeFile(cwd, "docs/prompt/48213.prompt.md", "ro file prompt 7q\n");
+          writeFile(cwd, "docs/feature-log/48213.log.md", "ro file log 7q\n");
+          const stub = writeCurlStub(
+            cwd,
+            defaultRoutes({
+              [`GET ${itemPath()}`]: { code: 200, body: workItem },
+              [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [{ text: "tracker comment" }] } },
+            })
+          );
+          const result = runAdo(cwd, ["get", ID], stub.env);
+          assert.equal(result.status, 0, result.stdout + result.stderr);
+          assert.match(result.stdout, /^OK\n/);
+          assert.match(result.stdout, /status: QX9 Backlog New\n/);
+          assert.match(result.stdout, /BEGIN spec\nro file spec 7q\nEND spec/);
+          assert.match(result.stdout, /BEGIN prompt\nro file prompt 7q\nEND prompt/);
+          assert.match(result.stdout, /BEGIN log\nro file log 7q\nEND log/);
+          assert.doesNotMatch(result.stdout, /QX9 spec body|QX9 prompt body|tracker comment/);
+        });
+      });
+
+      test("get with no local files gives empty bodies and OK", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { readOnly: true } });
+          const stub = writeCurlStub(
+            cwd,
+            defaultRoutes({
+              [`GET ${itemPath()}`]: { code: 200, body: workItem },
+              [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [] } },
+            })
+          );
+          const result = runAdo(cwd, ["get", ID], stub.env);
+          assert.match(result.stdout, /^OK\n/);
+          assert.match(result.stdout, /BEGIN spec\n\nEND spec/);
+          assert.match(result.stdout, /BEGIN prompt\n\nEND prompt/);
+          assert.match(result.stdout, /BEGIN log\n\nEND log/);
+        });
       });
     });
   });

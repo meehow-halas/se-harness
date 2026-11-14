@@ -1,6 +1,6 @@
 # SE harness
 
-A layer for software engineering work in an AI coding assistant. Supported hosts in this version are **Claude Code** and **Cursor Agent**. It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
+A layer for software engineering work in an AI coding assistant. Supported hosts in this version are **Claude Code**, **Cursor Agent**, **OpenCode**, and **Codex**. It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
 
 One path: request → spec → implementation with quality feedback → review against the spec.
 
@@ -11,21 +11,40 @@ The product and CLI binary are **`seh`**. The npm package is **`se-harness`**. C
 - Node.js 18 or later
 - Run commands in **this project’s directory**, with the assistant open on that project
 - Do **not** `npm install -g`
-- Do **not** install skills, templates, or a CLI into `~/.claude/`, `~/.cursor/`, or any other machine-wide path
+- Do **not** install skills, templates, or a CLI into `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, `~/.codex/`, or any other machine-wide path
 - Git helpers need `sh` (Windows is out of v1)
 
 ## Hosts
 
-A **host** is the coding assistant (harness) you run seh in. This version: **Claude Code** and **Cursor Agent**. A later host is a row in `hosts.json` plus a format adapter, not a second product.
+A **host** is the coding assistant (harness) you run seh in. This version: **Claude Code**, **Cursor Agent**, **OpenCode**, and **Codex**. A later host is a row in `hosts.json` plus a format adapter, not a second product.
 
-`seh install` and `/_setit-se` always write **every** row in `.seh/references/hosts.json`. They do not ask which hosts to use. Live skills, agents, rules, and brainstorm files are **copies** (not symlinks to `.seh/agents/`) under `.claude/` and `.cursor/` (rules as `.md` vs `.mdc`). In a session, use the copy that host loaded. Skill bodies match; live agent `model:` is that host’s string only.
+`seh install` and `/_setit-se` always write **every** row in `.seh/references/hosts.json`. They do not ask which hosts to use. Live skills, agents, rules, and brainstorm files are **copies** (not symlinks to `.seh/agents/`) under `.claude/`, `.cursor/`, `.opencode/`, `.agents/`, and `.codex/` (rules as `.md` vs `.mdc`). In a session, use the copy that host loaded. Skill bodies match; live agent `model:` is that host’s string only.
+
+OpenCode differences:
+
+- A skill is not a slash command there, so every skill also gets a thin command file `.opencode/commands/_<name>.md` that loads the skill.
+- Rules go to `.opencode/rules/*.md`; that glob is merged into `.opencode/opencode.json` `instructions` (project-root `opencode.json` is not touched).
+- Live agents drop `name` and `tools` and get `mode: subagent`; the consultant also gets `permissions` that deny `edit`.
+- The session-start update check is a plugin, `.opencode/plugins/seh-check-update.js`.
+
+Codex differences:
+
+- Skills live in `.agents/skills` (shared with other tools; uninstall removes only seh-owned entries). A skill is invoked as `$_setit-se` (or picked in `/skills`), not `/_setit-se`. Codex has no project command directory, so there is no command file and nothing is written under `~/.codex/`.
+- Live agents are TOML, `.codex/agents/<name>.toml`. `model` is written only when one is set; otherwise the session model is inherited. A Codex subagent inherits the parent sandbox, so Consultant read-only is an instruction, not enforced.
+- Work skills get `agents/openai.yaml` with `allow_implicit_invocation: false`, so the model does not start them on its own.
+- Rules go to `.codex/rules/*.md`; `$_setit-se` keeps one seh-managed section in `AGENTS.md` that points at them. Path scoping is soft (instruction only).
+- The session-start update check is a `.codex/hooks.json` `SessionStart` hook. Codex loads it only in a **trusted project**.
+- **Approve the hook:** after `seh install`, opening the project in Codex shows a notification that hooks need review. Open `/hooks` and accept the seh `SessionStart` hook, otherwise the update check never runs.
+- Sessions per key are not started automatically; one command is printed per key.
+
+One session per key (multi-key `/_planit`, `/_doit`, `/_checkit`, `/_shipit`) starts automatically only in the Claude Code desktop app. Cursor and OpenCode print one command per key.
 
 ### Models per host
 
 `agents.roles.<role>.model` is a map keyed by host `id`, not one string per role:
 
 ```text
-"architect": { "model": { "claude-code": "opus", "cursor": "inherit" } }
+"architect": { "model": { "claude-code": "opus", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-opus-5-5" } }
 ```
 
 First-run suggestions come from that host row’s `modelSuggest`. seh does not translate a Claude alias into a Cursor id.
@@ -33,7 +52,11 @@ First-run suggestions come from that host row’s `modelSuggest`. seh does not t
 | Host | Architect | Implementer | Consultant | Reviewer |
 |------|-----------|-------------|------------|----------|
 | Claude Code | `opus` | `sonnet` | `haiku` | `sonnet` |
-| Cursor | `inherit` | `inherit` | `inherit` | `inherit` |
+| Cursor | `cursor-grok-4.6-medium` | `cursor-grok-4.6-medium` | `composer-2.5` | `cursor-grok-4.6-medium` |
+| OpenCode | `anthropic/claude-opus-5-5` | `anthropic/claude-sonnet-5-5` | `anthropic/claude-haiku-5-5` | `anthropic/claude-sonnet-5-5` |
+| Codex | `gpt-6-sol` | `gpt-6.1-sol` | `gpt-6-luna` | `gpt-6.1-sol` |
+
+Codex model ids are unverified per account. Choose "no change" to omit `model` and inherit the session model.
 
 A later `/_setit-se` model change is one cell `(role, host)` and rewrites `model:` only in that host’s `agentsDir`. If `model` is still a string, or a host `id` is missing, setup finishes the map first (prefill a legacy string on every host, then confirm per host) before it stamps live files.
 
@@ -60,7 +83,7 @@ Skills are installed with a name prefix. `seh install --prefix P` sets it; the d
 npx -p se-harness seh install --prefix my-
 ```
 
-Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag. Installing again with another prefix removes the old `/_setit-se` skill; the next `/_setit-se` run regenerates the work skills under the new prefix and removes the old ones.
+Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag, and a later `seh install` without `--prefix` keeps it. Installing again with another prefix removes the old `/_setit-se` skill; the next `/_setit-se` run regenerates the work skills under the new prefix and removes the old ones.
 
 | Skill | Was (1.x) |
 |---|---|
@@ -71,7 +94,7 @@ Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag. In
 | `/_checkit` | `/seh-checkit` |
 | `/_shipit` | `/seh-shipit` |
 
-**Result:** `.seh/` and the project skill `/_setit-se` in every host `skillsDir` (today `.claude/skills/_setit-se` and `.cursor/skills/_setit-se`). Setup is **not** done. Work skills (`/_shipit`, `/_planit`, `/_doit`, `/_checkit`, `/_grillit`) do not exist yet.
+**Result:** `.seh/` and the project skill `/_setit-se` in every host `skillsDir` (today `.claude/skills/_setit-se`, `.cursor/skills/_setit-se`, `.opencode/skills/_setit-se`, and `.agents/skills/_setit-se` for Codex), plus the OpenCode command `.opencode/commands/_setit-se.md`. Setup is **not** done. Work skills (`/_shipit`, `/_planit`, `/_doit`, `/_checkit`, `/_grillit`) do not exist yet.
 
 ## 2. Setup
 
@@ -114,6 +137,24 @@ Removes `.seh/` and the install-owned `/_setit-se` skill from every `skillsDir`.
 ## After a package update
 
 Run install again from the same source, then `/_setit-se`, so generated files match the installed templates (`.seh/VERSION` vs `seh.generatedFrom`). That regeneration copies `/_shipit` and deletes leftover live `seh-feature` and the old `seh-*` skills. It does not rewrite project `AGENTS.md`.
+
+```text
+npx -p se-harness@latest seh install
+```
+
+Then run `/_setit-se` in the project.
+
+- **Pin the version you want.** `npx` may reuse a cached copy of an unpinned package. Use `se-harness@latest` or `se-harness@<version>` for npm, and `github:meehow-halas/se-harness#<tag>` for GitHub. Check the printed `seh install: OK <version>` line.
+- **No need to repeat `--prefix`.** A reinstall without the flag keeps the prefix from `.seh/PREFIX`. Pass `--prefix` only to change it.
+- `.seh/` (including `.seh/scripts/`) is replaced right away. Live agents, work skills, and rules change only when `/_setit-se` regenerates them.
+
+### Force a reinstall when the version did not change
+
+`seh install` always overwrites `.seh/` and the `/_setit-se` skill. It does not compare versions. `/_setit-se` regenerates live files only when `.seh/VERSION` differs from `seh.generatedFrom` (or the prefix changed). To regenerate everything anyway, for example after a hand edit to a live agent or when installing from a branch whose version was not bumped:
+
+1. Run `seh install` as above.
+2. In `harness.config.json`, set `seh.generatedFrom` to `""`.
+3. Run `/_setit-se`. It sees the mismatch and regenerates live agents, work skills, and rule packs in every host tree. Your config values, including role models, are kept.
 
 ## Skills
 
@@ -335,6 +376,11 @@ These are **not** a substitute for interaction modes. Reviewer still receives `M
 
 Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, its `kind` (`jira` or `ado`) is the active tracker; a config without `kind` is Jira. If it is absent, the files tracker is active.
 
+Jira and Azure DevOps run in one of two modes, chosen in `/_setit-se` right after you pick the tracker (`agents.tracker.readOnly`):
+
+- **Full write** (default, `readOnly: false`): seh creates items, writes spec, prompt, and log on them, and moves statuses. No repo files for tasks.
+- **Read-only** (`readOnly: true`): seh only reads the tracker, e.g. so you can point the Architect at an existing item. It never creates, edits, comments, transitions, or links. Spec, prompt, log, and status live in repo files, as with the files tracker, named by the item key when the task exists on the tracker.
+
 Switching does **not** migrate. Connect Jira or Azure DevOps → new work is tickets / work items only; leftover `docs/features` (etc.) are ignored. Remove the tracker → new work is files only; existing tickets are not copied into files.
 
 `CHANGELOG.md` and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
@@ -375,15 +421,15 @@ Credentials: you put the token in a project-local ignored file `harness.credenti
 
 `seh install` already ignores that filename. Never paste the token in chat. Never write it into git or `harness.config.json`. Project key and field mapping live in config under `agents.tracker`.
 
-**Add** (no tracker yet, or you accept the first-run offer). One question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.seh/scripts/jira meta` lists that project’s statuses, issue types, and fields. Map each seh step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
+**Add** (no tracker yet, or you accept the first-run offer). First: read-only mode, yes or no (see [One active tracker](#one-active-tracker)). Then, either way, one question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.seh/scripts/jira meta` lists that project’s statuses, issue types, and fields. Read-only: map only `blocker` (if you use `depends`) and `fetchFields`; status moves are writes, so nothing else is mapped. Full write: map each seh step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
 
 `null` means that step does not call a Jira transition. There is no file fallback. If a mapped status is missing from that issue type’s workflow, work stops — fix the mapping in `/_setit-se`.
 
-**Change** (tracker already there): change the integration (same mapping questions; token stays unless you rotate it in the credentials file) or remove it.
+**Change** (tracker already there): change the integration (same mapping questions; token stays unless you rotate it in the credentials file), toggle read-only (to full write asks the maps still missing; no migration), or remove it.
 
 **Remove:** confirm, drop `agents.tracker` from config, delete or clear `harness.credentials.local.json`. The project is files-only again. A first-run decline (`jiraOffer: declined`) does not block a later add.
 
-Task key = issue key (`PROJ-123`). Branch name = that key. Spec, prompt, log, and status live **only** on the ticket. Agents do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/` while Jira is active. While Jira is the tracker, `agents.statuses` is not written onto the ticket. After Remove, file-tracker strings from `agents.statuses` apply again.
+Task key = issue key (`PROJ-123`). Branch name = that key. Full write: spec, prompt, log, and status live **only** on the ticket. Agents do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/` while Jira is active. While Jira is the tracker, `agents.statuses` is not written onto the ticket. After Remove, file-tracker strings from `agents.statuses` apply again.
 
 | When | On the ticket |
 |------|----------------|
@@ -410,20 +456,19 @@ Credentials: you put the PAT in the same ignored file `harness.credentials.local
 
 Never paste the PAT in chat. Never write it into git or `harness.config.json`. Organization URL, project, and field mapping live in config under `agents.tracker` (`kind: "ado"`; skeleton `.seh/references/harness.tracker.ado.json`).
 
-**Add.** One question at a time: `organizationUrl` (`https://dev.azure.com/{org}`, no trailing slash), then `project` (name or GUID). Setup creates `harness.credentials.local.json` with an empty `adoPat` if the file is missing (an existing file is never overwritten). You paste the PAT there and confirm. Setup runs `.seh/scripts/ado meta`; on `BLOCKED:` you fix the PAT, URL, or project and it retries until `OK`.
+**Add.** First: read-only mode, yes or no (see [One active tracker](#one-active-tracker)). Then, either way, one question at a time: `organizationUrl` (`https://dev.azure.com/{org}`, no trailing slash), then `project` (name or GUID). Setup creates `harness.credentials.local.json` with an empty `adoPat` if the file is missing (an existing file is never overwritten). You paste the PAT there and confirm. Setup runs `.seh/scripts/ado meta`; on `BLOCKED:` you fix the PAT, URL, or project and it retries until `OK`.
 
-Then one question: use Azure DevOps **only to read task info**, with spec, prompt, and log in repo files? (default no → `artifactsOnTrackerOnly: true`.) Then map `todo`, `inProgress`, `codeReview`, `inReview`, `done` to an exact state name from the `meta` list (numbered), or skip = `null`. Map `blocker` if you use `depends`. Map `workItemTypes.feature` / `.bug`. If `artifactsOnTrackerOnly` is `true`, also map where spec, prompt, and optional log live (`fields.*`: a field `referenceName`, `description`, `comment`, or `history`). If `false`, `fields.*` stay empty. Agents transition only to mapped states. The state list is the union over all work item types: a state missing on a given type makes `ado transition` stop with `BLOCKED:` for that type.
+Read-only: map only `blocker` (if you use `depends`) and `fetchFields`. Full write: map `todo`, `inProgress`, `codeReview`, `inReview`, `done` to an exact state name from the `meta` list (numbered), or skip = `null`. Map `blocker` if you use `depends`. Map `workItemTypes.feature` / `.bug`. Map where spec, prompt, and optional log live (`fields.*`: a field `referenceName`, `description`, `comment`, or `history`). Agents transition only to mapped states. The state list is the union over all work item types: a state missing on a given type makes `ado transition` stop with `BLOCKED:` for that type.
 
 `null` means that step does not change state. No file fallback. Current state already equal to the target → `UNCHANGED`. ADO has no transitions API: the script PATCHes `System.State` and ADO rejects illegal moves.
 
-**Change:** change the mapping, rotate the PAT in the credentials file, or toggle `artifactsOnTrackerOnly` (to `true` needs `fields.*` mapped again; to `false` drops them; no content migration). Switching to Jira = Remove, then Add (no migration).
+**Change:** change the mapping, rotate the PAT in the credentials file, or toggle read-only (to full write asks the maps still missing; no migration). Switching to Jira = Remove, then Add (no migration).
 
 **Remove:** confirm, drop `agents.tracker`, delete or clear the `adoPat` key in `harness.credentials.local.json`. Files-only again. A first-run decline does not block a later add.
 
 Task key = numeric work item id. Branch and worktree name = that id.
 
-- `artifactsOnTrackerOnly: true` (default; also when the key is missing): spec, prompt, and log live **only** on the work item. ADO stores HTML; `ado get` returns plain text, and `ado set` writes plain text as minimal HTML. `ado set log` appends (a `history` mapping or a `comment` mapping adds an entry). `agents.statuses` is not written onto the work item.
-- `artifactsOnTrackerOnly: false`: they live in `docs/features/<id>.feature.md`, `docs/prompt/<id>.prompt.md`, `docs/feature-log/<id>.log.md`. Spec frontmatter `status` uses `agents.statuses`. `ado get` reads those files; `ado set` on spec/prompt/log is `BLOCKED:`. The work item still carries state transitions, comments, and links.
+Full write: spec, prompt, and log live **only** on the work item. ADO stores HTML; `ado get` returns plain text, and `ado set` writes plain text as minimal HTML. `ado set log` appends (a `history` mapping or a `comment` mapping adds an entry). `agents.statuses` is not written onto the work item. Read-only: they live in `docs/features/<id>.feature.md`, `docs/prompt/<id>.prompt.md`, `docs/feature-log/<id>.log.md`, with status in spec frontmatter (`agents.statuses`); `ado get` reads those files and every `ado` write verb is `BLOCKED:`.
 
 `ado create` makes the work item (type from `workItemTypes`); the Architect then sets `todo` with `ado transition`. Lifecycle rows are the same as the Jira table above, with comments via `ado comment` and `depends` / `relates` via `ado link` (if linking fails, a comment says so and the task continues). Reviewer ❌ moves the item back to `inProgress`.
 

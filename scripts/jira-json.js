@@ -98,8 +98,8 @@ function mapped(t, kind) {
   return typeof v === "string" ? v.trim() : "";
 }
 
-function artifactsOnTrackerOnly(t) {
-  return t.artifactsOnTrackerOnly !== false;
+function readOnly(t) {
+  return t.readOnly === true;
 }
 
 function readArtifactFile(root, rel) {
@@ -371,9 +371,54 @@ if (cmd === "http-error") {
   process.exit(0);
 }
 
+if (cmd === "issue-type-ids") {
+  const body = readJson(process.argv[3]);
+  const ids = (Array.isArray(body) ? body : [])
+    .map((it) => (it && it.id != null ? String(it.id).trim() : ""))
+    .filter((id) => /^[0-9]+$/.test(id));
+  const out = uniqueNames(ids);
+  process.stdout.write(out.length ? `${out.join("\n")}\n` : "");
+  process.exit(0);
+}
+
+function createMetaFields(body) {
+  if (body && Array.isArray(body.fields)) {
+    return body.fields;
+  }
+  if (body && Array.isArray(body.results)) {
+    return body.results;
+  }
+  return [];
+}
+
+if (cmd === "next-start") {
+  const body = readJson(process.argv[3]);
+  const start = Number(process.argv[4]) || 0;
+  const items = createMetaFields(body);
+  const next = start + items.length;
+  const total = body && typeof body.total === "number" ? body.total : null;
+  const max = body && typeof body.maxResults === "number" ? body.maxResults : 0;
+  const more =
+    items.length > 0 && (total !== null ? next < total : max > 0 && items.length >= max);
+  process.stdout.write(more ? `${next}\n` : "");
+  process.exit(0);
+}
+
 if (cmd === "format-meta") {
   const statusesBody = readJson(process.argv[3]);
-  const fieldsBody = readJson(process.argv[4]);
+  const pageDir = process.argv[4];
+  const pages = fs
+    .readdirSync(pageDir)
+    .filter((n) => /^[0-9]+\.json$/.test(n))
+    .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+  const fieldsBody = [];
+  for (const page of pages) {
+    for (const f of createMetaFields(readJson(path.join(pageDir, page)))) {
+      if (f && typeof f === "object") {
+        fieldsBody.push({ id: f.fieldId || f.key, name: f.name });
+      }
+    }
+  }
   const statusNames = [];
   const typeNames = [];
   const list = Array.isArray(statusesBody) ? statusesBody : [];
@@ -404,14 +449,15 @@ if (cmd === "format-meta") {
     fi += 1;
     lines.push(`field.${fi}: ${id} | ${name}`);
   }
-  const fields = Array.isArray(fieldsBody) ? fieldsBody : [];
-  for (const f of fields) {
-    if (!f || typeof f.id !== "string") {
+  const seenFields = new Set();
+  for (const f of fieldsBody) {
+    if (typeof f.id !== "string" || !f.id.startsWith("customfield_")) {
       continue;
     }
-    if (!f.id.startsWith("customfield_")) {
+    if (seenFields.has(f.id)) {
       continue;
     }
+    seenFields.add(f.id);
     const name = typeof f.name === "string" ? f.name : f.id;
     fi += 1;
     lines.push(`field.${fi}: ${f.id} | ${name}`);
@@ -420,9 +466,14 @@ if (cmd === "format-meta") {
   process.exit(0);
 }
 
-if (cmd === "artifacts-on-tracker-only") {
-  const t = trackerFrom(readJson(process.argv[3]));
-  process.stdout.write(artifactsOnTrackerOnly(t) ? "true\n" : "false\n");
+if (cmd === "read-only") {
+  let on = false;
+  try {
+    on = readOnly(trackerFrom(JSON.parse(fs.readFileSync(process.argv[3], "utf8"))));
+  } catch {
+    on = false;
+  }
+  process.stdout.write(on ? "true\n" : "false\n");
   process.exit(0);
 }
 
@@ -439,7 +490,7 @@ if (cmd === "format-get") {
   let spec;
   let prompt;
   let log;
-  if (!artifactsOnTrackerOnly(t)) {
+  if (readOnly(t)) {
     const root = path.dirname(cfgPath);
     spec = stripYamlFrontmatter(
       readArtifactFile(root, `docs/features/${key}.feature.md`)
