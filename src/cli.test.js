@@ -911,6 +911,24 @@ describe("seh install --prefix", () => {
     }
   });
 
+  test("each host command names its own host row id", () => {
+    withTempDir((root) => {
+      const { pkg, project } = setupPackage(root);
+      const hostsFile = path.join(pkg, "references", "hosts.json");
+      const table = JSON.parse(read(hostsFile));
+      for (const host of table.hosts) {
+        if (host.id === "cursor") host.commandsDir = ".cursor/cmds";
+      }
+      fs.writeFileSync(hostsFile, `${JSON.stringify(table, null, 2)}\n`);
+      assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+      const cursorCmd = read(path.join(project, ".cursor", "cmds", "_setit-se.md"));
+      const opencodeCmd = read(commandFile(project, ".opencode", "_"));
+      assert.match(cursorCmd, /^Host: `cursor` /m);
+      assert.match(opencodeCmd, /^Host: `opencode` /m);
+      assert.equal(exists(path.join(project, ".claude", "commands")), false);
+    });
+  });
+
   test("second install rewrites the setup command in place and keeps other commands", () => {
     withTempDir((root) => {
       const { pkg, project } = setupPackage(root);

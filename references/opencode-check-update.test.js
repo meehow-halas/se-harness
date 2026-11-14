@@ -154,6 +154,28 @@ describe("opencode check-update plugin", () => {
     });
   });
 
+  test("checks again for each session, so a long-lived server sees a newer tag later", async () => {
+    await withProject(async (project) => {
+      const countFile = path.join(project, "calls");
+      const stub = installSeh(project, { tags: [], countFile });
+      const cache = path.join(project, ".seh", "update-check.json");
+      fs.writeFileSync(cache, '{"checkedAt":1000,"latest":"1.0.0"}\n');
+      const plugin = await loadPlugin(project);
+      const events = (function* () {
+        yield created("ses_before");
+        fs.writeFileSync(cache, '{"checkedAt":1000,"latest":"1.2.0"}\n');
+        yield created("ses_after");
+      })();
+      const { ctx, puts, done } = fakeContext(project, events);
+      await withStubEnv(stub, async () => {
+        plugin.setup(ctx);
+        await done;
+      });
+      assert.deepEqual(puts.map((p) => p.sessionID), ["ses_after"]);
+      assert.match(puts[0].value, NOTICE);
+    });
+  });
+
   test("puts nothing when no newer tag exists", async () => {
     await withProject(async (project) => {
       const countFile = path.join(project, "calls");

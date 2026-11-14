@@ -11,6 +11,8 @@ Version reset from `2.0.0`: seh has no production users yet. First changelog ent
 - OpenCode slash commands. OpenCode does not turn skills into `/` commands, so `/_setit-se` did not exist there. The host table now has `commandsDir` (`.opencode/commands` for OpenCode, `null` elsewhere).
   - `seh install` writes `<commandsDir>/<prefix>setit-se.md` from `references/host-command.md`, a thin wrapper that loads the skill and passes `$ARGUMENTS`. A prefix change moves it. `seh uninstall` removes it.
   - `/<prefix>setit-se` writes the same wrapper for each work skill.
+  - Each command names its host row (`Host: <id>`). `/<prefix>grillit` takes the host from that line before matching `skillsDir`, because OpenCode also loads `.claude/skills` and could otherwise pick Claude model ids. Persona and facilitator launches pass the brainstorm model explicitly.
+- OpenCode work skills get `disable-model-invocation: true`, as on Cursor. The model no longer starts `/<prefix>shipit` and the others on its own. The host commands still load them by id. A copy without the field counts as missing, so a later `/<prefix>setit-se` repairs it.
 - `/<prefix>setit-se` repairs incomplete host trees on a later run. If a live agent, work skill, or host command is missing while the version and prefix are unchanged (for example a new host row or `commandsDir`), it regenerates them and names the missing paths.
 - Jira and Azure DevOps read-only mode (`agents.tracker.readOnly`). seh only reads the tracker; spec, prompt, log, and status live in repo files. Every write verb of `.seh/scripts/jira` and `.seh/scripts/ado` is `BLOCKED:`.
 
@@ -20,7 +22,9 @@ Version reset from `2.0.0`: seh has no production users yet. First changelog ent
 
 ### Fixed
 
-- OpenCode showed `Plugin failed: …/.opencode/plugins/seh-check-update.js` on every start. The plugin now uses the OpenCode V2 shape: a default export `{ id, setup }`, events from `ctx.event.subscribe` (`session.created`), and the notice added through `ctx.session.instructions.entry.put` (key `seh-update`). Top-level sessions only. The check runs once per OpenCode process and never blocks it.
+- OpenCode `modelSuggest` and the config skeleton mixed model generations (`anthropic/claude-opus-4-5`, `anthropic/claude-haiku-4-5`). They now use `anthropic/claude-opus-5-5` and `anthropic/claude-haiku-5-5`. Existing `harness.config.json` values are not changed.
+- OpenCode skipped the `architect`, `implementer`, and `reviewer` agents ("agent file skipped"): a string `tools:` is invalid there. `/<prefix>setit-se` now removes `name` and `tools` from OpenCode agent copies (the name comes from the file) and keeps `mode: subagent`. A copy in the old shape counts as missing, so a later run repairs it without a version bump.
+- OpenCode showed `Plugin failed: …/.opencode/plugins/seh-check-update.js` on every start. The plugin now uses the OpenCode V2 shape: a default export `{ id, setup }`, events from `ctx.event.subscribe` (`session.created`), and the notice added through `ctx.session.instructions.entry.put` (key `seh-update`). Top-level sessions only. The check runs for each new session (so a long-running OpenCode server sees a later release), uses the script's 24h cache, and never blocks OpenCode.
 - `seh install` without `--prefix` reset an existing project to `_`. It now keeps the prefix in `.seh/PREFIX`, so updating no longer renames the skills. `_` is used only on a first install or when `.seh/PREFIX` holds a disallowed value.
 - Autonomous `/<prefix>shipit` asked the user at the end. Architect now fixes a clear misspelling in a requested name (for example `substract` → `subtract`) in `critical` / `autonomous` and records it as `Q<n>`, and never leaves a choice open for the user. The autonomous final report lists decisions and asks nothing.
 

@@ -58,7 +58,6 @@ async function watchSessions(ctx, signal) {
     return;
   }
   const cwd = projectRoot(startDirectory(ctx));
-  let notice;
   for await (const event of ctx.event.subscribe({ types: ["session.created"], signal })) {
     if (!event || event.type !== "session.created") {
       continue;
@@ -70,9 +69,9 @@ async function watchSessions(ctx, signal) {
       continue;
     }
     try {
-      if (notice === undefined) {
-        notice = await updateNotice(cwd);
-      }
+      // Per session, not per process: the OpenCode server can outlive many
+      // sessions. check-update keeps its own 24h cache, so this stays cheap.
+      const notice = await updateNotice(cwd);
       if (notice) {
         await entry.put({ sessionID, key: "seh-update", value: notice });
       }

@@ -58,9 +58,9 @@
       "hooksHostArg": "opencode",
       "sessionSpawn": "manual",
       "modelSuggest": {
-        "architect": "anthropic/claude-opus-4-5",
+        "architect": "anthropic/claude-opus-5-5",
         "implementer": "anthropic/claude-sonnet-5-5",
-        "consultant": "anthropic/claude-haiku-4-5",
+        "consultant": "anthropic/claude-haiku-5-5",
         "reviewer": "anthropic/claude-sonnet-5-5",
         "brainstorm": "anthropic/claude-sonnet-5-5"
       }

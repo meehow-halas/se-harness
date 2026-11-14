@@ -165,8 +165,9 @@ function frontmatterField(text, field) {
   return line ? line[1].trim() : "";
 }
 
-function renderHostCommand(template, { prefix, name, description }) {
+function renderHostCommand(template, { prefix, name, description, host }) {
   return template
+    .split("{{host}}").join(host)
     .split("{{description}}").join(description)
     .split("{{name}}").join(name)
     .split(PREFIX_TOKEN).join(prefix);
@@ -577,7 +578,7 @@ function install(ctx, prefixArg) {
       fs.mkdirSync(path.dirname(commandFile), { recursive: true });
       fs.writeFileSync(
         commandFile,
-        renderHostCommand(commandTemplate, { prefix, name: SETUP_SKILL, description })
+        renderHostCommand(commandTemplate, { prefix, name: SETUP_SKILL, description, host: host.id })
       );
     }
     ensureHostHook(cwd, host, packageRoot);

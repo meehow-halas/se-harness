@@ -121,7 +121,7 @@ Status is `todo` or `done`. Update only the row just completed, and only after t
 | 13 | OpenCode host | 8, 9, 11 | done |
 | 14 | `artifactsOnTrackerOnly` | 12, 5 | done |
 | 15 | Optional git (empty `agents.baseBranch` disables git) | 2, 4, 5, 6, 10 | done |
-| 16 | OpenCode full support (commands, V2 agent/plugin format) | 13 | todo |
+| 16 | OpenCode full support (commands, V2 agent/plugin format) | 13 | done |
 
 Phase 1 may leave payload directories thin. Later phases fill them. Install must still copy whatever exists under the six payload names and write `.seh/VERSION`.
 
