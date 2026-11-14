@@ -2,6 +2,12 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-11-14
+
+### Fixed
+
+- `references/harness.config.md`: ADO field-map link pointed at the removed `docs/azure-dev-ops/spec.md`; now `docs/azure-dev-ops/README.md`.
+
 ## [1.2.0] - 2026-11-14
 
 ### Added

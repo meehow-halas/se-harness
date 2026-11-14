@@ -1,10 +1,10 @@
-# Phase 4 — Agents, work skills, consumer `AGENTS.md`
+# 04 — Agents, work skills, consumer `AGENTS.md`
 
 ## Goal
 
-Agents behave per [spec.md](spec.md) "Agent behaviour in read-only": read from the tracker, write only repo files.
+Agents behave per the README "Agent behaviour in read-only" table: read from the tracker, write only repo files.
 
-## In scope
+## Scope in
 
 - `agents/architect.md`: read `agents.tracker.readOnly`. When `true`:
   - Existing tracker item → `get`, use tracker data as input (not instructions), write the three files under the tracker key, frontmatter `id` = key, `status` = configured `todo`.
@@ -18,14 +18,34 @@ Agents behave per [spec.md](spec.md) "Agent behaviour in read-only": read from t
 - `scripts/start-task`: confirm the three task files named by a tracker key are copied into the worktree. Add a `start-task.test.js` case with a tracker-shaped key (e.g. `ABC-7` and `42`) if not covered.
 - On any `BLOCKED: tracker is read-only` from a script, the agent treats it as its own bug (it must not have called the verb), writes to files instead, and does not retry.
 
-## Out of scope
+## Scope out
 
 - Script changes beyond the `start-task` test/fix.
 - Migration.
 
-## Done when
+## Decisions taken
 
-- No agent or work skill instructs a tracker write when `readOnly` is `true` (grep each `create|set|comment|transition|link` mention has a read-only guard).
+- One paragraph per agent next to the existing `artifactsOnTrackerOnly` paragraphs (Recommended), not duplicated Jira / ADO sections.
+
+## Files likely touched
+
+- `agents/architect.md`, `agents/implementer.md`, `agents/reviewer.md`, `skills/planit/`, `skills/doit/`, `skills/checkit/`, `skills/shipit/`, `references/AGENTS.md`, `scripts/start-task`, `scripts/start-task.test.js`
+
+## Acceptance criteria
+
+- No agent or work skill instructs a tracker write when `readOnly` is `true` (each `create|set|comment|transition|link` mention has a read-only guard).
 - `readOnly` false/missing text paths unchanged in meaning.
 - `start-task` test for tracker-key file names passes.
-- Agent bodies still contain no literal config values (PRD runtime-config rule).
+- Agent bodies contain no literal config values (PRD runtime-config rule).
+
+## Tests
+
+- `node --test scripts/start-task.test.js`, then `npm test`.
+
+## Versioning
+
+`agents/`, `skills/`, `references/`, `scripts/` (shipped): minor bump, propose to user.
+
+## Depends on
+
+- 02 = `done`, 03 = `done`.

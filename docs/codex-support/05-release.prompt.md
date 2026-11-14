@@ -1,32 +1,49 @@
-# Codex support — stage 5: Release
+# Prompt — codex-support stage 05: Release
 
-You were given only this file. Everything needed is here or in the files it names.
+Implement stage `05` of `docs/codex-support` only. Requires stage `04` = `done` in `docs/codex-support/README.md`. If not, stop and say so.
 
-## Task
+## Repo context
 
-Implement **docs/codex-support stage 5 only**. Do not implement other stages.
+- Repo: `se-harness`. `package.json` `version` is SemVer; `seh install` writes it to `.seh/VERSION`.
+- Minor bump approved for the whole Codex change set (decision 7). Extend the `CHANGELOG.md` entry if the current version is untagged.
+- README is updated last, Codex additions only (user request): supported hosts, `$<prefix>setit-se` invocation, trust and `/hooks` review note. No other README sync.
 
-## Read first (in order)
+## Stage spec
 
-1. `docs/codex-support/prompt.md` — read order and shared constraints (they apply here).
-2. `docs/prd.md` — wins over this plan.
-3. `docs/codex-support/plan.md` — findings, decisions 1–8, host row, status table.
-4. `docs/codex-support/05-release.md` — this stage's scope and "Done when".
+### Goal
 
-## Preflight
+Ship the Codex change set.
 
-Stage **4** Status must be `done` in `docs/codex-support/plan.md`; if not, stop and say so.
+### Scope in
 
-## Work
+- `package.json`: minor bump. `CHANGELOG.md`: Added entry covering the Codex host.
+- Full `npm test`. Never fix a failure by weakening a test.
+- README.md last, Codex additions only.
 
-Minor bump in `package.json` (approved), `CHANGELOG.md` Added entry covering the Codex host (extend the entry if the current version is untagged). Run full `npm test`; never fix a failure by weakening a test. Then, last, update `README.md` with Codex additions only (explicitly requested for this initiative).
+### Scope out
 
-No other README sync. Do not commit. Ask the user only for a choice the plan does not settle: one question at a time, recommended option first, labelled **(Recommended)**.
+- Any other README change.
 
-## Verify
+### Acceptance criteria
 
-Run `npm test`. Report actual output, never claim passing without running.
+- `npm test` passes.
+- Changelog and version match.
+- README documents Codex.
 
-## Finish
+### Tests
 
-Report against the stage "Done when" checklist, listing deviations and anything unconfirmed in the Codex docs. If all items hold, set stage 5 Status to `done` in `docs/codex-support/plan.md`.
+- Full `npm test`; report actual output.
+
+### Depends on
+
+- 04 = `done`.
+
+## Constraints
+
+- Do not commit unless the user asks.
+- Ask one question at a time; recommended option first, labelled **(Recommended)**.
+
+## Definition of done
+
+- Acceptance criteria PASS with evidence; `npm test` output quoted.
+- Report: changed files, deviations, unconfirmed Codex doc facts.

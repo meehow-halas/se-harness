@@ -1,52 +1,45 @@
-# Phase 12 — Jira Cloud REST scripts (no MCP)
+# 12 — Jira Cloud REST scripts (no MCP)
 
 ## Goal
 
-Make the optional Jira tracker harness-agnostic: agents and `/<prefix>setit-se` call `.seh/scripts/jira` against Jira Cloud REST v3. Do not use MCP. Do not add a `seh` Jira CLI.
+Make the optional Jira tracker harness-agnostic: agents and `/<prefix>setit-se` call `.seh/scripts/jira` against Jira Cloud REST v3. No MCP. No `seh` Jira CLI.
 
-## In scope
+## Scope in
 
-- Package `scripts/jira` dispatcher (`meta`, `get`, `create`, `set`, `comment`, `transition`, `link`) with the git-script `OK` / `UNCHANGED` / `BLOCKED:` contract.
-- Shared JSON/auth helper used by that script (token never in argv, stdout, chat, or git).
-- Behaviour tests that stub HTTP/`curl` only.
-- Product templates: `/<prefix>setit-se`, Architect, Implementer, Reviewer, consumer `references/AGENTS.md`, and README (MCP was user-facing there).
-- PRD and this plan already record the scope change; keep them aligned if a sentence still says MCP.
+- `scripts/jira` dispatcher: `meta`, `get`, `create`, `set`, `comment`, `transition`, `link`, with the `OK` / `UNCHANGED` / `BLOCKED:` contract.
+- Shared JSON/auth helper (token never in argv, stdout, chat or git).
+- Behaviour tests stubbing `curl` only.
+- Product templates: `/<prefix>setit-se`, Architect, Implementer, Reviewer, `references/AGENTS.md`, README (MCP removed there).
 
-## Out of scope
+Behaviour: read `agents.tracker` and `harness.credentials.local.json`; credentials may live in the main worktree when the caller is a seh worktree. `curl` and `node` required. Missing tracker, token or `curl` → `BLOCKED:`. `transition` with a `null` map key → `UNCHANGED`, no HTTP. Mapped status missing from the issue type's transitions → `BLOCKED:` telling the user to fix the mapping in `/<prefix>setit-se`. Bodies for `set` / `comment` come from `--file` or stdin.
 
-- A `seh jira` CLI subcommand.
-- File-tracker status or log scripts.
-- Jira Server/Data Center.
-- Windows `sh`.
-- Regenerating live agent bodies because tracker maps changed.
+## Scope out
 
-## Inputs
+- A `seh jira` CLI subcommand. File-tracker status or log scripts. Jira Server/Data Center. Windows `sh`. Regenerating live agent bodies because tracker maps changed.
 
-- PRD: Jira tracker; Git (jira table); `/<prefix>setit-se` Tracker; Decisions 14, 17; Deferred (files-tracker status/log; Server/DC).
+## Decisions taken
 
-## Outputs
+- Jira Cloud REST v3 only (Server/DC is Deferred).
 
-| Path | What |
-|------|------|
-| `scripts/jira` | POSIX dispatcher |
-| `scripts/lib-jira.sh` and/or `scripts/jira-json.js` | Auth, ADF, response formatting |
-| `scripts/jira.test.js` | stub `curl`; unique fixtures |
-| `skills/setit-se/SKILL.md` | `jira meta`, no MCP |
-| `agents/*.md` | call `.seh/scripts/jira` |
-| `references/AGENTS.md` | Jira via scripts |
-| `README.md` | no Jira MCP |
+## Files likely touched
 
-## Behaviour
+- `scripts/jira`, `scripts/lib-jira.sh`, `scripts/jira-json.js`, `scripts/jira.test.js`, `skills/setit-se/SKILL.md`, `agents/*.md`, `references/AGENTS.md`, `README.md`
 
-- Read `agents.tracker` and `harness.credentials.local.json`. Credentials may live on the main worktree when the caller is a seh worktree.
-- `curl` and `node` required. Missing tracker, token, or `curl` → `BLOCKED:`.
-- `transition` with a `null` map key → `UNCHANGED` and no HTTP.
-- Mapped status missing from that issue type’s transitions → `BLOCKED:` tell the user to fix mapping in `/<prefix>setit-se`.
-- Bodies for `set` / `comment` from `--file` or stdin.
+## Acceptance criteria
 
-## Done when
-
-- Tests fail if the script uses a hardcoded Jira URL, project key, token, or status name instead of config.
+- Tests fail if the script uses a hardcoded Jira URL, project key, token or status name instead of config.
 - Token does not appear in script stdout or in stubbed `curl` argv.
 - `/<prefix>setit-se` and agents no longer mention Jira MCP.
 - CLI still accepts only `install` and `uninstall`.
+
+## Tests
+
+- `scripts/jira.test.js` with stubbed `curl`; fixtures differ from defaults.
+
+## Versioning
+
+Not recorded in the legacy plan.
+
+## Depends on
+
+- 02, 03, 04, 05 = `done`.

@@ -1,82 +1,52 @@
-# Phase 10 — Parallel worktrees
+# 10 — Parallel worktrees
 
 ## Goal
 
-Implementer and Reviewer always work in a git worktree for the task so the user’s primary checkout is not switched. `/<prefix>doit` and `/<prefix>checkit` accept a list of tasks and run in parallel when the runtime allows. Architect stays independent. No fifth agent and no new skill.
+Implementer and Reviewer always work in a git worktree for the task, so the user's primary checkout is not switched. `/<prefix>doit` and `/<prefix>checkit` accept a list of tasks and run in parallel when the runtime allows. Architect stays independent. No fifth agent, no new skill.
 
-## In scope
+## Scope in
 
-- `start-task` creates or reuses `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` and does not switch the caller.
-- `return-to-base` removes a seh worktree when invoked from one; legacy checkout of base from the primary checkout.
-- File-tracker copy from the launch working tree; symlink `.seh/` and `harness.config.json` when missing in the worktree.
-- Implementer and Reviewer: `Worktree:` payload; Architect still no git / no worktrees.
-- `/<prefix>doit` and `/<prefix>checkit`: one or many keys; per-task `depends` / `Q<n>`.
-- `/<prefix>shipit`: one task; a list is `BLOCKED:`.
-
-## Out of scope
-
-- Extra CLI (`seh worktree`, `seh agent`).
-- A fifth product agent or `/seh-parallel`.
-- Auto-merge, Windows `sh`, copying `node_modules` / `.env`.
-- README sync unless the user asks.
-- Architect using worktrees.
-
-## Inputs
-
-- PRD: Git; Agents (Implementer, Reviewer, Architect); Skills `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>shipit`; Stops; Decisions 2, 9, 20.
-
-## Outputs
-
-| Path | What |
-|------|------|
-| `scripts/start-task` | worktree add/reuse; `worktree: <abs>`; tracker copy |
-| `scripts/return-to-base` | remove seh worktree, or checkout base on primary |
-| `scripts/lib.sh` | shared worktree helpers |
-| `scripts/*.test.js` | caller stays on previous branch; scripts that need the task run in the worktree |
-| `agents/implementer.md` | `Worktree:`; drop “No worktrees” |
-| `agents/reviewer.md` | `Worktree:`; `return-to-base` removes worktree |
-| `agents/architect.md` | still no worktrees |
-| `skills/doit/SKILL.md` | list of tasks; parallel when allowed |
-| `skills/checkit/SKILL.md` | list; one variant; parallel when allowed |
-| `skills/shipit/SKILL.md` | one task; worktree for Implementer/Reviewer |
-| `references/AGENTS.md` | Git table + worktree |
-| `references/BLOCKED.md` | dirty worktree / feature list |
-| `docs/prd.md` | already the spec for this phase |
-
-## Behaviour
-
-### `start-task`
-
-- Path: `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`.
-- If `<task>` is already checked out in some worktree (including the caller already on that branch), reuse it. `UNCHANGED` when that checkout is already the worktree in use; still print `worktree:`.
-- Else `git worktree add` (`-b` from `agents.baseBranch` when the branch is new; existing local branch; or `-b` from `origin/<task>`).
-- Do not `git checkout` in the caller. A dirty primary checkout is not a stop.
-- Copy `docs/features|prompt|feature-log/<task>.*` from the launch toplevel into the worktree when those files exist in the launch tree. Then drop this task’s uncommitted copies on launch (untracked → delete; tracked dirty → restore; tracked clean → leave). Other dirty files stay.
-- If the worktree lacks `.seh/` or `harness.config.json` and the launch tree has them, `ln -s`.
+- `start-task` creates or reuses `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` and does not switch the caller. Reuses an existing checkout of the task branch (`UNCHANGED`, still prints `worktree:`). Otherwise `git worktree add` (`-b` from `agents.baseBranch` when new; existing local branch; or from `origin/<task>`). A dirty primary checkout is not a stop.
+- File-tracker files for the key are copied from the launch toplevel into the worktree; then this task's uncommitted copies on launch are dropped (untracked → delete; tracked dirty → restore; tracked clean → leave). Other dirty files stay.
+- If the worktree lacks `.seh/` or `harness.config.json` and the launch tree has them: `ln -s`.
 - Success: `OK` or `UNCHANGED`, `branch:`, `base:`, `created:`, `worktree:`.
+- `return-to-base`: from a path under `seh-worktrees/` unlink launch-only symlinks, then `git worktree remove` when clean (dirty → `BLOCKED:`). From primary already on base → `UNCHANGED`. From primary on another branch → `git checkout` base (legacy).
+- Implementer and Reviewer receive a `Worktree:` payload. Architect still uses no git and no worktrees.
+- `/<prefix>doit` and `/<prefix>checkit` take one or many keys; parent resolves keys, runs `start-task` per task, passes `Worktree:` to each child; unmet `depends` blocks only that task.
+- `/<prefix>shipit` takes one task. A list is refused: `BLOCKED: /<prefix>shipit is one task — spec with /<prefix>planit, then /<prefix>doit with the list`.
 
-### `return-to-base`
+## Scope out
 
-- From a path under `seh-worktrees/`: unlink launch-only `.seh` / `harness.config.json` symlinks, then `git worktree remove` when clean. Do not switch the primary checkout. Dirty → `BLOCKED:`.
-- From the primary checkout already on base → `UNCHANGED`.
-- From the primary checkout on another branch → `git checkout` base (legacy).
+- Extra CLI (`seh worktree`, `seh agent`). A fifth agent or `/seh-parallel`.
+- Auto-merge, Windows `sh`, copying `node_modules` or `.env`. Architect using worktrees.
 
-### Skills
+## Decisions taken
 
-Parent session: resolve keys, `start-task` per task, pass `Worktree:` to the child. N>1 in parallel when the runtime allows; otherwise sequential worktrees. Unmet `depends` blocks that task only. `/<prefix>checkit` one variant for the invocation. `/<prefix>shipit` with multiple keys:
+- Worktrees under the git common dir; primary checkout is never switched.
+- Never overwrite uncommitted worktree content (rule from later findings).
 
-```text
-BLOCKED: /<prefix>shipit is one task — spec with /<prefix>planit, then /<prefix>doit with the list
-```
+## Files likely touched
 
-## Done when
+- `scripts/start-task`, `scripts/return-to-base`, `scripts/lib.sh`, `scripts/*.test.js`, `agents/implementer.md`, `agents/reviewer.md`, `skills/doit/`, `skills/checkit/`, `skills/shipit/`, `references/AGENTS.md`, `references/BLOCKED.md`
 
-- `start-task` leaves the caller’s branch unchanged and prints `worktree:`.
+## Acceptance criteria
+
+- `start-task` leaves the caller's branch unchanged and prints `worktree:`.
 - Two `start-task` calls for different keys produce two worktrees; the primary checkout stays put.
-- Dirty primary does not block `start-task`.
+- A dirty primary does not block `start-task`.
 - File-tracker files present only on the launch tree appear in the worktree; uncommitted copies of those paths are gone from launch.
-- `return-to-base` from the worktree removes it and leaves the primary checkout on its previous branch.
-- Implementer/Reviewer markdown mention `Worktree:`; Architect still forbids worktrees.
-- `/<prefix>doit` and `/<prefix>checkit` describe a task list; `/<prefix>shipit` refuses a list.
-- `npm test` passes.
-- Phase 10 Status in the index is set to `done` only after this checklist is true.
+- `return-to-base` from the worktree removes it and leaves the primary on its previous branch.
+- Implementer and Reviewer markdown mention `Worktree:`; Architect still forbids worktrees.
+- `doit` and `checkit` describe a task list; `shipit` refuses a list.
+
+## Tests
+
+- `scripts/*.test.js` with real git temp repos; `npm test`.
+
+## Versioning
+
+Not recorded in the legacy plan.
+
+## Depends on
+
+- 02, 04, 06 = `done`.

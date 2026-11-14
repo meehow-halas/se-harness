@@ -90,4 +90,4 @@ Read-only. Applies during planning, between stages, and mid-stage. Triggered by 
 - Keep plan files in `docs/<slug>/` only. Do not create parallel trees.
 - Do not commit, push, or open PRs unless the user asks.
 - Do not touch `.env` files. Do not write to `~/.claude/` or other machine-wide paths.
-- Do not add items from the PRD Deferred list or plan "Out of this v1 plan" as work.
+- Do not add items from the PRD Deferred list as work.

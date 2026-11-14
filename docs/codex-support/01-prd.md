@@ -1,19 +1,41 @@
-# Stage 1 — PRD
+# 01 — PRD
 
 ## Goal
 
-The PRD wins, so it changes first. No code in this stage.
+Update the PRD and implementation plan first so Codex is in product scope.
 
-## In scope
+## Scope in
 
-- `docs/prd.md`: supported hosts line (add Codex); Package layout (`hosts.json` fields: `agentFormat`, `hooksMatcher`, `invokePrefix`, `skillHide`); What install writes; hooks table (Codex `.codex/hooks.json`); `/<prefix>setit-se` generation (TOML agents, `openai.yaml`, rules + `AGENTS.md` section, trust and `/hooks` note); host agent files row (Codex copies are TOML, model optional, consultant read-only is text only); Decisions (record plan decisions 1–6); **Deferred**: remove the Codex adapter line.
-- `docs/implementation-plan.md`: remove Codex from "Out of this v1 plan".
-- Older phase files (8, 9, 13, 16) that say "Codex is Deferred" stay as historical; do not edit them.
+- Edit `docs/prd.md` first: Codex leaves Deferred; record plan decisions 1–6 in the PRD Decisions section, in the PRD's existing style.
+- Edit the "Out of this v1 plan" line in `docs/implementation-plan/README.md`.
+- Leave phase files 8, 9, 13, 16 untouched.
 
-## Out of scope
+## Scope out
 
-Code, tests, version, README.
+- Code, tests, version, README changes.
 
-## Done when
+## Decisions taken
 
-PRD, plan and this folder agree; no document still lists Codex as Deferred except as history.
+- Plan decisions 1–6 (see README "Decisions") are recorded in the PRD. Settled; not reopened.
+
+## Files likely touched
+
+- `docs/prd.md`, `docs/implementation-plan/README.md`
+
+## Acceptance criteria
+
+- PRD lists Codex as a supported host in scope; Codex no longer in Deferred.
+- Decisions 1–6 recorded in the PRD Decisions section.
+- `docs/implementation-plan/README.md` "Out of this v1 plan" line updated; phase files 8, 9, 13, 16 unchanged.
+
+## Tests
+
+- None in this stage.
+
+## Versioning
+
+No version bump in this stage (see README).
+
+## Depends on
+
+- None.

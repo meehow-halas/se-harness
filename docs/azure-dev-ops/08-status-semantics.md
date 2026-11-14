@@ -1,31 +1,47 @@
-# Phase 8 — Status key semantics in spec
+# 08 — Status key semantics in spec
 
 ## Goal
 
-`spec.md` and `docs/prd.md` agree on what each `agents.tracker.statuses` key means for ADO (same as Jira). Found during the phase 6 review: the PRD table contradicted the agents; the PRD is fixed, `spec.md` listed keys without meaning.
+Docs agree on what each `agents.tracker.statuses` key means for ADO (same as Jira). Found during stage 06 review: the PRD table contradicted the agents. The PRD was fixed; the spec listed keys without meaning.
 
-## In scope
+## Scope in
 
 | Path | Change |
 |------|--------|
-| `docs/azure-dev-ops/spec.md` | `statuses` / `transition` rows state key meaning by reference to the PRD table “Azure DevOps tracker” (todo = Architect ready; inProgress = Implementer starts or rework; codeReview = Implementer finishes; inReview = Reviewer starts a round; done = clean review, PR open) |
+| ADO spec (now the README "Status meaning" line) | `statuses` / `transition` rows state key meaning by reference to the PRD table "Azure DevOps tracker" |
 | `docs/prd.md` | Verify ADO status table and event rows match; no change if they already do |
-| `skills/setit-se/SKILL.md` | Verify any status-mapping prompt for ADO does not describe different meanings; fix only if it does |
+| `skills/setit-se/SKILL.md` | Verify ADO status-mapping prompt does not describe different meanings; fix only if it does |
 
-Note: the `spec.md` sentence and the PRD table fix were already applied (uncommitted) while closing phase 6. This phase verifies them and settles wording.
+Note: the spec sentence and PRD table fix were applied (uncommitted) while closing stage 06. This stage verifies them and settles wording.
 
-## Options
-
-| Topic | Recommended |
-|-------|-------------|
-| How `spec.md` states meaning | One short pointer to the PRD table, listing the five keys inline at most once; do not copy the full table |
-
-## Out of scope
+## Scope out
 
 - Any script, agent or skill behaviour change; renaming keys.
-- Edits to `README.md`.
+- Edits to `README.md` (repo root).
 
-## Done when
+## Decisions taken
 
-- `spec.md`, `docs/prd.md`, `agents/*.md` and `setit-se` give the same meaning for `todo`, `inProgress`, `codeReview`, `inReview`, `done`.
-- `grep` finds no ADO text that maps `codeReview` to “Reviewer starts” or `done` to “merged”.
+| Topic | Chosen (Recommended) |
+|-------|----------------------|
+| How the spec states meaning | One short pointer to the PRD table, listing the five keys inline at most once; do not copy the full table |
+
+## Files likely touched
+
+- `docs/prd.md`, `skills/setit-se/SKILL.md`, and the ADO docs file that states key meaning.
+
+## Acceptance criteria
+
+- The docs, `agents/*.md` and `setit-se` give the same meaning for `todo`, `inProgress`, `codeReview`, `inReview`, `done`.
+- `grep` finds no ADO text mapping `codeReview` to "Reviewer starts" or `done` to "merged".
+
+## Tests
+
+- Grep checks. Docs only; `npm test` not required.
+
+## Versioning
+
+Docs/skill wording: patch bump per CLAUDE.md if a shipped dir (`skills/`) changes.
+
+## Depends on
+
+- 06 = `done`.
