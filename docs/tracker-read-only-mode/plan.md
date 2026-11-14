@@ -36,7 +36,7 @@ A phase is `done` when its checklist is true **and**:
 | 3 | `/<prefix>setit-se` question, skipped maps, toggle | 1, 2 | done |
 | 4 | Agents, work skills, consumer `AGENTS.md`, `start-task` check | 2, 3 | done |
 | 5 | Manual end-to-end scenario + full `npm test` | 4 | done |
-| 6 | `README.md` tracker sections | 5 | todo |
+| 6 | `README.md` tracker sections | 5 | done |
 
 Phases 2 and 3 may run in parallel after phase 1 (different files). Phase 3 must not ship before phase 2 is `done`.
 

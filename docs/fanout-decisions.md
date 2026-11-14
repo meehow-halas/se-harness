@@ -2,7 +2,7 @@
 
 Source of knowledge for adding fan-out to another host (Cursor Agent, OpenCode, other harness UIs). Records what was decided and why, from building and testing fan-out in the Claude Code desktop app. The normative behaviour is in `references/session-fanout.md`, `references/hosts.json` and the skills; this file explains the choices behind them.
 
-Status: Claude Code desktop is the only host tested end to end. Cursor and OpenCode are set to `manual` and have not been run.
+Status: manually tested on each host (Claude Code desktop, Cursor, OpenCode). Cursor and OpenCode are set to `manual`.
 
 ## 1. What fan-out is
 

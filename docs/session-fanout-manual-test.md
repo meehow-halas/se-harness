@@ -49,8 +49,6 @@ Expected: planner returns `ready: TST-1`, `waiting: TST-2 after TST-1`. Parent r
 
 Check: `git worktree list` shows `seh-worktrees/TST-1`; the primary checkout stays on `dev`.
 
-Open point: whether the app accepts `cwd` on a seh worktree. If refused, the parent reports `BLOCKED: session cannot open worktree ...`.
-
 ## 5. Manual host
 
 Use a project with `sessionSpawn: manual` (Cursor or OpenCode). `/<prefix>planit TST-1 TST-2` must print two commands and stop; it must not create any session.
@@ -64,6 +62,6 @@ Use a project with `sessionSpawn: manual` (Cursor or OpenCode). `/<prefix>planit
 
 Result (pass/fail), the `fanout-plan` output, the session titles, and any `BLOCKED:` line. Report failures with the exact output.
 
-## Known issues (not blocking)
+## Outcome
 
-- **Reviewer report language.** In `/<prefix>shipit` runs on the test project, the parent replies in the user's language, but the Reviewer subagent's final report comes back in English, although `agents/reviewer.md` and the shipit skill ask for the launch to pass `Conversation language: Polish` (not verified in the transcript). Seen on 03-multiply and 011-feature-negate. Open TODO, non-critical. Next step when picked up: export the session transcript and check the exact Agent call input to see whether the launch line reached the Reviewer.
+- 2026-11-14: manual test run on each host (Claude Code desktop, Cursor, OpenCode). Result: działanie potwierdzone (fan-out works as specified). Per-step outputs are not stored in this repo.

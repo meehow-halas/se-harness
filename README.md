@@ -237,14 +237,14 @@ Exactly four product agents. Brainstorm members are not agents and are not `@`-a
 
 | Agent | Job | Must not |
 |-------|-----|----------|
-| **Architect** | Spec + prompt + first log row on the **active tracker**. Status stays `todo`. Read-only on application code. No worktrees. | Write app code; git; a file-by-file recipe |
+| **Architect** | Spec + prompt + first log row on the **active tracker** (repo files when Jira or ADO is read-only). Status stays `todo`. Read-only on application code. No worktrees. | Write app code; git; a file-by-file recipe |
 | **Implementer** | Implements the spec (`feature` or `bug`). Own 2–6 phase plan. After each phase, launches Consultant. Calls `.seh/scripts/start-task` (worktree; does not switch your checkout). Works under `Worktree:`. | Edit `CHANGELOG.md`; open the PR; invent architecture past Questions |
 | **Consultant** | Code **quality** on the **phase diff**. Structured `CONSULT` report. Not a user skill. | Edit product code; talk to the user; judge spec compliance |
 | **Reviewer** | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, commit, push, PR from the worktree. `return-to-base` **removes** that worktree; it does not switch your primary checkout. | Merge the PR; treat Consultant `should-fix` as ❌ |
 
 ### Architect
 
-Writes the spec, the implementation prompt, and the first log row. Status stays `todo`; the Implementer moves it later. Read-only on application code; no git writes; no worktrees.
+Writes the spec, the implementation prompt, and the first log row. Status stays `todo`; the Implementer moves it later. With Jira or ADO in read-only mode, these go to repo files and the tracker is not written. Read-only on application code; no git writes; no worktrees.
 
 If a persona round is needed, Architect **stops and asks** `/_grillit`. It does not interview personae itself. When that skill returns **PART A**, Architect decides on every blocker, conflict, and gap, then continues the spec. Details: [Brainstorm](#brainstorm).
 
@@ -372,7 +372,7 @@ These are **not** a substitute for interaction modes. Reviewer still receives `M
 
 ### One active tracker
 
-**Exactly one tracker:** files, Jira, **or** Azure DevOps, never two at once. Agents write spec, prompt, log, and status to the active tracker only. They do not mirror.
+**Exactly one tracker:** files, Jira, **or** Azure DevOps, never two at once. Agents write spec, prompt, log, and status to the active tracker only. They do not mirror. The one exception is read-only mode (below): the tracker is only read, and spec, prompt, log, and status are written to repo files.
 
 Which tracker is active is in `harness.config.json`. If `agents.tracker` is present, its `kind` (`jira` or `ado`) is the active tracker; a config without `kind` is Jira. If it is absent, the files tracker is active.
 
@@ -429,6 +429,8 @@ Credentials: you put the token in a project-local ignored file `harness.credenti
 
 **Remove:** confirm, drop `agents.tracker` from config, delete or clear `harness.credentials.local.json`. The project is files-only again. A first-run decline (`jiraOffer: declined`) does not block a later add.
 
+**Read-only mode** (`readOnly: true`): `jira get <key>` reads the issue fields from Jira. Spec, prompt, and log come from `docs/features/`, `docs/prompt/`, and `docs/feature-log/` for that key, with status in spec frontmatter. `jira create`, `set`, `comment`, `transition`, and `link` are `BLOCKED:` before any HTTP request. Setup maps only `blocker` and `fetchFields`. The table below applies to full write only.
+
 Task key = issue key (`PROJ-123`). Branch name = that key. Full write: spec, prompt, log, and status live **only** on the ticket. Agents do not create or edit `docs/features/`, `docs/prompt/`, or `docs/feature-log/` while Jira is active. While Jira is the tracker, `agents.statuses` is not written onto the ticket. After Remove, file-tracker strings from `agents.statuses` apply again.
 
 | When | On the ticket |
@@ -465,6 +467,8 @@ Read-only: map only `blocker` (if you use `depends`) and `fetchFields`. Full wri
 **Change:** change the mapping, rotate the PAT in the credentials file, or toggle read-only (to full write asks the maps still missing; no migration). Switching to Jira = Remove, then Add (no migration).
 
 **Remove:** confirm, drop `agents.tracker`, delete or clear the `adoPat` key in `harness.credentials.local.json`. Files-only again. A first-run decline does not block a later add.
+
+**Read-only mode** (`readOnly: true`): `ado get <id>` reads the work item fields from Azure DevOps. Spec, prompt, and log come from `docs/features/`, `docs/prompt/`, and `docs/feature-log/` for that id, with status in spec frontmatter. `ado create`, `set`, `comment`, `transition`, and `link` are `BLOCKED:` before any HTTP request. Setup maps only `blocker` and `fetchFields`. The paragraphs below apply to full write only, except where they say otherwise.
 
 Task key = numeric work item id. Branch and worktree name = that id.
 
