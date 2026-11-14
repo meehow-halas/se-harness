@@ -138,6 +138,6 @@ Then set that phase’s **Status** to `done` in the Phase index. That write is p
 
 Azure DevOps Boards tracker work is tracked separately in [azure-dev-ops/plan.md](azure-dev-ops/plan.md) (post–core v1 slices; not part of the phase index above).
 
-Trackers beyond files, Jira, and Azure DevOps; auto-merge; auto-install when a newer GitHub tag exists; a user-facing Consultant skill; changing `agents.contentLanguage` mid-task; file-tracker status/log helpers in `.seh/scripts/`; Jira Server/DC; Windows `sh` hosts; symlinking live agents to `.seh/agents/`.
+Auto-merge; auto-install when a newer GitHub tag exists; a user-facing Consultant skill; changing `agents.contentLanguage` mid-task; file-tracker status/log helpers in `.seh/scripts/`; Jira Server/DC; Windows `sh` hosts; symlinking live agents to `.seh/agents/`.
 
 This list is a **scope boundary**, not a backlog. Do not open tickets from it. Do not implement these items in a v1 phase. A later version may pick items up only after an explicit new scope.
