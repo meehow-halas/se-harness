@@ -45,7 +45,7 @@ New optional row fields: `hooksMatcher` (`"startup|resume"` for Codex), `invokeP
 | 2 | `02-host-row-cli.md` | Host row, new fields, CLI install/uninstall, `check-update --host codex` | done |
 | 3 | `03-setup-adapters.md` | `/<prefix>setit-se`: TOML agents, `openai.yaml`, rules + `AGENTS.md` section, model keys | done |
 | 4 | `04-runtime-wording.md` | `invokePrefix` in skills, grillit host detection and per-persona model | done |
-| 5 | `05-release.md` | Version, changelog, full test run, README last | pending |
+| 5 | `05-release.md` | Version, changelog, full test run, README last | done |
 
 Order is strict: each stage builds on the previous one. Each stage has a `NN-*.prompt.md` sibling; [prompt.md](prompt.md) has the read order and shared constraints.
 
