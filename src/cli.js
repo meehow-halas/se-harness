@@ -213,6 +213,33 @@ function renderTokens(tree, prefix) {
   }
 }
 
+const INVOKE_SKILLS = ["setit-se", "planit", "doit", "checkit", "shipit", "grillit"];
+
+// Skills and messages name what the user types as `/<prefix><skill>`. A host
+// whose row has another `invokePrefix` (Codex: `$`) gets that character instead.
+function rewriteInvocations(tree, prefix, invokePrefix) {
+  if (!invokePrefix || invokePrefix === "/") {
+    return;
+  }
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`(^|[^A-Za-z0-9_.\\-/])/(${escaped}(?:${INVOKE_SKILLS.join("|")}))(?![A-Za-z0-9_-])`, "gm");
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (entry.isFile() && /\.(md|yaml|yml|toml)$/.test(entry.name)) {
+        const text = fs.readFileSync(full, "utf8");
+        const next = text.replace(pattern, (_m, lead, name) => `${lead}${invokePrefix}${name}`);
+        if (next !== text) {
+          fs.writeFileSync(full, next);
+        }
+      }
+    }
+  };
+  walk(tree);
+}
+
 function copyTree(src, dest, prefix) {
   fs.rmSync(dest, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -577,6 +604,7 @@ function install(ctx, prefixArg) {
   for (const host of hosts) {
     const dest = setupSkillDir(cwd, host, prefix);
     copyTree(skillSrc, dest, prefix);
+    rewriteInvocations(dest, prefix, host.invokePrefix);
     renameSkill(dest, `${prefix}${SETUP_SKILL}`);
     const commandFile = setupCommandFile(cwd, host, prefix);
     if (commandFile) {
@@ -596,11 +624,20 @@ function install(ctx, prefixArg) {
   ensureGitignore(cwd);
 
   console.log(`seh install: OK ${version} in ${cwd}`);
-  console.log(`Next: run /${prefix}${SETUP_SKILL} in the project.`);
+  const invokeOf = (host) => host.invokePrefix || "/";
+  const slashHosts = hosts.filter((host) => invokeOf(host) === "/");
+  const otherPrefixes = [...new Set(hosts.map(invokeOf).filter((p) => p !== "/"))];
+  const primary = slashHosts.length > 0 ? "/" : otherPrefixes.shift();
+  const alternates = otherPrefixes.map((p) => {
+    const ids = hosts.filter((host) => invokeOf(host) === p).map((host) => host.id);
+    return `In ${ids.join(", ")} type ${p}${prefix}${SETUP_SKILL} instead.`;
+  });
+  const alsoText = alternates.length > 0 ? ` ${alternates.join(" ")}` : "";
+  console.log(`Next: run ${primary}${prefix}${SETUP_SKILL} in the project.${alsoText}`);
 
   if (fs.existsSync(path.join(cwd, "harness.config.json"))) {
     console.log(
-      `harness.config.json is present. Run /${prefix}${SETUP_SKILL} to apply the new templates.`
+      `harness.config.json is present. Run ${primary}${prefix}${SETUP_SKILL} to apply the new templates.${alsoText}`
     );
   }
 }

@@ -41,7 +41,7 @@ Only when `sessionSpawn` is `start_session`. For each key in `ready`, one `mcp__
 
 Do not start sessions for keys in `waiting`, `blocked`, or `queued`.
 
-For `manual` (other hosts): print one block per ready key with the exact command to run in a new session, and stop. Do not guess a host API.
+For `manual` (other hosts, Codex included: it has no host API to start a session): print one block per ready key with the exact command to run in a new session, and stop. Do not guess a host API.
 
 ## 4. Per-skill placement
 

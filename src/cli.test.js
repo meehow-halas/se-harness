@@ -760,6 +760,31 @@ describe("seh uninstall", () => {
       });
     });
 
+    test("setup skill text and next-step line use the row's invokePrefix; other hosts keep /", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        fs.writeFileSync(
+          path.join(pkg, "skills", "setit-se", "SKILL.md"),
+          "---\nname: setit-se\ndescription: x\n---\nRun /{{prefix}}doit, see .seh/x/{{prefix}}doit, /skills, /other.\n"
+        );
+        const hostsFile = path.join(pkg, "references", "hosts.json");
+        const table = JSON.parse(read(hostsFile));
+        for (const h of table.hosts) if (h.id === "codex") h.invokePrefix = "%";
+        fs.writeFileSync(hostsFile, JSON.stringify(table));
+        const result = runCli(["install", "--prefix", "zx_"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(
+          read(path.join(project, ".agents", "skills", "zx_setit-se", "SKILL.md")),
+          /Run %zx_doit, see \.seh\/x\/zx_doit, \/skills, \/other\./
+        );
+        assert.match(
+          read(path.join(project, ".claude", "skills", "zx_setit-se", "SKILL.md")),
+          /Run \/zx_doit, see/
+        );
+        assert.match(result.stdout, /Next: run \/zx_setit-se in the project\. In codex type %zx_setit-se instead\./);
+      });
+    });
+
     test("hook matcher comes from the row, not a hardcoded value", () => {
       withTempDir((root) => {
         const { pkg, project } = setup(root);

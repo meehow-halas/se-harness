@@ -308,6 +308,8 @@ Cleanup in **each** `skillsDir`: delete a leftover `seh-feature` directory and t
 
 When the host `id` is `cursor` or `opencode`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/{{prefix}}setit-se`). The package templates may omit that field.
 
+**`invokePrefix`.** Templates in `.seh/` name what the user types as slash plus prefix plus name. On a row whose `invokePrefix` is set and is not `/` (today Codex: `$`), in every copied work-skill file and every generated agent file for that host, replace each such slash form (names: `setit-se`, `planit`, `doit`, `checkit`, `shipit`, `grillit`) with `<invokePrefix><prefix><name>`. Do not touch paths such as `.seh/scripts/…`. Rows without `invokePrefix`, or with `/`, get the text as is. In your own messages to the user use the same prefix for this session’s host. The `BLOCKED:` strings printed by `.seh/scripts/` keep `/`: when you relay one on such a host, say it with that host’s prefix.
+
 **`skillHide` `openai-yaml`** (today Codex, which has no frontmatter switch). For each copied work skill write `<skillsDir>/<prefix><name>/agents/openai.yaml` with the stdout of `node .seh/references/codex-adapters.cjs openai-yaml` (`policy.allow_implicit_invocation: false`; `$<prefix><name>` still works). Not for `<prefix>setit-se`. Rows without `skillHide` get nothing.
 
 **Shared skills directory.** Codex reads `.agents/skills`, which other tools may also use. Write and delete only seh-owned names (the lists in the cleanup above). Never delete or rewrite an entry seh did not write, and never remove the directory itself. Removing a seh skill directory removes its `agents/openai.yaml` with it.
