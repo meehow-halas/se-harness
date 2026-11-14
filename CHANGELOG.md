@@ -2,6 +2,24 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-11-14
+
+### Added
+
+- Codex as the fourth host: a `codex` row in `references/hosts.json` plus format adapters (`references/codex-adapters.cjs`), no second template tree. New optional row fields: `agentFormat`, `hooksMatcher`, `invokePrefix`, `skillHide`, `rulesIndex`.
+  - Skills install to `.agents/skills`. A skill is invoked as `$<prefix>setit-se` (or picked in `/skills`); Codex has no `commandsDir`, and nothing is written under `~/.codex/`. Skill text uses the row's `invokePrefix`.
+  - Agents are TOML in `.codex/agents/<name>.toml` (`name`, `description`, `developer_instructions`; `model` only when set, otherwise the session model is inherited). A Codex subagent inherits the parent sandbox, so Consultant read-only is instruction text only.
+  - Work skills get `<skill>/agents/openai.yaml` with `policy.allow_implicit_invocation: false`.
+  - Rule packs go to `.codex/rules/*.md`, and `/<prefix>setit-se` keeps one seh-managed section in `AGENTS.md` that points at them. Path scoping is soft; content outside the section is untouched.
+  - `seh install` merges the update check into `.codex/hooks.json` (`SessionStart`, matcher `startup|resume`). It runs only in a trusted project after the user reviews it in `/hooks`; setup says so. `scripts/check-update --host codex`.
+  - `seh uninstall` removes only seh-owned entries from `.agents/skills`, which other tools also read.
+  - `modelSuggest`: architect `gpt-6-sol`, implementer, reviewer and brainstorm `gpt-6.1-sol`, consultant `gpt-6-luna`. Availability per account is unverified; "no change" omits `model`. Reasoning effort is not configured.
+  - `/<prefix>grillit` no longer takes the host from a `skillsDir` shared by several rows (`.agents/skills`): it uses the tool it runs in, or asks once. On Codex the brainstorm model is requested in the persona launch prompt (`Use model <id>.`); the Codex docs name no per-launch model parameter, so the runtime may not honour it.
+
+### Fixed
+
+- Codex: `$_setit-se` stopped with `BLOCKED: seh install has not been run here` although the install was complete. With the default prefix `_`, the model put the typed invocation into a shell path check, and the shell read `$_setit-se` as `$_` plus `setit-se`, so every `skillsDir` looked empty. The entry check now names the skill directory `<prefix>setit-se`, tells the model to test the literal quoted path and never to put the typed invocation in a shell command, and says a missing git repository is git disabled, never `BLOCKED`.
+
 ## [1.1.0] - 2026-11-13
 
 Version reset from `2.0.0`: seh has no production users yet. First changelog entry.

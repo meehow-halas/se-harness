@@ -6,9 +6,9 @@ Parseable defaults: `harness.config.json` in this directory. External tracker sh
 
 `seh.generatedFrom` is set by setup to the contents of `.seh/VERSION`. `seh.generatedPrefix` is set by setup to the contents of `.seh/PREFIX` (the skill-name prefix; may be empty). `agents.baseBranch` has no value until setup asks (suggested default `dev`). **Empty string or `null` disables git** for the harness: no worktrees, branches, commits, PRs or `update`; tasks run sequentially; the git scripts print `UNCHANGED` + `git: disabled`. Setup leaves it empty when the project has no git repo or the user answers “no git”. Optional role `rules`; reviewer may use `checklist`. `jiraOffer` is `declined` when they decline the first offer (`null` until then). `agents.brainstorm.consult` is `any` | `significant` (default if unset) | `broad`. Members themselves are not this template’s job.
 
-Supported hosts are **not** a tree in this config. They live in `hosts.json` in this directory (`.seh/references/hosts.json` after install). Install and `/{{prefix}}setit-se` always write every row. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format, `modelSuggest`). A Codex adapter (TOML agents, `.codex/` or `.agents/skills`) is out of this version.
+Supported hosts are **not** a tree in this config. They live in `hosts.json` in this directory (`.seh/references/hosts.json` after install). Install and `/{{prefix}}setit-se` always write every row. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format, `modelSuggest`). Codex is the fourth row: `agentFormat: "codex-toml"` (TOML agents via `codex-adapters.cjs`), `skillHide: "openai-yaml"` (work skills get `agents/openai.yaml`), `rulesIndex: "agents-md"` (a seh-managed section in `AGENTS.md` points at `rulesDir`), skills in `.agents/skills`, invoked as `$<prefix><name>`.
 
-`agents.roles.<role>.model` is a map keyed by host `id`. `/{{prefix}}setit-se` writes `model:` in that host’s `agentsDir` from that entry only. Do not copy another host’s model. A legacy string is invalid for generation: migrate first (prefill every host, then confirm per host). `agents.brainstorm.model` uses the same map shape and is written by `/{{prefix}}grillit`, not `/{{prefix}}setit-se`.
+`agents.roles.<role>.model` is a map keyed by host `id`. `/{{prefix}}setit-se` writes `model:` in that host’s `agentsDir` from that entry only. Do not copy another host’s model. On a `codex-toml` row an empty string `""` is valid and means no change: the live agent has no `model` and the session model is inherited. A legacy string is invalid for generation: migrate first (prefill every host, then confirm per host). `agents.brainstorm.model` uses the same map shape and is written by `/{{prefix}}grillit`, not `/{{prefix}}setit-se`.
 
 ```json
 {
@@ -28,9 +28,9 @@ Supported hosts are **not** a tree in this config. They live in `hosts.json` in 
       "done": "done"
     },
     "roles": {
-      "architect": { "model": { "claude-code": "opus", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-opus-5-5" } },
-      "implementer": { "model": { "claude-code": "sonnet", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-sonnet-5-5" } },
-      "consultant": { "model": { "claude-code": "haiku", "cursor": "composer-2.5", "opencode": "anthropic/claude-haiku-5-5" } },
+      "architect": { "model": { "claude-code": "opus", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-opus-5-5", "codex": "gpt-6-sol" } },
+      "implementer": { "model": { "claude-code": "sonnet", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-sonnet-5-5", "codex": "gpt-6.1-sol" } },
+      "consultant": { "model": { "claude-code": "haiku", "cursor": "composer-2.5", "opencode": "anthropic/claude-haiku-5-5", "codex": "gpt-6-luna" } },
       "reviewer": { "model": { "claude-code": "sonnet", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-sonnet-5-5" } }
     },
     "brainstorm": { "consult": "significant" }
