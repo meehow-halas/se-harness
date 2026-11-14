@@ -1,93 +1,53 @@
-# Phase 7 — Brainstorm
+# 07 — Brainstorm
 
 ## Goal
 
-Publish brainstorm round templates and `/<prefix>grillit`. Facilitator **collect only**; no scoring; not a product agent.
+Publish brainstorm round templates and `/<prefix>grillit`. Facilitator collects only: no scoring, no winner, not a product agent.
 
-## In scope
+## Scope in
 
-1. Package `brainstorm/` templates against the PRD (facilitator **collect only**; no scoring; not a product agent).
+1. Package `brainstorm/` templates: member template; persona output format (`[BLOCKER]` / `[IMPORTANT]` / `[NICE]`); collect-only facilitator (PART A: shared points, conflicts, blockers, lone voices, review quality); report template; app-context skeleton.
 2. Skill `/<prefix>grillit`: members CRUD, app context, run a consult (personae → facilitator → Architect PART A).
 3. Pack comments, if any, use `seh`.
 
-## Out of scope
+Split: material → each persona alone (no Architect context) → facilitator collates → Architect receives PART A and decides. Personae see only member file, output format, app context, material. Architect does not prompt personae itself.
 
-- A fifth role in `agents.roles` or a `/<prefix>setit-se` question for facilitator model as a product role.
-- Implementer, Consultant, or Reviewer running a round.
-- `/<prefix>setit-se` editing members.
-- `/<prefix>shipit` starting a round by itself.
-- Writing persona transcripts back into chat or into the Architect launch.
-- Cursor-specific generators (Deferred).
-- A judging synthesizer. Facilitator templates stay in `brainstorm/`, not `agents/`.
+`/<prefix>grillit`: same config/VERSION guard as work skills. Members CRUD: on create ask consult threshold once, then per host confirm-or-change the default from `modelSuggest.brainstorm`; `agents.brainstorm.model` is a map keyed by host `id`; no per-persona model. Regenerate member file after change; never hand-edit it. App context built from repo (product line, `agents.docs`, README); gaps one question at a time; user confirms. Direct consult needs ready app context and at least one member; threshold does not apply. Architect gets PART A only. Show Architect decisions; do not hide a rejected blocker. `/<prefix>setit-se` does not edit members.
 
-## Inputs
+Consult threshold (when Architect asks for a round, with at least two members): `any` every user-visible change; `significant` (default) hard to reverse or changes product use; `broad` new module, onboarding, pricing, navigation rebuild.
 
-- PRD: Brainstorm (entire section); Decisions 2, 10; Package layout (`brainstorm/` not `agents/`).
-- Existing packs under `packs/*/`.
+Round: ready app context → persona turns (parallel when the runtime allows) → facilitator PART A (or the single reply) → Architect decides → interactive writes `docs/brainstorm/<slug>-<YYYY-MM-DD>.md` only after confirmation; critical/autonomous does not write it. One round unless the user asks for another.
 
-## Outputs
+Packs: keep path-scoped YAML `paths:`; do not change pack policy unless it contradicts the PRD.
 
-| Path | What |
-|------|------|
-| `brainstorm/` | Member template; persona output format (`[BLOCKER]` / `[IMPORTANT]` / `[NICE]`); facilitator (PART A: shared points, conflicts, blockers, lone voices, review quality — no winner); report template; app-context skeleton |
-| `skills/grillit/` (or host-shaped equivalent) | CRUD members, build/confirm app context, orchestrate a round; does not role-play |
-| `packs/**` | Same rules; comments, if any, use `seh` |
+## Scope out
 
-Live locations in a consuming project (skill behaviour, not files to add in this repo beyond templates):
+- A fifth role in `agents.roles`. Implementer, Consultant or Reviewer running a round.
+- `/<prefix>setit-se` editing members. `/<prefix>shipit` starting a round by itself.
+- Writing persona transcripts into chat or the Architect launch.
+- Cursor-specific generators (Deferred). A judging synthesizer.
 
-- Members: typically `.claude/brainstorm/members/<id>.md` from config (`id`, `description`, `identity`, `cares`, `dislikes`).
-- App context: typically `.claude/brainstorm/app-context.md`.
-- Settled interactive records: `docs/brainstorm/<slug>-<YYYY-MM-DD>.md` (files, not the task tracker).
+## Decisions taken
 
-## Behaviour
+- Facilitator templates stay in `brainstorm/`, not `agents/`.
 
-### Split
+## Files likely touched
 
-```text
-material (spec or question)
-    → each persona, alone, without Architect context
-    → facilitator collates, without scoring or picking a winner
-    → Architect receives PART A and decides
-```
+- `brainstorm/*`, `skills/grillit/`, `packs/**` (comments only, if any)
 
-Personae see only: member file, output format, app context, material. Facilitator sees persona replies and the report template — not Architect notes, not a “corrected” spec. Architect does not prompt personae itself.
+## Acceptance criteria
 
-### `/<prefix>grillit`
+- `brainstorm/` has member, persona format, collect-only facilitator, report, app-context skeleton. No judging synthesizer.
+- `/<prefix>grillit` is generated by setup (not install) and uses the same VERSION/config guard.
 
-- Same config/VERSION guard as other work skills (phase 6).
-- Members CRUD: on create, ask once for consult threshold, then per host one confirm-or-change on the default from `modelSuggest.brainstorm`. `agents.brainstorm.model` is a map keyed by host `id` (phase 9). No per-persona model. After create/edit/remove, regenerate that member file; do not hand-edit generated member markdown.
-- App context: built from the repo (product line, `agents.docs`, README); gaps one question at a time; user confirms the file.
-- **Direct consult:** needs ready app context and at least one member. Threshold does not apply. Named members or every member. Then personae → facilitator → Architect with **PART A only**. Show Architect decisions; user resolves leftover conflicts. Do not hide a blocker the Architect rejected.
-- `/<prefix>setit-se` does not edit members.
+## Tests
 
-### During specification
+- Grep checks on templates.
 
-`/<prefix>planit` or Architect inside `/<prefix>shipit`: if a round is needed, stop and ask this skill. Consult on its own when there are at least two members **and** the work passes `agents.brainstorm.consult`:
+## Versioning
 
-- `any` — every user-visible change
-- `significant` (default if unset) — hard to reverse, or changes how the product is used
-- `broad` — new module, onboarding, pricing, navigation rebuild
+Initial brainstorm. Not recorded in the legacy plan.
 
-### Round
+## Depends on
 
-1. Ready app context (or stop and finish it via the skill).
-2. Persona turns in parallel when the runtime allows. Launch prompt = member + format + app context + material.
-3. Facilitator → PART A (or the single persona reply if only one member).
-4. Architect gets PART A and decides. Agreement among personae is not required and is not proof.
-5. Interactive: write `docs/brainstorm/<slug>-<YYYY-MM-DD>.md` only after the user confirms the round. Critical/autonomous: Architect consumes PART A and does **not** write that file.
-6. One round unless the user asks for another, and then only for what changed.
-
-Do not paste persona transcripts back into the chat or into the Architect launch. If every persona says almost the same thing, facilitator flags weak personae under review quality.
-
-### Packs
-
-Keep path-scoped YAML `paths:` and the rule bullets. Pack comments, if any, use `seh`. Do not change pack **policy** unless it contradicts the PRD.
-
-## Done when
-
-- `brainstorm/` has member, persona format, collect-only facilitator, report, app-context skeleton. No judging synthesizer as a product piece. Facilitator not in `agents/`.
-- `/<prefix>grillit` exists, is generated by setup (not by install), and uses the same VERSION/config guard.
-
-## Handoff
-
-v1 payload is complete. PRD Deferred is out of this plan (scope boundary, not leftover work).
+- 05 = `done`, 06 = `done`.

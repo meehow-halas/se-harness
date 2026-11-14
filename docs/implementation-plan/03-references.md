@@ -1,75 +1,50 @@
-# Phase 3 — References and config templates
+# 03 — References and config templates
 
 ## Goal
 
-Publish the extra file templates setup and agents need: config skeleton, artifact shapes, `BLOCKED` format, and the consumer `AGENTS.md` template. These are copied to `.seh/references/` on install. `/<prefix>setit-se` merges and generates from them; agent bodies (phase 4) tell the host to read config rather than baking values.
+Publish the file templates setup and agents need: config skeleton, artifact shapes, `BLOCKED` format and consumer `AGENTS.md`. Copied to `.seh/references/` on install. Setup merges and generates from them; agent bodies say "read config", not literal values.
 
-## In scope
+## Scope in
 
-Package `references/` as named in the PRD:
+- `references/AGENTS.md`: consumer template. Binding flow, four roles, skills, tracker at runtime, git via `.seh/scripts/`, `BLOCKED:` line. No baked project name, base branch or status strings.
+- `harness.config.json` skeleton with at least: `seh.generatedFrom` (set by setup from `.seh/VERSION`); one-line product and `agents.docs`; `agents.baseBranch` (no default baked in agents; setup suggests `dev`); `agents.statuses` with the five file-tracker statuses (`todo`, `in progress`, `implemented`, `in review`, `done`); `agents.roles` (`architect`, `implementer`, `consultant`, `reviewer`, `model` as a map keyed by `hosts.json` `id`; optional `rules`; reviewer may use `checklist`); `agents.contentLanguage`; `packsIgnored`; `jiraOffer`; `agents.tracker` (only when Jira connected); `agents.brainstorm.consult` (`any` | `significant` default | `broad`).
+- Spec shape: frontmatter `id`, `title`, `status`, `type` (`feature` | `bug`), `depends`, `relates`; body Abstract, Requirements, Acceptance criteria, Architectural decisions.
+- Prompt shape: Goal, phase-grain order, new dependencies, existing code to reuse, what not to change.
+- Log shape: table `date | agent | action | note`; notes for `Q<n>:` and `C<phase>.<n>:`.
+- `BLOCKED` format: `BLOCKED: <what stopped> — <what the user or another skill must do>`.
+- File-tracker paths: `docs/features/<basename>.feature.md`, `docs/prompt/<basename>.prompt.md`, `docs/feature-log/<basename>.log.md`.
 
-- Consumer `AGENTS.md` template (`.seh/references/AGENTS.md` after install).
-- `harness.config.json` skeleton (keys setup will write; not a live project config in this repo unless needed as a template file).
-- Spec / prompt / log shapes (files tracker markdown).
-- `BLOCKED` format matching PRD Stops.
+## Scope out
 
-Related small extras the PRD groups as “and the like” if they are required for those shapes (for example a one-line comment on tracker frontmatter). Do not add a second documentation tree.
-
-## Out of scope
-
-- Implementing `/<prefix>setit-se` (phase 5) or product agents (phase 4).
-- Jira REST calls (phase 12).
-- Rewriting this repo’s own [AGENTS.md](../../AGENTS.md) into the consumer template (the consumer template is for **consuming** projects).
+- Implementing `/<prefix>setit-se` (phase 5) or agents (phase 4). Jira REST (phase 12).
+- Rewriting this repo's `AGENTS.md` into the consumer template.
 - Status/log helper scripts for the files tracker.
 
-## Inputs
+## Decisions taken
 
-- PRD: Artifact contract; Statuses; Feature tracking; Runtime config and generated files; `/<prefix>setit-se` (AGENTS.md / CLAUDE.md merge); Stops; Decisions 12–14, 16–18.
-- This repo’s [AGENTS.md](../../AGENTS.md) is **this product’s** agents file, not the consumer template.
+- Consumer template must be `references/AGENTS.md`.
+- No credentials in the skeleton. Jira token lives in a local ignored file.
+- Consumer `AGENTS.md` is merge input for first setup, not an overwrite.
 
-## Outputs
+## Files likely touched
 
-Place under `references/`. Exact filenames are the implementer’s choice except the consumer template **must** be `references/AGENTS.md` so setup can use `.seh/references/AGENTS.md`.
+- `references/AGENTS.md`, `references/harness.config.json`, `references/harness.config.md`, spec/prompt/log shape files under `references/`, `references/BLOCKED.md`
 
-| Template | Required content |
-|----------|------------------|
-| `references/AGENTS.md` | Standing instructions for a consuming project using seh: binding flow, four roles, skills, tracker-at-runtime, git via `.seh/scripts/`, `BLOCKED:` line. No baked project name, base branch, or status strings |
-| Config skeleton | Keys listed below, with comments or empty/defaults where the PRD gives defaults |
-| Spec shape | Frontmatter `id`, `title`, `status`, `type` (`feature` \| `bug`), `depends`, `relates`. Body: Abstract, Requirements, Acceptance criteria, Architectural decisions |
-| Prompt shape | Goal, phase-grain order, new dependencies, existing code to reuse, **what not to change** |
-| Log shape | Table `date \| agent \| action \| note`. Notes for `Q<n>:` and `C<phase>.<n>:` |
-| `BLOCKED` format | `BLOCKED: <what stopped> — <what the user or another skill must do>` |
+## Acceptance criteria
 
-### Config skeleton keys
-
-`harness.config.json` is the source of truth. Include at least:
-
-- `seh.generatedFrom` — set by setup to `.seh/VERSION`.
-- One-line product (not the PRD body) and `agents.docs` (paths).
-- `agents.baseBranch` — no default baked into agents; setup suggests `dev`.
-- `agents.statuses` — default English strings for the five file-tracker statuses (`todo`, `in progress`, `implemented`, `in review`, `done`).
-- `agents.roles` — `architect`, `implementer`, `consultant`, `reviewer` with `model` as a map keyed by `hosts.json` `id` (phase 9; interview defaults from that row’s `modelSuggest`). Optional `rules`; reviewer may use `checklist`.
-- `agents.contentLanguage`.
-- `packsIgnored`.
-- `jiraOffer` (`declined` when they decline the first offer).
-- `agents.tracker` — present only when Jira is connected: project key, field mapping, `statuses` (`todo`, `inProgress`, `codeReview`, `inReview`, `done`, optional `blocker`), issue types for `feature` and `bug`, `fetchFields` as needed.
-- `agents.brainstorm.consult` — `any` \| `significant` (default if unset) \| `broad`. Members themselves are not this template’s job (phase 7 / `/<prefix>grillit`).
-
-Do not put credentials in the skeleton. Jira token lives in a local ignored file; never in git, never in chat.
-
-## Behaviour
-
-- Templates describe **reading** `harness.config.json` and **calling** `.seh/scripts/`.
-- Consumer `AGENTS.md` is merge input for first `/<prefix>setit-se`, not a raw overwrite of an existing project file (merge rules are phase 5 / PRD).
-- File-tracker paths (for the shapes): `docs/features/<basename>.feature.md`, `docs/prompt/<basename>.prompt.md`, `docs/feature-log/<basename>.log.md`. Basename example: `001-feature-example-name`.
-
-## Done when
-
-- `references/AGENTS.md` exists and contains no interpolated base branch or status literals presented as the only allowed values.
+- `references/AGENTS.md` has no interpolated base branch or status literal presented as the only allowed value.
 - Config skeleton lists the keys above.
-- Spec, prompt, and log shapes match the Artifact contract.
-- `BLOCKED` template matches PRD Stops, not a `rule=` line.
+- Spec, prompt and log shapes match the artifact contract.
+- `BLOCKED` template matches the PRD stop line, not a `rule=` line.
 
-## Handoff
+## Tests
 
-Phase 4 agents say “read harness.config.json” using these shapes. Phase 5 merges `references/AGENTS.md` into the consuming project and writes a live `harness.config.json` from the skeleton plus answers.
+- JSON parse of the skeleton; grep checks for forbidden literals.
+
+## Versioning
+
+Initial references. Not recorded in the legacy plan.
+
+## Depends on
+
+- 01 = `done`.

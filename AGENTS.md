@@ -4,7 +4,7 @@
 
 `seh` is an SE harness for coding assistants: skills, agents, rule packs, and a small CLI (`seh`). The npm package is `se-harness`. The binary is `seh`.
 
-Behaviour is defined in `docs/prd.md`. That file wins over old agent files and chat history. `docs/implementation-plan.md` is the build order, not a second spec.
+Behaviour is defined in `docs/prd.md`. That file wins over old agent files and chat history. Feature plans in `docs/<slug>/` (`Planning: complete`) cover new scope. `docs/implementation-plan/README.md` is the archived v1 build log: it is not a source of norms and does not outrank any other plan.
 
 CLI in v1: `seh install [--prefix P]` and `seh uninstall` only. Skill names in `skills/` have no prefix; install adds it (default `_`) and renders `{{prefix}}` in copied text. Never `npm install -g`. Never write to `~/.claude/` or another machine-wide path. Setup is `/<prefix>setit-se`. Git allowlist helpers and Jira Cloud REST (`jira`) are POSIX scripts under `scripts/` (installed as `.seh/scripts/`), not CLI subcommands.
 
@@ -14,7 +14,7 @@ Product sources in **this** repo are `agents/`, `packs/`, `skills/`, `brainstorm
 
 ## Deferred (not a backlog)
 
-PRD **Deferred** and the plan’s **Out of this v1 plan** are a **scope boundary**. They record decisions we considered and postponed. They are not tickets, not leftover audit work, and not items to implement “while here”. A ticket exists only when someone opens a **new** version scope. Read the list before new work: if it is Deferred, it is not v1.
+PRD **Deferred** is a **scope boundary**. They record decisions we considered and postponed. They are not tickets, not leftover audit work, and not items to implement “while here”. A ticket exists only when someone opens a **new** version scope. Read the list before new work: if it is Deferred, it is not v1.
 
 The plan’s “Repo state before phase 1” is a historical snapshot, not TODO.
 

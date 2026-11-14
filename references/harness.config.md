@@ -91,4 +91,4 @@ ADO skeleton (`harness.tracker.ado.json`):
 }
 ```
 
-Field map values for ADO: `referenceName`, `description`, `comment`, or `history` (see `docs/azure-dev-ops/spec.md`).
+Field map values for ADO: `referenceName`, `description`, `comment`, or `history` (see `docs/azure-dev-ops/README.md`).

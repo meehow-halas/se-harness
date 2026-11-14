@@ -1,32 +1,62 @@
-# Codex support — stage 2: Host row and CLI
+# Prompt — codex-support stage 02: Host row and CLI
 
-You were given only this file. Everything needed is here or in the files it names.
+Implement stage `02` of `docs/codex-support` only. Requires stage `01` = `done` in `docs/codex-support/README.md`. If not, stop and say so.
 
-## Task
+## Repo context
 
-Implement **docs/codex-support stage 2 only**. Do not implement other stages.
+- Repo: `se-harness`. CLI in v1: `seh install` and `seh uninstall` only. No `npm install -g`. Never write to `~/.codex/` or any machine-wide path.
+- Host-table model: new row fields and format adapters, no `if (id === "codex")` scattered through skills.
+- Host row target: `id: "codex"`, `skillsDir: ".agents/skills"`, `commandsDir: null`, `agentsDir: ".codex/agents"`, `rulesDir: ".codex/rules"`, `rulesExt: ".md"`, `brainstormDir: ".codex/brainstorm"`, `projectAgentsFile: null`, `hooksFile: ".codex/hooks.json"`, `hooksEvent: "SessionStart"`, `hooksShape: "claude-nested"`, `hooksHostArg: "codex"`, `sessionSpawn: "manual"`, `agentFormat: "codex-toml"`, `modelSuggest` per decision 5.
+- New optional row fields: `hooksMatcher` (`"startup|resume"` for Codex), `invokePrefix` (`"$"` for Codex, `"/"` for others), `skillHide` (`"openai-yaml"` for Codex).
+- Re-read the Codex hooks docs to confirm the `hooks.json` shape before coding; state anything unconfirmed.
+- Tests: `*.test.js` next to the unit; `seh install` must not copy them. Stub external boundaries only. Vary inputs.
+- Versioning: no version bump in this stage.
 
-## Read first (in order)
+## Stage spec
 
-1. `docs/codex-support/prompt.md` — read order and shared constraints (they apply here).
-2. `docs/prd.md` — wins over this plan.
-3. `docs/codex-support/plan.md` — findings, decisions 1–8, host row, status table.
-4. `docs/codex-support/02-host-row-cli.md` — this stage's scope and "Done when".
+### Goal
 
-## Preflight
+`seh install` / `seh uninstall` handle Codex; `check-update` speaks to it.
 
-Stage **1** Status must be `done` in `docs/codex-support/plan.md`; if not, stop and say so.
+### Scope in
 
-## Work
+- `references/hosts.json`: Codex row and new fields. Existing rows get `invokePrefix: "/"`; other new fields optional and absent for them.
+- `src/cli.js`: install writes `/<prefix>setit-se` into `.agents/skills/` and merges the `SessionStart` hook (with `hooksMatcher`) into `.codex/hooks.json` without touching other hooks or keys. Uninstall removes only the setup skill and the seh hook entry; prunes empty dirs seh created; leaves `.agents/skills` when other content exists. Second install does not duplicate the hook.
+- `scripts/check-update`: `--host codex` prints the plain-text notice (same as Claude).
+- Tests (`src/cli.test.js`, `scripts/check-update.test.js`): fourth host install/uninstall; hook merged beside a foreign hook; foreign hook and foreign skills survive uninstall; second install idempotent; Claude's hook output unchanged (no matcher regression); `--host codex` plain text.
 
-Model the Codex hook merge on the existing `claude-nested` merge in `src/cli.js`; add `hooksMatcher` as an optional row field so Claude output stays byte-identical. Re-read the Codex hooks docs to confirm the `hooks.json` shape before coding, and state anything unconfirmed.
+### Scope out
 
-No version bump, README, or setup-skill changes. Do not commit. Ask the user only for a choice the plan does not settle: one question at a time, recommended option first, labelled **(Recommended)**.
+- Generation of agents, rules, skills (stage 03). Wording (stage 04).
 
-## Verify
+### Decisions taken
 
-Run `node --test src/cli.test.js scripts/check-update.test.js`, then `npm test`. Report actual output, never claim passing without running.
+- Model the Codex hook merge on the existing `claude-nested` merge in `src/cli.js`; `hooksMatcher` optional so Claude output stays byte-identical.
 
-## Finish
+### Files likely touched
 
-Report against the stage "Done when" checklist, listing deviations and anything unconfirmed in the Codex docs. If all items hold, set stage 2 Status to `done` in `docs/codex-support/plan.md`.
+- `references/hosts.json`, `src/cli.js`, `src/cli.test.js`, `scripts/check-update`, `scripts/check-update.test.js`
+
+### Acceptance criteria
+
+- `npm test` passes with the new cases.
+- Install then uninstall in a temp repo leaves foreign files untouched.
+
+### Tests
+
+- `node --test src/cli.test.js scripts/check-update.test.js`, then `npm test`. Report actual output.
+
+### Depends on
+
+- 01 = `done`.
+
+## Constraints
+
+- Do not commit unless the user asks.
+- Do not touch `.env` files.
+- Ask one question at a time; recommended option first, labelled **(Recommended)**.
+
+## Definition of done
+
+- Acceptance criteria PASS with evidence; `npm test` output quoted.
+- Report: changed files, deviations, unconfirmed Codex doc facts.
