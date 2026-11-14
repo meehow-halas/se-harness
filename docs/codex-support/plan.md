@@ -41,9 +41,9 @@ New optional row fields: `hooksMatcher` (`"startup|resume"` for Codex), `invokeP
 
 | # | File | What | Status |
 |---|------|------|--------|
-| 1 | `01-prd.md` | PRD and plan updated first; Codex leaves Deferred | pending |
-| 2 | `02-host-row-cli.md` | Host row, new fields, CLI install/uninstall, `check-update --host codex` | pending |
-| 3 | `03-setup-adapters.md` | `/<prefix>setit-se`: TOML agents, `openai.yaml`, rules + `AGENTS.md` section, model keys | pending |
+| 1 | `01-prd.md` | PRD and plan updated first; Codex leaves Deferred | done |
+| 2 | `02-host-row-cli.md` | Host row, new fields, CLI install/uninstall, `check-update --host codex` | done |
+| 3 | `03-setup-adapters.md` | `/<prefix>setit-se`: TOML agents, `openai.yaml`, rules + `AGENTS.md` section, model keys | done |
 | 4 | `04-runtime-wording.md` | `invokePrefix` in skills, grillit host detection and per-persona model | pending |
 | 5 | `05-release.md` | Version, changelog, full test run, README last | pending |
 

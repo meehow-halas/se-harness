@@ -117,6 +117,15 @@ function loadHosts(packageRoot) {
       );
       process.exit(1);
     }
+    if (
+      host.hooksMatcher !== undefined &&
+      (typeof host.hooksMatcher !== "string" || host.hooksMatcher === "")
+    ) {
+      console.error(
+        "seh: references/hosts.json host hooksMatcher must be a non-empty string"
+      );
+      process.exit(1);
+    }
     if (host.hooksFile) {
       if (
         typeof host.hooksFile !== "string" ||
@@ -328,13 +337,13 @@ function claudeEntryHasCheckUpdate(entry) {
   );
 }
 
-function ensureClaudeHook(data, eventName, command) {
+function ensureClaudeHook(data, eventName, command, matcher) {
   const list = eventList(data, eventName);
   if (list.some(claudeEntryHasCheckUpdate)) {
     return;
   }
   list.push({
-    matcher: "startup",
+    matcher: matcher || "startup",
     hooks: [{ type: "command", command }],
   });
 }
@@ -455,7 +464,7 @@ function ensureHostHook(cwd, host, packageRoot) {
   if (host.hooksShape === "cursor-flat") {
     ensureCursorHook(data, host.hooksEvent, command);
   } else if (host.hooksShape === "claude-nested") {
-    ensureClaudeHook(data, host.hooksEvent, command);
+    ensureClaudeHook(data, host.hooksEvent, command, host.hooksMatcher);
   } else {
     console.error(
       `seh: references/hosts.json unknown hooksShape ${host.hooksShape}`

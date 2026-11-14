@@ -273,6 +273,7 @@ describe("seh install", () => {
         "claude-code": "start_session",
         cursor: "manual",
         opencode: "manual",
+        codex: "manual",
       });
     });
   });
@@ -712,6 +713,141 @@ describe("seh uninstall", () => {
         exists(path.join(project, ".opencode", "plugins", "seh-check-update.js")),
         false
       );
+    });
+  });
+
+  describe("codex host", () => {
+    function setup(root) {
+      const pkg = path.join(root, "pkg");
+      const project = path.join(root, "project");
+      fs.mkdirSync(pkg);
+      fs.mkdirSync(project);
+      makePackageRoot(pkg);
+      return { pkg, project };
+    }
+    const hooksPath = (project) => path.join(project, ".codex", "hooks.json");
+
+    test("install writes the setup skill under .agents/skills with the stored prefix, no commands dir", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        const result = runCli(["install", "--prefix", "zx_"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        const skill = path.join(project, ".agents", "skills", "zx_setit-se", "SKILL.md");
+        assert.equal(exists(skill), true);
+        assert.equal(exists(path.join(project, ".agents", "skills", "_setit-se")), false);
+        assert.equal(exists(path.join(project, ".codex", "commands")), false);
+        assert.equal(exists(path.join(project, ".codex", "skills")), false);
+      });
+    });
+
+    test("hook is SessionStart with matcher startup|resume; Claude keeps matcher startup", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        const codex = JSON.parse(read(hooksPath(project)));
+        assert.deepEqual(codex, {
+          hooks: {
+            SessionStart: [
+              {
+                matcher: "startup|resume",
+                hooks: [{ type: "command", command: ".seh/scripts/check-update --host codex" }],
+              },
+            ],
+          },
+        });
+        const claude = JSON.parse(read(path.join(project, ".claude", "settings.json")));
+        assert.equal(claude.hooks.SessionStart[0].matcher, "startup");
+      });
+    });
+
+    test("hook matcher comes from the row, not a hardcoded value", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        const hostsFile = path.join(pkg, "references", "hosts.json");
+        const table = JSON.parse(read(hostsFile));
+        for (const h of table.hosts) if (h.id === "codex") h.hooksMatcher = "clear|fork";
+        fs.writeFileSync(hostsFile, JSON.stringify(table));
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        assert.equal(JSON.parse(read(hooksPath(project))).hooks.SessionStart[0].matcher, "clear|fork");
+      });
+    });
+
+    test("merges beside a foreign hook and keeps unrelated keys; second install is idempotent", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        fs.mkdirSync(path.join(project, ".codex"));
+        fs.writeFileSync(
+          hooksPath(project),
+          JSON.stringify({
+            description: "mine",
+            hooks: {
+              SessionStart: [
+                { matcher: "clear", hooks: [{ type: "command", command: "echo foreign" }] },
+              ],
+              Stop: [{ hooks: [{ type: "command", command: "echo stop" }] }],
+            },
+          })
+        );
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        const data = JSON.parse(read(hooksPath(project)));
+        assert.equal(data.description, "mine");
+        assert.equal(data.hooks.Stop[0].hooks[0].command, "echo stop");
+        assert.equal(data.hooks.SessionStart.length, 2);
+        assert.equal(data.hooks.SessionStart[0].hooks[0].command, "echo foreign");
+        assert.equal(data.hooks.SessionStart[1].hooks[0].command, ".seh/scripts/check-update --host codex");
+      });
+    });
+
+    test("uninstall removes only seh entries: foreign hook and foreign skills survive", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        fs.mkdirSync(path.join(project, ".codex"));
+        fs.writeFileSync(
+          hooksPath(project),
+          JSON.stringify({
+            hooks: {
+              SessionStart: [
+                { matcher: "clear", hooks: [{ type: "command", command: "echo foreign" }] },
+              ],
+            },
+          })
+        );
+        const foreign = path.join(project, ".agents", "skills", "other-tool", "SKILL.md");
+        fs.mkdirSync(path.dirname(foreign), { recursive: true });
+        fs.writeFileSync(foreign, "keep me\n");
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        const result = runCli(["uninstall"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(read(foreign), "keep me\n");
+        assert.equal(exists(path.join(project, ".agents", "skills", "_setit-se")), false);
+        const data = JSON.parse(read(hooksPath(project)));
+        assert.equal(data.hooks.SessionStart.length, 1);
+        assert.equal(data.hooks.SessionStart[0].hooks[0].command, "echo foreign");
+      });
+    });
+
+    test("uninstall in a clean project leaves no .agents or .codex dirs", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        assert.equal(runCli(["install"], { cwd: project, packageRoot: pkg }).status, 0);
+        assert.equal(runCli(["uninstall"], { cwd: project, packageRoot: pkg }).status, 0);
+        assert.equal(exists(path.join(project, ".agents")), false);
+        assert.equal(exists(path.join(project, ".codex")), false);
+      });
+    });
+
+    test("rejects an empty hooksMatcher in the host table", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        const hostsFile = path.join(pkg, "references", "hosts.json");
+        const table = JSON.parse(read(hostsFile));
+        for (const h of table.hosts) if (h.id === "codex") h.hooksMatcher = "";
+        fs.writeFileSync(hostsFile, JSON.stringify(table));
+        const result = runCli(["install"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /hooksMatcher/);
+      });
     });
   });
 

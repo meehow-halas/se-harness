@@ -66,6 +66,20 @@ describe("check-update", () => {
     });
   });
 
+  test("prints a plain-text notice when --host is codex", () => {
+    withTempDir((cwd) => {
+      writeFile(cwd, ".seh/VERSION", "1.0.0\n");
+      const stub = writeStub(cwd, { tags: ["v1.2.0"] });
+      const result = runCheck(cwd, ["--host", "codex"], {
+        SEH_GIT_LS_REMOTE: stub,
+        SEH_CHECK_NOW: "1000",
+      });
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, NOTICE);
+      assert.equal(result.stdout.trimStart().startsWith("{"), false);
+    });
+  });
+
   test("prints Cursor JSON when --host is cursor", () => {
     withTempDir((cwd) => {
       writeFile(cwd, ".seh/VERSION", "1.0.0\n");
