@@ -64,7 +64,7 @@ Task key = basename. Branch name = basename, or `<basename>-N` when the old bran
 
 `CHANGELOG.md` and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
 
-Several keys in one work-skill call: on hosts whose `sessionSpawn` is `start_session`, one session per key (`.seh/references/session-fanout.md`, planner `.seh/scripts/fanout-plan`). On `manual` hosts, one command per key is printed. One key runs in the current session.
+Several keys in one work-skill call: on hosts whose `sessionSpawn` is `start_session`, one session per key (`.seh/references/session-fanout.md`, planner `.seh/scripts/fanout-plan`). On `manual` hosts with git enabled, one command per key is printed. Git disabled (any host): keys run one after another in the current session in dependency order (`fanout-plan`, `mode: sequential`). One key runs in the current session.
 
 ## Git
 

@@ -7,7 +7,7 @@ Planner: `.seh/scripts/fanout-plan`. Host adapter: `sessionSpawn` in `.seh/refer
 ## 1. Guard and resolve (parent, once)
 
 - Run the skill's own guard first (unchanged).
-- Resolve each key (spec, status, `depends`) as the skill does for one key. Keys whose spec is missing are `BLOCKED` for that key only, except for `runit`: a missing spec does not block the key, and its child starts at Architect (see Rules).
+- Resolve each key (spec, status, `depends`) as the skill does for one key. Keys whose spec is missing are `BLOCKED` for that key only, except for `planit` (writing the spec is its job) and `runit`: a missing spec does not block the key, and its child starts at Architect (see Rules); for `runit` after the `pr-state` check in `runit` *Resolve the task* (an open or merged PR is reported, not started).
 
 ## 2. Plan
 
@@ -15,7 +15,7 @@ Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in
 
 `runit` with `mode: parallel` (git enabled) does no dependency ordering: pass no `--depends`. A key whose spec already has a `depends` on a sibling key that is not `done` is not started; report it `BLOCKED: depends on <DEP> — rerun /{{prefix}}runit <KEY> after <DEP> is merged`. Full automation with dependencies is `/{{prefix}}shipit` with specs written beforehand.
 
-`runit` with `mode: sequential` (git disabled) follows dependencies, never the order the keys were given: pass `--depends` as above and run the one `ready` key in this session. After it, call the planner again: a key at `done` goes to `--done`; a key that stopped on `BLOCKED:` or `Q<n>` is dropped from `--keys` together with its own `--depends` entries (its dependents then report `blocked`). When Architect writes a `depends` on a sibling key that is not `done` yet, that stop is not dropped: add `--depends KEY:DEP` and the key goes to `waiting` and runs again later in this session from the written spec.
+`runit` with `mode: sequential` (git disabled) follows dependencies, never the order the keys were given: pass `--depends` as above and run the keys as the `sequential` bullet below says. When the *Dependency gate* in `runit` stops a key on a sibling key that is not `done` yet, that stop is not dropped: add `--depends KEY:DEP` and the key goes to `waiting` and runs again later in this session from the written spec.
 
 ```text
 .seh/scripts/fanout-plan --skill <name> --keys <K1,K2,...> [--variant review|update] [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
@@ -23,7 +23,7 @@ Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in
 
 Output: `OK`, then `mode`, `max`, `ready` (comma list, may be empty), and optional `waiting`, `blocked`, `queued`, `stuck` lines. `BLOCKED: ...` means fix the arguments and retry.
 
-- `mode` is `parallel`, or `sequential` (with `max: 1`) when git is disabled (`agents.baseBranch` empty). On `sequential`, do not start sessions: run the keys one after another in this session.
+- `mode` is `parallel`, or `sequential` (with `max: 1`) when git is disabled (`agents.baseBranch` empty). On `sequential`, do not start sessions: run the keys one after another in this session, in the planner's order, never in the order the keys were given. Run the one `ready` key, then call the planner again: a key that finished goes to `--done`; a key that stopped on `BLOCKED:` is dropped from `--keys` together with its own `--depends` entries (its dependents then report `blocked`). A `Q<n>` is asked in this session: wait for the user's answer and continue the same key; it is not dropped. Git disabled means `sequential` on every host, `manual` included.
 - Default `--max 4`. Above that, ask the user first.
 
 ## 3. Start sessions (desktop app host)
@@ -45,7 +45,7 @@ Only when `sessionSpawn` is `start_session`. For each key in `ready`, one `mcp__
 
 Do not start sessions for keys in `waiting`, `blocked`, or `queued`.
 
-For `manual` (other hosts, Codex included: it has no host API to start a session): print one block per ready key with the exact command to run in a new session, and stop. Do not guess a host API.
+For `manual` (other hosts, Codex included: it has no host API to start a session): print one block per ready key with the exact command to run in a new session, and stop. Each command carries the user's mode words from this request (for example `/{{prefix}}runit MT-01 samodzielnie`), so the new session runs in the same mode. Do not guess a host API.
 
 ## 4. Per-skill placement
 
@@ -61,19 +61,19 @@ Do not use app-created worktrees (`use_worktree: true`) for seh tasks: they woul
 
 ## 5. Between waves
 
-When woken, read `list_sessions` / `get_session` for each started key. A key that finished is added to `--done`, a key still running to `--running`. `shipit`: a key finishes for dependents only when `.seh/scripts/pr-state <KEY>` prints `state: merged`; a child that ended without a merged PR is dropped from `--keys` (its dependents then report `blocked`). Call the planner again with those lists and start the next `ready` keys.
+When woken, read `list_sessions` / `get_session` for each started key. A key that finished is added to `--done`, a key still running to `--running`. A session that waits on the user (open `Q<n>`, interactive acceptance) counts as running. A session that ended on a final `BLOCKED:` did not finish: drop the key from `--keys` with its own `--depends` entries (its dependents then report `blocked`). `shipit`: a key finishes for dependents only when `.seh/scripts/pr-state <KEY>` prints `state: merged`; a child that ended on a final `BLOCKED:` without a merged PR is dropped from `--keys` (its dependents then report `blocked`); a child waiting on the user is still running. Call the planner again with those lists and start the next `ready` keys.
 
-Stop the whole fan-out and report when `ready` is empty and nothing is running.
+Stop the whole fan-out and report when `ready` is empty and no session is running or waiting on the user. When only waiting sessions remain, end this turn with the interim table; a later wake continues.
 
 ## 6. Report
 
-One table: key, session link (`[title](#local_<id>)`), state (done, `BLOCKED: ...`, `Q<n>`, waiting, queued). Do not relay `Q<n>` answers: the user answers in that session.
+One table: key, session link (`[title](#local_<id>)`), state (done, `BLOCKED: ...`, `Q<n>`, waiting, queued). Do not relay `Q<n>` answers: the user answers in that session. In `autonomous` mode the report asks nothing: no follow-up question, no choice buttons.
 
 ## Rules
 
 - Children never spawn children. A session whose prompt has the line `Fan-out child: yes` runs exactly its one key in place: it never runs this procedure and never calls `start_session`. Subagents (Architect, Implementer, Consultant, Reviewer, brainstorm personae launched as subagents) are not sessions and are allowed inside a child, as in a normal single-key run.
 - The parent does not do the children's work and does not merge PRs.
-- Run only the skill the user named. The parent never starts another skill's session, for example `planit` for a missing spec. For `planit`, `doit`, `checkit` and `shipit` a missing spec or prompt is `BLOCKED` for that key, with the one-line fix (`run /{{prefix}}planit <KEY> first`). `runit` is the exception: the child starts at the first missing stage, so a key with no spec runs Architect inside the child (the parent still never starts `planit`).
+- Run only the skill the user named. The parent never starts another skill's session, for example `planit` for a missing spec. For `doit`, `checkit` and `shipit` a missing spec or prompt is `BLOCKED` for that key, with the one-line fix (`run /{{prefix}}planit <KEY> first`). `planit` writes the spec in its child. `runit` is the other exception: the child starts at the first missing stage, so a key with no spec runs Architect inside the child (the parent still never starts `planit`).
 - `runit` with `mode: parallel`, `depends` between sibling keys found by a child's Architect: the child stops after the Architect stage with `BLOCKED: depends on <KEY> — rerun /{{prefix}}runit <this key> after <KEY> is merged` (spec stays `todo`). The parent lists it in the report table; there is no waiting, no side channel, and no new wave (same for a `depends` already in the spec, see section 2). The rerun reuses the written spec.
 - A child's `BLOCKED:` or `Q<n>` does not stop siblings.
 - Children share no notes folder and no side channel. The parent does not create one. Coordination goes through the user and the repo's own tracker files.

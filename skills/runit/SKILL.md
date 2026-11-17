@@ -63,14 +63,14 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). A key without a spec is not blocked: its child starts at the first missing stage, Architect, without user intervention in `autonomous` mode. No dependency ordering: a key whose spec `depends` on a sibling key is not started, and Architect's `depends` on a sibling key stops that child after the Architect stage; both are `BLOCKED` and the user reruns the key after the dependency is merged (`session-fanout.md`, section 2 and Rules). Full automation with dependencies: `/{{prefix}}shipit` with specs written beforehand; a key that exists nowhere follows *Task source* in the Architect file. Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key and stop. Two or more keys with git disabled: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `session-fanout.md` section 2), never in the order given (see stage 2). One key: continue below.
+This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). A key without a spec is not blocked: its child starts at the first missing stage, Architect, without user intervention in `autonomous` mode. No dependency ordering: a key whose spec `depends` on a sibling key is not started, and Architect's `depends` on a sibling key stops that child at the *Dependency gate* after the Architect stage; both are `BLOCKED` and the user reruns the key after the dependency is merged (`session-fanout.md`, section 2 and Rules). Full automation with dependencies: `/{{prefix}}shipit` with specs written beforehand; a key that exists nowhere follows *Task source* in the Architect file. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `session-fanout.md` section 2), never in the order given (see stage 2). Two or more keys, git enabled, and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key, with the user's mode words (for example `samodzielnie`), and stop. One key: continue below.
 
 ## Resolve the task
 
 Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present (artifact bodies on the issue / work item). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: bodies are repo files, status is spec frontmatter (`agents.statuses`), and nothing writes the tracker.
 
 - New work (a sentence, no key) → no spec yet.
-- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → *Several keys*. A key with no spec yet → stage 1 (Architect).
+- Named basename or issue key → load spec, prompt, log, status from that tracker (files tracker or read-only: the task worktree copy when a seh worktree exists for the key, else the launch checkout). Two or more keys → *Several keys*. A key with no spec yet (neither in the task worktree nor in the launch checkout): with git enabled and a files or read-only tracker, run `.seh/scripts/pr-state <KEY>` first, because after `return-to-base` the spec may exist only on the task branch. `state: open` → the already-done stop below; `state: merged` → `BLOCKED: task is already merged — <url>; start new work with a new request`; `state: none` → stage 1 (Architect).
 - Status strings: `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
 
 If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
@@ -93,7 +93,15 @@ If Architect asks `/{{prefix}}grillit`: stop and ask that skill; do not run the 
 
 If Architect stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
 
-On success, status stays `todo`. Continue to stage 2 without pausing.
+On success, status stays `todo`. **Dependency gate** (only when Architect ran in this run): if the spec lists a `depends` entry that is not at the configured `done` status (read as the Implementer reads it), stop before stage 2, with no `start-task`:
+
+```text
+BLOCKED: depends on <DEP> — rerun /{{prefix}}runit <KEY> after <DEP> is merged
+```
+
+Git disabled: `after <DEP> is done` (there is no merge).
+
+The spec stays `todo` in the launch checkout; the rerun starts at stage 2 with a worktree cut from the current base. Otherwise continue to stage 2 without pausing.
 
 ### 2. Spec + prompt, no implementation → Implementer
 
@@ -115,7 +123,7 @@ Review is due when status is the configured `implemented` or `in review` string.
 
 Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round: `Variant: review`.
 
-Pass the same `Mode:`, the task key, and `Worktree: <abs>`. Add `Auto-merge: yes` only under the rule in *Auto-merge*; otherwise do not merge.
+Pass the same `Mode:`, the task key, and `Worktree: <abs>` (when stage 2 did not run in this session, run `.seh/scripts/start-task <task>` first: it is idempotent and prints the existing `worktree:`; git disabled: no `Worktree:`). Add `Auto-merge: yes` only under the rule in *Auto-merge*; otherwise do not merge.
 
 If Reviewer stops on `BLOCKED:` or `Q<n>` (including interactive acceptance), stop the pipeline and report.
 

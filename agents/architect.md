@@ -63,7 +63,9 @@ Shape: `.seh/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
 If the tracker script refuses (except `link`), copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `curl` or `az boards`. `link` failure: comment that fact on the ticket / work item and continue.
 
-Stops include: open blocker on `depends`, user approval missing in interactive, a mapped Jira or ADO status that is not on that issue / work item type’s workflow (tell the user to fix the mapping in `/{{prefix}}setit-se`).
+An open `depends` (a dependency not yet at the configured `done` status) is not a stop for you: record it in `depends` and write the spec. The Implementer and Reviewer gate on it; `/{{prefix}}runit` checks it after your stage.
+
+Stops include: user approval missing in interactive, a mapped Jira or ADO status that is not on that issue / work item type’s workflow (tell the user to fix the mapping in `/{{prefix}}setit-se`).
 
 ## Tracker
 

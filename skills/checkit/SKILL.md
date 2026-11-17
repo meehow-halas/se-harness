@@ -66,7 +66,7 @@ Parse the user message. Do not mix variants.
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit` and the same variant for every child, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys and `sessionSpawn` is `manual`: print the commands per key and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit` and the same variant for every child, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `.seh/references/session-fanout.md` section 2), never in the order given. Two or more keys, git enabled, and `sessionSpawn` is `manual`: print the commands per key, with the user's mode words (for example `samodzielnie`), and stop. One key: continue below.
 
 ## Resolve the tasks
 
@@ -92,7 +92,7 @@ This skill is the parent. Follow the live Reviewer file for this host (`<agentsD
 
 For each resolved task:
 
-**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout. Variant `update` needs git: stop with `BLOCKED: update needs git`.
+**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout, in dependency order (*Several keys*). Variant `update` needs git: stop with `BLOCKED: update needs git`.
 
 1. Run `.seh/scripts/start-task <task>` from the launch checkout if a worktree is not already printed for it. Copy `worktree:`. Do not compose `git`.
 2. Launch Reviewer with at least:

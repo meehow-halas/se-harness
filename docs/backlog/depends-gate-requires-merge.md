@@ -15,6 +15,7 @@ Bramka `depends` w Architect i Reviewer sprawdza status `done`, ustawiany przy o
 ## Proponowane rozwiązanie
 - Przy włączonym git bramka sprawdza `.seh/scripts/pr-state <DEP>` = `merged` zamiast `done`.
 - Git wyłączony: bez zmian (`done` = kod już w checkoutcie).
+- Ten sam problem dla spec, która już ma otwarte `depends` (bez Architekta w tym przebiegu): `runit` etap 2 robi `start-task` przed bramką Implementera, więc spec trafia do worktree z base sprzed merge zależności, a ponowne uruchomienie stoi na `BLOCKED`, dopóki user nie usunie worktree. Bramka przed `start-task` musi czytać status zależności niezależnie od lokalnego base (np. `pr-state`), inaczej da fałszywe `BLOCKED` w `shipit` (lokalny base parenta jest nieaktualny).
 
 ## Powiązane pliki
 - `agents/architect.md:168` — bramka `depends` przed implementacją
@@ -23,3 +24,4 @@ Bramka `depends` w Architect i Reviewer sprawdza status `done`, ustawiany przy o
 
 ## Historia
 - 2026-11-17 — utworzenie
+- 2026-11-17 — dopisany przypadek spec z otwartym `depends` przed `start-task` (bramka po Architekcie w `runit` już jest)

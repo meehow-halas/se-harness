@@ -77,10 +77,10 @@ No tasks found: `BLOCKED: no todo tasks with spec and prompt — run /{{prefix}}
 
 Per key, from the active tracker, as `/{{prefix}}runit` resolves one key (spec, prompt, status, `depends`). Check PR state with `.seh/scripts/pr-state <KEY>` (`state: merged|open|none`, `merged_at:`, `merge_commit:`, `url:`).
 
-- No spec or prompt: `BLOCKED: run /{{prefix}}planit <KEY> first`. That key is not started; dependents are `blocked`.
-- Status `done` and `pr-state` is `merged`: pass in `--done`, no session. Counts as "skipped (already merged)".
+- `pr-state` first. `merged`: pass in `--done`, no session, no spec check (after `return-to-base` the spec may exist only on the base branch, not in the launch checkout). Counts as "skipped (already merged)".
+- No spec or prompt (worktree copy when a seh worktree exists for the key, else the launch checkout): `BLOCKED: run /{{prefix}}planit <KEY> first`. That key is not started; dependents are `blocked`.
 - Status `done` and `pr-state` is `open`: `BLOCKED: <KEY> is done but its PR is not merged — merge it, then rerun /{{prefix}}shipit`. Not started; dependents wait.
-- Status `in progress` / `implemented` / `in review`: already running somewhere. Pass in `--running` (see *Manual hosts*; on the desktop host check `list_sessions` first).
+- Status `in progress` / `implemented` / `in review`: started before. On the desktop host check `list_sessions`: a live session for the key → `--running`; none → the run was interrupted: plan the key as any other (not in `--running`); its new child resumes at the first missing stage and reuses the spec and worktree. On `manual` hosts → `--running` (see *Manual hosts*).
 - `depends` between keys in this invocation: pass `--depends KEY:DEP`. The same key list is used for `--keys`.
 - `depends` on a key **outside** the invocation: satisfied when `pr-state <DEP>` is `merged` (pass it in `--done`; it is not in `--keys`). For a read-only tracker key with no local spec: satisfied when its tracker status equals `agents.tracker.statuses.blocker`. Otherwise that key is `blocked`.
 
@@ -124,11 +124,12 @@ When woken, read `list_sessions` / `get_session` for every started key.
 
 1. A session that ended: run `.seh/scripts/pr-state <KEY>`.
    - `state: merged` → the key is finished: add it to `--done`. Record `merged_at:` and `merge_commit:`.
-   - Anything else (no PR, open PR, `BLOCKED:`, `Q<n>`, the session still waiting on the user) → the key did **not** finish. Remove it from `--keys` (and from `--running` unless its session is still alive) on the next planner call, so its dependents report `blocked`. Also drop that key's own `--depends KEY:DEP` entries (the planner refuses a `--depends` entry whose key is not in `--keys`); entries that name it as the dependency stay. Keep its `BLOCKED:` line or open `Q<n>` and the session link for the report. A `Q<n>` is answered by the user in that session; do not relay it.
+   - Not merged and the session waits on the user (open `Q<n>`, or interactive acceptance) → still running: keep it in `--keys` and `--running`; its dependents stay `waiting`. The user answers in that session; do not relay it.
+   - Anything else (no PR, open PR, a final `BLOCKED:`) → the key did **not** finish. Remove it from `--keys` (and from `--running` unless its session is still alive) on the next planner call, so its dependents report `blocked`. Also drop that key's own `--depends KEY:DEP` entries (the planner refuses a `--depends` entry whose key is not in `--keys`); entries that name it as the dependency stay. Keep its `BLOCKED:` line and the session link for the report.
 2. A session still running → `--running`.
 3. Call `fanout-plan` again with the updated lists and start the next `ready` keys.
 
-Stop when `ready` is empty and nothing is running (including after blocks). Then write the run report and the end report.
+Stop when `ready` is empty and no session is running or waiting on the user (including after blocks). Then write the run report and the end report. When only sessions waiting on the user remain, end this turn with the interim end-report table (no run report); a later wake continues.
 
 A child's `BLOCKED:` or `Q<n>` does not stop siblings.
 
@@ -148,7 +149,7 @@ Tell the user to paste each block in a new session. The parent keeps no state be
 
 ## Run report
 
-Written by the parent when the fan-out ends: `ready` is empty and nothing is running, including a stop on blocks, and on the final `manual` rerun. Not written on an intermediate wave.
+Written by the parent when the fan-out ends: `ready` is empty and no session is running or waiting on the user, including a stop on blocks, and on the final `manual` rerun. Not written on an intermediate wave.
 
 - Path: `docs/run-reports/<YYYY-MM-DD-HHMM>-shipit.md` in the launch checkout (local time of run start; add `-2`, `-3` … if the name exists). Create the directory if needed.
 - Language: `agents.contentLanguage`.
@@ -158,7 +159,7 @@ Written by the parent when the fan-out ends: `ready` is empty and nothing is run
 Sections, in this order:
 
 1. **Header**: run start / end, total duration, mode, host, `agents.baseBranch`, base commit before (`git rev-parse origin/<base>` at start) and after (at end), key selection (named keys or "all `todo`"), `--max`.
-2. **Summary counts**: merged / blocked / question pending / not started (dependency blocked) / skipped (already merged before the run).
+2. **Summary counts**: merged / blocked / not started (dependency blocked) / skipped (already merged before the run).
 3. **Per-task table**: key, title (from spec), wave number, session link, start, end, duration, status, PR URL, merge commit, merged at, result (`merged` / `BLOCKED: …` / `Q<n>` / not started).
 4. **Done**: per merged task, what was delivered (one or two lines from the spec goal / the CHANGELOG line the child added).
 5. **Agent runs**: one line per task, counts only, read from the task log, plus the log path (do not copy log rows): `Implementer phases N · Consultant passes N (C items N, debt accepted N) · Reviewer rounds N (❌ N, ⚠️ N)`. Full-write Jira/ADO: Consultant `n/a` (not logged on the work item). Brainstorm personae are not reported (they do not run inside `/{{prefix}}shipit`).

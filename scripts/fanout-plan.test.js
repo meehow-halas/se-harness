@@ -183,6 +183,20 @@ describe("fanout-plan", () => {
     });
   });
 
+  for (const skill of ["doit", "checkit"]) {
+    test(`${skill} with git disabled also runs the dependency first`, () => {
+      withTempDir((dir) => {
+        writeHarnessConfig(dir, "");
+        const out = fields(
+          runScript("fanout-plan", ["--skill", skill, "--keys", "DQ-9,DQ-4", "--depends", "DQ-9:DQ-4"], { cwd: dir })
+        );
+        assert.equal(out.mode, "sequential");
+        assert.deepEqual(out.ready, ["DQ-4"]);
+        assert.deepEqual(out.lines, ["waiting: DQ-9 after DQ-4"]);
+      });
+    });
+  }
+
   test("unknown skill hint lists shipit", () => {
     const stdout = blockedResult(["--skill", "ship", "--keys", "NS-1"]);
     assert.match(stdout, /use planit, doit, checkit, runit or shipit/);
