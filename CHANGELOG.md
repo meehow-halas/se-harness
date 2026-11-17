@@ -8,6 +8,10 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 - Skill names swapped. `/<prefix>shipit` is now the parallel, dependency-ordered, auto-merge skill for many specced tasks (was `/<prefix>runit`); `/<prefix>runit` is now the single-task pipeline Architect → Implementer → Reviewer (was `/<prefix>shipit`). Children started by `shipit` run `/<prefix>runit <KEY>`; the run report is `docs/run-reports/<YYYY-MM-DD-HHMM>-shipit.md`; `fanout-plan` accepts both names as before. Migration: replace old `/shipit` with `/runit`, and old `/runit` with `/shipit`. `/<prefix>setit-se` regenerates both skills on the version change.
 
+### Fixed
+
+- `.seh/scripts/ado` no longer stops with `BLOCKED: this directory is not a git repository` in a project without git (git disabled). It reads `harness.config.json` and `harness.credentials.local.json` from the project root, and from the main checkout only when run inside a git worktree, the same as `jira`.
+
 ## [1.3.0] - 2026-11-17
 
 ### Added
