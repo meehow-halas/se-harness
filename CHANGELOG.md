@@ -7,9 +7,11 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 ### Changed
 
 - Skill names swapped. `/<prefix>shipit` is now the parallel, dependency-ordered, auto-merge skill for many specced tasks (was `/<prefix>runit`); `/<prefix>runit` is now the single-task pipeline Architect → Implementer → Reviewer (was `/<prefix>shipit`). Children started by `shipit` run `/<prefix>runit <KEY>`; the run report is `docs/run-reports/<YYYY-MM-DD-HHMM>-shipit.md`; `fanout-plan` accepts both names as before. Migration: replace old `/shipit` with `/runit`, and old `/runit` with `/shipit`. `/<prefix>setit-se` regenerates both skills on the version change.
+- `/<prefix>runit` with several keys and no spec: not `BLOCKED`; each child starts at Architect. With git disabled, several `runit` keys run in this session in dependency order from `fanout-plan` (`mode: sequential`), not in the order given; a sibling `depends` found by Architect sends the key back to `waiting`. No dependency ordering in a parallel `runit` fan-out (git enabled): a sibling `depends` already in the spec means the key is not started, and one found by Architect stops that child after the Architect stage; both are `BLOCKED` (rerun after the dependency is merged). Dependency-ordered automation stays `/<prefix>shipit` with specs written beforehand. Removed contradicting texts (`runit is one task` block, PRD stops list). `shipit` keeps its missing-spec `BLOCKED`.
 
 ### Fixed
 
+- Reviewer auto-merge (`Auto-merge: yes`): after resolving a conflict with the base branch, the project's test/lint/typecheck runs before `push-task`; failing checks are `BLOCKED` with no merge. Up to 3 conflict-resolution attempts (was 1), since the base moves while sibling tasks merge.
 - `.seh/scripts/ado` no longer stops with `BLOCKED: this directory is not a git repository` in a project without git (git disabled). It reads `harness.config.json` and `harness.credentials.local.json` from the project root, and from the main checkout only when run inside a git worktree, the same as `jira`.
 
 ## [1.3.0] - 2026-11-17

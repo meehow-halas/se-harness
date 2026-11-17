@@ -5,11 +5,7 @@ description: Full path Architect → Implementer (Consultant inside) → Reviewe
 
 # /{{prefix}}runit
 
-Full path for **one task**. Single-stage skills do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR, except in a fan-out child launched with `Auto-merge: yes`. There is no user-facing Consultant skill (Consultant stays inside Implementer). A list of keys:
-
-```text
-BLOCKED: /{{prefix}}runit is one task — spec with /{{prefix}}planit, then /{{prefix}}doit with the list
-```
+Full path for **one task**. Single-stage skills (`/{{prefix}}planit`, `/{{prefix}}doit`, `/{{prefix}}checkit`) do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR, except in a fan-out child launched with `Auto-merge: yes`. There is no user-facing Consultant skill (Consultant stays inside Implementer). Several keys: see *Several keys*.
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands.
 
@@ -67,14 +63,14 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key and stop. One key: continue below.
+This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). A key without a spec is not blocked: its child starts at the first missing stage, Architect, without user intervention in `autonomous` mode. No dependency ordering: a key whose spec `depends` on a sibling key is not started, and Architect's `depends` on a sibling key stops that child after the Architect stage; both are `BLOCKED` and the user reruns the key after the dependency is merged (`session-fanout.md`, section 2 and Rules). Full automation with dependencies: `/{{prefix}}shipit` with specs written beforehand; a key that exists nowhere follows *Task source* in the Architect file. Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key and stop. Two or more keys with git disabled: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `session-fanout.md` section 2), never in the order given (see stage 2). One key: continue below.
 
 ## Resolve the task
 
 Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present (artifact bodies on the issue / work item). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: bodies are repo files, status is spec frontmatter (`agents.statuses`), and nothing writes the tracker.
 
 - New work (a sentence, no key) → no spec yet.
-- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /{{prefix}}runit is one task` above).
+- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → *Several keys*. A key with no spec yet → stage 1 (Architect).
 - Status strings: `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
 
 If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
@@ -105,7 +101,7 @@ No implementation means status is still the configured `todo` string (Architect 
 
 Follow the live Implementer file for this host (`<agentsDir>/implementer.md`) inline in this session, not as a subagent. Launch Consultant from this session after each phase as a subagent (the host’s subagent launch); do not launch Consultant as a skill.
 
-**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout. Skip the next step's `start-task` and omit `Worktree:` below.
+**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout, in dependency order (*Several keys*). Skip the next step's `start-task` and omit `Worktree:` below.
 
 Run `.seh/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent). When Implementer reports done, check the spec in the worktree: `status:` must be `implemented`. Otherwise stop with `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
 

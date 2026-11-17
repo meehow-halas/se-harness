@@ -159,6 +159,8 @@ Read `harness.config.json`, project `AGENTS.md` / `CLAUDE.md`, and `agents.docs`
 
 **New task:** propose title and type (`feature` or `bug`). When Writing the specification allows it, choose the key (basename, or create the Jira issue / ADO work item with `create` — never `create` when `readOnly` is `true`) and write spec + prompt + first log row.
 
+**Key given by the launch, no spec** (for example `runit` fan-out child): if the key has no spec, prompt or log, take the content from the launch request and the tracker item (title, description) when one exists; the launch carries no other text. Files tracker: new task with the key as basename. Jira / ADO with full write: if the issue / work item exists, treat it as an existing task; if it does not exist, `BLOCKED: <KEY> not found in the tracker — create it or give a new request without a key` (never invent a tracker key). Read-only tracker: as files tracker, key as `id`.
+
 ### 3. Questions and split
 
 Settle each point the way Questions says. Record choices as `Q<n>: <decision>`.

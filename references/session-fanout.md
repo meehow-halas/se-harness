@@ -7,11 +7,15 @@ Planner: `.seh/scripts/fanout-plan`. Host adapter: `sessionSpawn` in `.seh/refer
 ## 1. Guard and resolve (parent, once)
 
 - Run the skill's own guard first (unchanged).
-- Resolve each key (spec, status, `depends`) as the skill does for one key. Keys whose spec is missing are `BLOCKED` for that key only.
+- Resolve each key (spec, status, `depends`) as the skill does for one key. Keys whose spec is missing are `BLOCKED` for that key only, except for `runit`: a missing spec does not block the key, and its child starts at Architect (see Rules).
 
 ## 2. Plan
 
 Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in this invocation. A dependency on a key outside the invocation must already be `done` (pass it in `--done`), or that key stays blocked.
+
+`runit` with `mode: parallel` (git enabled) does no dependency ordering: pass no `--depends`. A key whose spec already has a `depends` on a sibling key that is not `done` is not started; report it `BLOCKED: depends on <DEP> — rerun /{{prefix}}runit <KEY> after <DEP> is merged`. Full automation with dependencies is `/{{prefix}}shipit` with specs written beforehand.
+
+`runit` with `mode: sequential` (git disabled) follows dependencies, never the order the keys were given: pass `--depends` as above and run the one `ready` key in this session. After it, call the planner again: a key at `done` goes to `--done`; a key that stopped on `BLOCKED:` or `Q<n>` is dropped from `--keys` together with its own `--depends` entries (its dependents then report `blocked`). When Architect writes a `depends` on a sibling key that is not `done` yet, that stop is not dropped: add `--depends KEY:DEP` and the key goes to `waiting` and runs again later in this session from the written spec.
 
 ```text
 .seh/scripts/fanout-plan --skill <name> --keys <K1,K2,...> [--variant review|update] [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
@@ -69,7 +73,8 @@ One table: key, session link (`[title](#local_<id>)`), state (done, `BLOCKED: ..
 
 - Children never spawn children. A session whose prompt has the line `Fan-out child: yes` runs exactly its one key in place: it never runs this procedure and never calls `start_session`. Subagents (Architect, Implementer, Consultant, Reviewer, brainstorm personae launched as subagents) are not sessions and are allowed inside a child, as in a normal single-key run.
 - The parent does not do the children's work and does not merge PRs.
-- Run only the skill the user named. The parent never starts another skill's session, for example `planit` for a missing spec. A missing spec or prompt is `BLOCKED` for that key, with the one-line fix (`run /{{prefix}}planit <KEY> first`).
+- Run only the skill the user named. The parent never starts another skill's session, for example `planit` for a missing spec. For `planit`, `doit`, `checkit` and `shipit` a missing spec or prompt is `BLOCKED` for that key, with the one-line fix (`run /{{prefix}}planit <KEY> first`). `runit` is the exception: the child starts at the first missing stage, so a key with no spec runs Architect inside the child (the parent still never starts `planit`).
+- `runit` with `mode: parallel`, `depends` between sibling keys found by a child's Architect: the child stops after the Architect stage with `BLOCKED: depends on <KEY> — rerun /{{prefix}}runit <this key> after <KEY> is merged` (spec stays `todo`). The parent lists it in the report table; there is no waiting, no side channel, and no new wave (same for a `depends` already in the spec, see section 2). The rerun reuses the written spec.
 - A child's `BLOCKED:` or `Q<n>` does not stop siblings.
 - Children share no notes folder and no side channel. The parent does not create one. Coordination goes through the user and the repo's own tracker files.
 - Shared files (tracker, log, status) written by parallel children need the skill's own locking or per-key files; a shared-file collision is a stop for that key, not a silent overwrite.

@@ -42,7 +42,7 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | `/{{prefix}}planit` | Architect once. Offer the next step; do not start it. |
 | `/{{prefix}}doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
 | `/{{prefix}}checkit` | One Reviewer round per named task: review or update from base. An accepted review ends with commit, PR and `done`. |
-| `/{{prefix}}runit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task only. |
+| `/{{prefix}}runit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session; several keys fan out (`.seh/references/session-fanout.md`), with no dependency ordering; git disabled: run in this session in dependency order. |
 | `/{{prefix}}shipit` | Many specced tasks: one `/{{prefix}}runit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. |
 | `/{{prefix}}grillit` | Members, app context, and a consult round. |
 
@@ -76,7 +76,7 @@ Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/script
 | `commit-task` | Reviewer, after acceptance, or after resolving an update merge (from the worktree) |
 | `push-task` | Reviewer |
 | `open-pr` | Reviewer, after acceptance |
-| `update-from-base` | Reviewer, only when the user asks to update |
+| `update-from-base` | Reviewer, when the user asks to update, or on a merge conflict with `Auto-merge: yes` |
 | `return-to-base` | Reviewer, after PR opened (removes the seh worktree) |
 | `jira` | `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 | `ado` | Same who-calls-what as `jira`, when `agents.tracker.kind` is `ado`: `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress` / `codeReview`, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |

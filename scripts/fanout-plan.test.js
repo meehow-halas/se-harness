@@ -168,6 +168,21 @@ describe("fanout-plan", () => {
     });
   });
 
+  test("runit with git disabled runs the dependency first, not the first key given", () => {
+    withTempDir((dir) => {
+      writeHarnessConfig(dir, "");
+      const args = ["--skill", "runit", "--keys", "SQ-7,SQ-3", "--depends", "SQ-7:SQ-3"];
+      const first = fields(runScript("fanout-plan", args, { cwd: dir }));
+      assert.equal(first.mode, "sequential");
+      assert.deepEqual(first.ready, ["SQ-3"]);
+      assert.deepEqual(first.lines, ["waiting: SQ-7 after SQ-3"]);
+
+      const next = fields(runScript("fanout-plan", [...args, "--done", "SQ-3"], { cwd: dir }));
+      assert.deepEqual(next.ready, ["SQ-7"]);
+      assert.deepEqual(next.lines, []);
+    });
+  });
+
   test("unknown skill hint lists shipit", () => {
     const stdout = blockedResult(["--skill", "ship", "--keys", "NS-1"]);
     assert.match(stdout, /use planit, doit, checkit, runit or shipit/);
