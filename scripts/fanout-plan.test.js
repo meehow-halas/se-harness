@@ -3,7 +3,7 @@
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
 
-const { runScript } = require("../test/helpers");
+const { runScript, withTempDir, writeHarnessConfig } = require("../test/helpers");
 
 function plan(args) {
   return runScript("fanout-plan", args);
@@ -88,7 +88,7 @@ describe("fanout-plan", () => {
 
   test("unmet dependency outside the invocation blocks only that key", () => {
     const out = fields(
-      plan(["--skill", "shipit", "--keys", "MK-1,MK-2", "--depends", "MK-2:EXT-99"])
+      plan(["--skill", "runit", "--keys", "MK-1,MK-2", "--depends", "MK-2:EXT-99"])
     );
     assert.deepEqual(out.ready, ["MK-1"]);
     assert.deepEqual(out.lines, ["blocked: MK-2 needs EXT-99 (not done)"]);
@@ -97,7 +97,7 @@ describe("fanout-plan", () => {
   test("external dependency marked done does not block", () => {
     const out = fields(
       plan([
-        "--skill", "shipit", "--keys", "MK-1,MK-2", "--depends", "MK-2:EXT-99", "--done", "EXT-99",
+        "--skill", "runit", "--keys", "MK-1,MK-2", "--depends", "MK-2:EXT-99", "--done", "EXT-99",
       ])
     );
     assert.deepEqual(out.ready, ["MK-1", "MK-2"]);
@@ -140,6 +140,70 @@ describe("fanout-plan", () => {
     ]);
     const out = fields(result);
     assert.ok(!out.lines.some((l) => /^stuck: /.test(l)), result.stdout);
+  });
+
+  test("shipit plans like the other skills: dependent waits, then starts once its dependency is done", () => {
+    const out = fields(plan(["--skill", "shipit", "--keys", "RU-1,RU-2,RU-3", "--depends", "RU-3:RU-1"]));
+    assert.equal(out.mode, "parallel");
+    assert.deepEqual(out.ready, ["RU-1", "RU-2"]);
+    assert.deepEqual(out.lines, ["waiting: RU-3 after RU-1"]);
+
+    const next = fields(
+      plan(["--skill", "shipit", "--keys", "RU-1,RU-2,RU-3", "--depends", "RU-3:RU-1", "--done", "RU-1"])
+    );
+    assert.deepEqual(next.ready, ["RU-2", "RU-3"]);
+    assert.deepEqual(next.lines, []);
+  });
+
+  test("shipit with git disabled plans sequentially with max 1", () => {
+    withTempDir((dir) => {
+      writeHarnessConfig(dir, "");
+      const out = fields(
+        runScript("fanout-plan", ["--skill", "shipit", "--keys", "GD-1,GD-2", "--max", "3"], { cwd: dir })
+      );
+      assert.equal(out.mode, "sequential");
+      assert.equal(out.max, "1");
+      assert.deepEqual(out.ready, ["GD-1"]);
+      assert.deepEqual(out.lines, ["queued: GD-2 (max 1 reached)"]);
+    });
+  });
+
+  test("runit with git disabled runs the dependency first, not the first key given", () => {
+    withTempDir((dir) => {
+      writeHarnessConfig(dir, "");
+      const args = ["--skill", "runit", "--keys", "SQ-7,SQ-3", "--depends", "SQ-7:SQ-3"];
+      const first = fields(runScript("fanout-plan", args, { cwd: dir }));
+      assert.equal(first.mode, "sequential");
+      assert.deepEqual(first.ready, ["SQ-3"]);
+      assert.deepEqual(first.lines, ["waiting: SQ-7 after SQ-3"]);
+
+      const next = fields(runScript("fanout-plan", [...args, "--done", "SQ-3"], { cwd: dir }));
+      assert.deepEqual(next.ready, ["SQ-7"]);
+      assert.deepEqual(next.lines, []);
+    });
+  });
+
+  for (const skill of ["doit", "checkit"]) {
+    test(`${skill} with git disabled also runs the dependency first`, () => {
+      withTempDir((dir) => {
+        writeHarnessConfig(dir, "");
+        const out = fields(
+          runScript("fanout-plan", ["--skill", skill, "--keys", "DQ-9,DQ-4", "--depends", "DQ-9:DQ-4"], { cwd: dir })
+        );
+        assert.equal(out.mode, "sequential");
+        assert.deepEqual(out.ready, ["DQ-4"]);
+        assert.deepEqual(out.lines, ["waiting: DQ-9 after DQ-4"]);
+      });
+    });
+  }
+
+  test("unknown skill hint lists shipit", () => {
+    const stdout = blockedResult(["--skill", "ship", "--keys", "NS-1"]);
+    assert.match(stdout, /use planit, doit, checkit, runit or shipit/);
+  });
+
+  test("missing --skill hint lists shipit", () => {
+    assert.match(blockedResult(["--keys", "NS-1"]), /shipit/);
   });
 
   test("missing --skill is blocked", () => {

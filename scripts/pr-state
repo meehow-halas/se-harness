@@ -1,0 +1,43 @@
+#!/bin/sh
+# pr-state <task>
+# Read-only: is the task's PR into agents.baseBranch open, merged, or absent.
+# Heads considered: <task> and <task>-N (N >= 2). Open beats merged.
+
+. "$(dirname "$0")/lib.sh"
+
+git_gate
+require_git
+
+if ! command -v gh >/dev/null 2>&1; then
+  blocked "gh is not available" "install GitHub CLI (gh) and retry pr-state"
+fi
+if ! command -v node >/dev/null 2>&1; then
+  blocked "node is not available" "install node and retry pr-state"
+fi
+
+if [ $# -gt 1 ]; then
+  blocked "expected exactly one task argument" "usage: pr-state <task>"
+fi
+task=${1-}
+require_task "$task"
+read_base_branch
+base=$SEH_BASE_BRANCH
+require_not_base "$task" "$base"
+
+if ! list=$(gh pr list --base "$base" --state all --limit 500 \
+  --json number,state,url,mergedAt,mergeCommit,headRefName 2>&1); then
+  blocked "gh pr list failed ($list)" "fix the gh error, then retry pr-state"
+fi
+rc=0
+info=$(printf '%s' "$list" | node "$(dirname "$0")/pr-json.js" state "$task") || rc=$?
+if [ "$rc" -ne 0 ]; then
+  blocked "unreadable gh output" "retry pr-state"
+fi
+
+set -- "task: $task"
+while IFS= read -r line; do
+  set -- "$@" "$line"
+done <<EOT
+$info
+EOT
+ok "$@"

@@ -48,11 +48,13 @@ function tracker(over = {}) {
   };
 }
 
-function writeProject(cwd, { trackerOver, token = FIX.token } = {}) {
-  initGitRepo(cwd);
+function writeProject(cwd, { trackerOver, token = FIX.token, git = true } = {}) {
+  if (git) {
+    initGitRepo(cwd);
+  }
   const cfg = {
     agents: {
-      baseBranch: "dev",
+      baseBranch: git ? "dev" : "",
       tracker: tracker(trackerOver),
     },
   };
@@ -288,6 +290,26 @@ describe("ado", () => {
       const stub = writeCurlStub(cwd, defaultRoutes());
       const result = runAdo(wt, ["meta"], stub.env);
       assertOk(result, { project: FIX.project });
+    });
+  });
+
+  test("runs without a git repo (git disabled) and reads credentials from the project root", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd, { git: false });
+      assert.equal(fs.existsSync(path.join(cwd, ".git")), false);
+      const stub = writeCurlStub(cwd, defaultRoutes());
+      const result = runAdo(cwd, ["meta"], stub.env);
+      assertOk(result, { project: FIX.project });
+      assert.equal(fs.existsSync(path.join(cwd, ".git")), false);
+    });
+  });
+
+  test("without a git repo, a missing adoPat is still BLOCKED", () => {
+    withTempDir((cwd) => {
+      writeProject(cwd, { git: false, token: null });
+      const stub = writeCurlStub(cwd, defaultRoutes());
+      const result = runAdo(cwd, ["meta"], stub.env);
+      assertBlocked(result, /Azure DevOps token is missing/);
     });
   });
 

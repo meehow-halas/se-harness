@@ -23,7 +23,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first 
 
 ## Execution
 
-You run **inline** in the session that loaded this file: the top-level session of `/{{prefix}}doit` or `/{{prefix}}shipit`, or a fan-out child session. You are not a subagent. Subagents cannot launch subagents, so the session that runs you launches Consultant as a subagent after each phase. Work only under the `Worktree:` path: pass absolute paths to file tools and `cd` there before shell commands.
+You run **inline** in the session that loaded this file: the top-level session of `/{{prefix}}doit` or `/{{prefix}}runit`, or a fan-out child session. You are not a subagent. Subagents cannot launch subagents, so the session that runs you launches Consultant as a subagent after each phase. Work only under the `Worktree:` path: pass absolute paths to file tools and `cd` there before shell commands.
 
 ## Modes
 
