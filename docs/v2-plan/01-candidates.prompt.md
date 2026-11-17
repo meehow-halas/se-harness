@@ -1,6 +1,6 @@
 # Prompt — v2-plan stage 01: Candidates from Deferred
 
-Status: `Planning: draft`. This stage is not executable. The `_make-plan` rule blocks execution while planning is draft.
+Status: `Planning: draft`. This stage is not executable. Execution is blocked while planning is draft.
 
 If you were asked to run it anyway: stop and reply `BLOCKED: planning of v2-plan is not complete — finish planning first (open questions: 8)`.
 

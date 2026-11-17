@@ -11,4 +11,4 @@
 
 Archive: [implementation-plan](archive/implementation-plan/README.md) (v1 build log), [azure-dev-ops](archive/azure-dev-ops/README.md), [tracker-read-only-mode](archive/tracker-read-only-mode/README.md), [optional-git](archive/optional-git/README.md), [codex-support](archive/codex-support/README.md), [parallel-ship](archive/parallel-ship/README.md) (pre-1.3.1 skill names), [skill-name-swap](archive/skill-name-swap/README.md), [runit-fanout-missing-spec](archive/runit-fanout-missing-spec/README.md).
 
-New feature plans: `docs/<slug>/` via `/_make-plan`; moved to `archive/` when every stage is `done`.
+New feature plans: `docs/<slug>/`; moved to `archive/` when every stage is `done`.
