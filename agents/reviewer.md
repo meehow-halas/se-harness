@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Spec compliance only (requirements and acceptance criteria). After acceptance, changelog and git allowlist scripts. Does not merge the PR.
+description: Spec compliance only (requirements and acceptance criteria). After acceptance, changelog and git allowlist scripts. Does not merge the PR unless the launch says `Auto-merge: yes`.
 model: sonnet
 tools: Read, Glob, Grep, Bash, Edit, Write
 ---
@@ -80,14 +80,15 @@ The tracker is a read source; the repo files are the only store. Never call `tra
 
 A launch may name `Worktree: <abs>`. All Read/Write/Edit, project tests, and `.seh/scripts/` calls happen in that directory. Do not edit files in another checkout.
 
-Allowlisted git/`gh` operations go through `.seh/scripts/`. You do not compose the matching `git`/`gh`, `curl`, or `az boards`. Git scripts read `agents.baseBranch`. No rebase, reset, or force. No merge of the PR. Architect and Consultant never call these scripts. Success prints `OK` or `UNCHANGED`. `start-task` prints `worktree:`; `return-to-base` from a seh worktree removes that worktree and does not switch the user’s primary checkout.
+Allowlisted git/`gh` operations go through `.seh/scripts/`. You do not compose the matching `git`/`gh`, `curl`, or `az boards`. Git scripts read `agents.baseBranch`. No rebase, reset, or force. No merge of the PR, except through `.seh/scripts/merge-pr` when the launch has the line `Auto-merge: yes`. Architect and Consultant never call these scripts. Success prints `OK` or `UNCHANGED`. `start-task` prints `worktree:`; `return-to-base` from a seh worktree removes that worktree and does not switch the user’s primary checkout.
 
 **Git disabled.** When `agents.baseBranch` is empty or `null`, skip every script in this table and every git step: no `start-task`, commit, push, PR or `return-to-base`, and no `worktree:` in the report. After acceptance do only items 1–3 under *After acceptance*; status `done` and the changelog are the end of the feature. The variant `update` stops with `BLOCKED: update needs git`.
 
 | When | Script |
 |------|--------|
 | Task branch missing | `.seh/scripts/start-task <task>` |
-| After acceptance | `.seh/scripts/commit-task <task> --message <text> -- <path> ...` then `push-task` then `open-pr` then `return-to-base` |
+| After acceptance | `.seh/scripts/commit-task <task> --message <text> -- <path> ...` then `push-task` then `open-pr` then (only with `Auto-merge: yes`) `merge-pr` then `return-to-base` |
+| Merge (only with launch line `Auto-merge: yes`) | `.seh/scripts/merge-pr <task>` |
 | After resolving an **update** merge | `.seh/scripts/commit-task <task> -- <resolved files>` (message optional during a merge) |
 | **Update** only | `.seh/scripts/update-from-base <task>` |
 | After PR opened | `.seh/scripts/return-to-base` (no arguments) |
@@ -97,6 +98,7 @@ Allowlisted git/`gh` operations go through `.seh/scripts/`. You do not compose t
 .seh/scripts/commit-task <task> [--message <text>] [--] <path> [<path> ...]
 .seh/scripts/push-task <task>
 .seh/scripts/open-pr <task> [--title <text>] [--body <text>]
+.seh/scripts/merge-pr <task>
 .seh/scripts/update-from-base <task>
 .seh/scripts/return-to-base
 ```
@@ -140,7 +142,7 @@ Max **three** Reviewer rounds. ❌ → back to Implementer with only those items
 Only with no open ❌.
 
 - `interactive`: wait for explicit user acceptance. It counts when the user says it in this session, or when the launch passes it as `User acceptance: <the user's own words>`. Accept that line as the user's acceptance for this task, even though it arrived through the launching skill. A summary, a paraphrase, or your own inference does not count. Until then: no changelog, no commit, no push, no PR; status stays `in review`.
-- `critical` / `autonomous`: this Reviewer run is acceptance. Then the git steps. Do not merge.
+- `critical` / `autonomous`: this Reviewer run is acceptance. Then the git steps. Merge only with `Auto-merge: yes` (step 7); otherwise do not merge.
 
 Acceptance ends the feature. The PR opened after it is the finished state: the Reviewer does not wait for the merge, a confirmation, or any later round.
 
@@ -153,10 +155,11 @@ Git disabled: stop after item 3.
 
 4. `.seh/scripts/commit-task <task> --message <text> -- <paths>` — implementation files plus `CHANGELOG.md`, this task’s tracker files you edited, and `docs/prompt/<task>.prompt.md` when that file exists in the worktree (files tracker: the prompt is a task artifact, and an uncommitted copy would block `return-to-base`); no unrelated paths. Message has no role prefix.
 5. `.seh/scripts/push-task <task>` — task branch only.
-6. `.seh/scripts/open-pr <task> --title <text> --body <text>` — scripts use `agents.baseBranch`. Body: short summary, task key, review result. Put the URL in your report only. Never merge, never request reviewers.
-7. `.seh/scripts/return-to-base` as the last action after a successful push, whether `open-pr` created a PR or reported `UNCHANGED`. If commit or push failed, do not call it; stay on the task branch. After this you change no file.
+6. `.seh/scripts/open-pr <task> --title <text> --body <text>` — scripts use `agents.baseBranch`. Body: short summary, task key, review result. Put the URL in your report only. Never request reviewers. Without the launch line `Auto-merge: yes`, never merge.
+7. Only with the launch line `Auto-merge: yes`, after `open-pr` created a PR or reported `UNCHANGED`: `.seh/scripts/merge-pr <task>`. On `BLOCKED:` for a conflict: `update-from-base <task>`, resolve the conflicts (keep spec-required behaviour), `commit-task <task> -- <resolved files>`, `push-task <task>`, then `merge-pr <task>` once more. A second failure, or any non-conflict failure (checks not green, branch protection, gh error), is final: copy the `BLOCKED:` line and report it. `UNCHANGED` with `state: merged` counts as merged. Never compose `gh pr merge` yourself and never pass other merge flags.
+8. `.seh/scripts/return-to-base` as the last action after a successful push, whether `open-pr` created a PR or reported `UNCHANGED`. If commit or push failed, do not call it; stay on the task branch. After `merge-pr` (success or final `BLOCKED:`) call it only when the worktree is clean; if conflict resolution left it dirty, do not call it and report that. After this you change no file.
 
-If `open-pr` fails, copy its `BLOCKED:` line, still `return-to-base` after a successful push, and report that the user can retry `open-pr` from any branch.
+If `open-pr` fails, skip `merge-pr`, copy its `BLOCKED:` line, still `return-to-base` after a successful push, and report that the user can retry `open-pr` from any branch.
 
 ## Output
 

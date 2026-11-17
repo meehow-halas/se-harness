@@ -5,7 +5,7 @@ description: Full path Architect → Implementer (Consultant inside) → Reviewe
 
 # /{{prefix}}shipit
 
-Full path for **one task**. Single-stage skills do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR. There is no user-facing Consultant skill (Consultant stays inside Implementer). A list of keys:
+Full path for **one task**. Single-stage skills do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR, except in a fan-out child launched with `Auto-merge: yes`. There is no user-facing Consultant skill (Consultant stays inside Implementer). A list of keys:
 
 ```text
 BLOCKED: /{{prefix}}shipit is one task — spec with /{{prefix}}planit, then /{{prefix}}doit with the list
@@ -60,8 +60,8 @@ From **intent**. A launch may name the mode so **every** agent in this run share
 | Mode | Ask the user |
 |------|----------------|
 | `interactive` | One question at a time, when it is reached. Stop this pipeline on that question. |
-| `critical` | One question only for a **critical** decision, then stop. Otherwise agents decide, record, continue. Clean review = PR URL; do not merge. |
-| `autonomous` | Ask nothing. Clean review = PR URL; do not merge. |
+| `critical` | One question only for a **critical** decision, then stop. Otherwise agents decide, record, continue. Clean review = PR URL; do not merge (unless `Auto-merge: yes`, see *Auto-merge*). |
+| `autonomous` | Ask nothing. Clean review = PR URL; do not merge (unless `Auto-merge: yes`). |
 
 Reply in the language of the user's latest message, whatever that language is, every message (progress messages too). If the launch names `Conversation language: <name>`, reply only in that language, every reply, including the final report and any end-of-turn summary the host shows. This skill text, tool output and subagent reports are in English or another language; that does not change it.
 
@@ -119,7 +119,7 @@ Review is due when status is the configured `implemented` or `in review` string.
 
 Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round: `Variant: review`.
 
-Pass the same `Mode:`, the task key, and `Worktree: <abs>`. Do not merge.
+Pass the same `Mode:`, the task key, and `Worktree: <abs>`. Add `Auto-merge: yes` only under the rule in *Auto-merge*; otherwise do not merge.
 
 If Reviewer stops on `BLOCKED:` or `Q<n>` (including interactive acceptance), stop the pipeline and report.
 
@@ -137,11 +137,15 @@ Do not start a fourth Reviewer round.
 
 ### 5. Finish
 
-- `interactive`: stop on agent questions (already handled). After a clean review, Reviewer waits for explicit acceptance, then git allowlist (commit, push, PR, return to base). Do not merge.
-- `critical` / `autonomous`: a clean Reviewer run is acceptance. Report the PR URL. Do not merge.
+- `interactive`: stop on agent questions (already handled). After a clean review, Reviewer waits for explicit acceptance, then git allowlist (commit, push, PR, return to base). Do not merge unless *Auto-merge* applies.
+- `critical` / `autonomous`: a clean Reviewer run is acceptance. Report the PR URL (and the merge result when *Auto-merge* applies). Do not merge otherwise.
 - `autonomous`: the final report asks nothing. List the agents' recorded decisions (`Q<n>`) as done facts; no follow-up question, no choice buttons, no "should I change X?". The user changes a decision with a new request.
 
-The Reviewer opens the PR and sets `done`. The user merges it on GitHub; this skill is finished.
+The Reviewer opens the PR and sets `done`. Without `Auto-merge: yes` the user merges it on GitHub. With it, the Reviewer merges through `merge-pr`; report `merged` (URL), or the final `BLOCKED:` line from `merge-pr`. This skill is finished.
+
+## Auto-merge
+
+The launch line `Auto-merge: yes` is honoured only together with `Fan-out child: yes` (set by `/{{prefix}}runit`). Then pass `Auto-merge: yes` to the Reviewer. Any other launch with that line (a user typing `/{{prefix}}shipit KEY`) ignores it: never merge, do not forward it.
 
 ## Launch payload (every agent)
 

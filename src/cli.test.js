@@ -1154,11 +1154,19 @@ describe("seh install --prefix", () => {
       for (const f of walk(path.join(project, ".seh"))) {
         assert.equal(read(f).includes("{{prefix}}"), false, f);
       }
-      for (const name of ["planit", "doit", "checkit", "shipit", "grillit", "setit-se"]) {
+      for (const name of ["planit", "doit", "checkit", "shipit", "runit", "grillit", "setit-se"]) {
         assert.equal(exists(path.join(project, ".seh", "skills", name, "SKILL.md")), true, name);
       }
       assert.match(read(path.join(project, ".claude", "skills", "q_setit-se", "SKILL.md")), /^---\nname: q_setit-se\n/);
       assert.match(read(path.join(project, ".seh", "skills", "shipit", "SKILL.md")), /\/q_doit/);
+      const runit = read(path.join(project, ".seh", "skills", "runit", "SKILL.md"));
+      assert.match(runit, /\/q_runit/);
+      assert.match(runit, /\/q_shipit/);
+      const walkNames = (d) =>
+        fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+          e.isDirectory() ? walkNames(path.join(d, e.name)) : [e.name]
+        );
+      assert.deepEqual(walkNames(path.join(project, ".seh", "skills", "runit")).filter((n) => /\.test\.js$/.test(n)), []);
     });
   });
 });

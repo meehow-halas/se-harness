@@ -200,6 +200,49 @@ exit 1
   return { gh, logFile };
 }
 
+
+// gh stub that behaves like `gh pr list` over a fixed PR set (filters by
+// --head, --base, --state, prints JSON) and records `gh pr merge`.
+function writeGhPrStub(binDir, { prs = [], mergeFails = false } = {}) {
+  fs.mkdirSync(binDir, { recursive: true });
+  const logFile = path.join(binDir, "gh-argv.log");
+  const dataFile = path.join(binDir, "gh-prs.json");
+  fs.writeFileSync(dataFile, JSON.stringify(prs));
+  const gh = path.join(binDir, "gh");
+  const mergeBody = mergeFails
+    ? 'process.stderr.write("X Pull request is not mergeable\\n"); process.exit(1);'
+    : "process.exit(0);";
+  const js = `
+const a = process.argv.slice(2);
+const val = (f) => (a.includes(f) ? a[a.indexOf(f) + 1] : undefined);
+if (a[0] === "pr" && a[1] === "list") {
+  let prs = JSON.parse(require("fs").readFileSync(${JSON.stringify(dataFile)}, "utf8"));
+  if (val("--head")) prs = prs.filter((p) => p.headRefName === val("--head"));
+  if (val("--base")) prs = prs.filter((p) => p.baseRefName === val("--base"));
+  const st = val("--state") || "open";
+  if (st !== "all") prs = prs.filter((p) => p.state === st.toUpperCase());
+  process.stdout.write(JSON.stringify(prs));
+  process.exit(0);
+}
+if (a[0] === "pr" && a[1] === "merge") {
+  ${mergeBody}
+}
+process.stderr.write("unexpected gh invocation\\n");
+process.exit(1);
+`;
+  const jsFile = path.join(binDir, "gh-stub.js");
+  fs.writeFileSync(jsFile, js);
+  fs.writeFileSync(
+    gh,
+    `#!/bin/sh
+${argvLogCommand(logFile)}
+exec node ${JSON.stringify(jsFile)} "$@"
+`
+  );
+  fs.chmodSync(gh, 0o755);
+  return { gh, logFile };
+}
+
 function writeGitLogger(binDir) {
   fs.mkdirSync(binDir, { recursive: true });
   const realGit = which("git");
@@ -433,6 +476,7 @@ module.exports = {
   startWorktree,
   withTempDir,
   writeFile,
+  writeGhPrStub,
   writeGhStub,
   writeGitLogger,
   writeHarnessConfig,

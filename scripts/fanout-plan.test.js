@@ -3,7 +3,7 @@
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
 
-const { runScript } = require("../test/helpers");
+const { runScript, withTempDir, writeHarnessConfig } = require("../test/helpers");
 
 function plan(args) {
   return runScript("fanout-plan", args);
@@ -140,6 +140,41 @@ describe("fanout-plan", () => {
     ]);
     const out = fields(result);
     assert.ok(!out.lines.some((l) => /^stuck: /.test(l)), result.stdout);
+  });
+
+  test("runit plans like the other skills: dependent waits, then starts once its dependency is done", () => {
+    const out = fields(plan(["--skill", "runit", "--keys", "RU-1,RU-2,RU-3", "--depends", "RU-3:RU-1"]));
+    assert.equal(out.mode, "parallel");
+    assert.deepEqual(out.ready, ["RU-1", "RU-2"]);
+    assert.deepEqual(out.lines, ["waiting: RU-3 after RU-1"]);
+
+    const next = fields(
+      plan(["--skill", "runit", "--keys", "RU-1,RU-2,RU-3", "--depends", "RU-3:RU-1", "--done", "RU-1"])
+    );
+    assert.deepEqual(next.ready, ["RU-2", "RU-3"]);
+    assert.deepEqual(next.lines, []);
+  });
+
+  test("runit with git disabled plans sequentially with max 1", () => {
+    withTempDir((dir) => {
+      writeHarnessConfig(dir, "");
+      const out = fields(
+        runScript("fanout-plan", ["--skill", "runit", "--keys", "GD-1,GD-2", "--max", "3"], { cwd: dir })
+      );
+      assert.equal(out.mode, "sequential");
+      assert.equal(out.max, "1");
+      assert.deepEqual(out.ready, ["GD-1"]);
+      assert.deepEqual(out.lines, ["queued: GD-2 (max 1 reached)"]);
+    });
+  });
+
+  test("unknown skill hint lists runit", () => {
+    const stdout = blockedResult(["--skill", "ship", "--keys", "NS-1"]);
+    assert.match(stdout, /use planit, doit, checkit, shipit or runit/);
+  });
+
+  test("missing --skill hint lists runit", () => {
+    assert.match(blockedResult(["--keys", "NS-1"]), /runit/);
   });
 
   test("missing --skill is blocked", () => {

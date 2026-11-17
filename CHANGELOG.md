@@ -2,6 +2,15 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-11-17
+
+### Added
+
+- `.seh/scripts/merge-pr <task>`: `gh pr merge <number> --squash` for the open PR of the task branch into `agents.baseBranch`. Conflict, missing PR, and gh failures are `BLOCKED:`; an already merged PR is `UNCHANGED`. No `--auto`, `--admin`, `--delete-branch`, rebase, or force.
+- `.seh/scripts/pr-state <task>`: read-only `state: merged|open|none` (with `url:`, and `merged_at:` / `merge_commit:` when merged) for `<task>` or `<task>-N` into the configured base.
+- Reviewer merge step (opt-in): with launch line `Auto-merge: yes`, after `open-pr` the Reviewer runs `merge-pr` (one `update-from-base` retry on conflict), then `return-to-base`. `/<prefix>shipit` forwards the line only together with `Fan-out child: yes`; a user-launched run never merges. Default behaviour is unchanged.
+- `/<prefix>runit` work skill: many specced tasks (named keys, or all `todo` tasks in a files / read-only tracker) run as one `/<prefix>shipit` session each in parallel, with auto-merge into `agents.baseBranch`. A task with `depends` starts after its dependency is merged (`pr-state`). One go-ahead question; `manual` hosts print one command per ready key and recompute on rerun. Writes a run report to `docs/run-reports/<date>-runit.md` (not committed, never sent to Jira/ADO). `fanout-plan` accepts `--skill runit`; `references/session-fanout.md` allows `Auto-merge: yes` in the child prompt for `runit` only.
+
 ## [1.2.1] - 2026-11-14
 
 ### Fixed
