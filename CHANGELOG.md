@@ -21,6 +21,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 - Fan-out: `/<prefix>planit` with several keys no longer reports a key without a spec as `BLOCKED: run /<prefix>planit first`; its child writes the spec. Only `doit`, `checkit` and `shipit` keep that stop.
 - `manual` hosts: printed per-key commands carry the user's mode words (for example `samodzielnie`). The fan-out end report asks nothing in `autonomous` mode.
 - Reviewer auto-merge (`Auto-merge: yes`): after resolving a conflict with the base branch, the project's test/lint/typecheck runs before `push-task`; failing checks are `BLOCKED` with no merge. Up to 3 conflict-resolution attempts (was 1), since the base moves while sibling tasks merge.
+- `references/harness.config.md`: ADO field-map values are explained in place instead of linking to a repo planning doc that is not installed in consuming projects.
 
 ## [1.3.1] - 2026-11-17
 

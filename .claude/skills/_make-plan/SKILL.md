@@ -13,7 +13,7 @@ Read `CLAUDE.md` and `docs/prd.md` first. PRD and Deferred lists win over the re
 
 ### 1.1 Plan directory
 
-- Plan dir: `docs/<slug>/` (kebab-case, short, e.g. `docs/tracker-read-only-mode/`).
+- Plan dir: `docs/<slug>/` (kebab-case, short, e.g. `docs/tracker-read-only-mode/`; finished plans move to `docs/archive/<slug>/`).
 - If the dir exists, read it and continue (ask what to change). Never overwrite an existing stage file without showing the user the diff first.
 - Planning can be paused and resumed. `docs/<slug>/README.md` holds `Planning: draft | complete` and an `Open questions` list. If `draft`, resume: take the first open question, ask it (one at a time), do not re-ask answered ones.
 - Create `docs/<slug>/README.md` with `Planning: draft` after the first answer, and update it after every answer, so an interrupted session loses nothing.
@@ -32,7 +32,7 @@ Read `CLAUDE.md` and `docs/prd.md` first. PRD and Deferred lists win over the re
 
 ### 1.4 Files written
 
-For each stage `NN-<stage-slug>`, mirror the existing `docs/implementation-plan/` convention:
+For each stage `NN-<stage-slug>`, use this convention (finished examples in `docs/archive/<slug>/`, prompts there already removed):
 
 - `docs/<slug>/NN-<stage-slug>.md` — **spec**:
   - Goal (1–3 sentences)
@@ -75,7 +75,7 @@ Planning with `Planning: draft` cannot be executed. Stage execution requires `Pl
 
 Read-only. Applies during planning, between stages, and mid-stage. Triggered by any question about a plan: current stage, next stage, can next start, gaps, blocked stages, summary, open questions.
 
-- Plan: the one the user names. If only one `docs/<slug>/` exists, use it. If several exist, ask which one (recommended: the one with a stage `in progress`).
+- Plan: the one the user names. Ignore `docs/archive/`, `docs/manual-tests/`, `docs/backlog/` and folders without a `Planning:` line. If only one `docs/<slug>/` plan exists, use it. If several exist, ask which one (recommended: the one with a stage `in progress`).
 - Source: `docs/<slug>/README.md` first. Read `NN-*.md` only for the stage asked about.
 - Answer from the files. Quote status values as written.
 - Report `Planning` status and the open questions count. If `draft`, list the open questions.
@@ -88,6 +88,7 @@ Read-only. Applies during planning, between stages, and mid-stage. Triggered by 
 - One question per message, always. Recommended option first, always marked.
 - Never invent requirements; mark assumptions as assumptions.
 - Keep plan files in `docs/<slug>/` only. Do not create parallel trees.
+- When every stage of a plan is `done`, propose (one question) archiving it: `git mv docs/<slug> docs/archive/<slug>`, remove its `*.prompt.md`, drop prompt links from its stage table, fix relative links, and update links to it elsewhere. A manual end-to-end scenario a stage produced goes to `docs/manual-tests/<slug>.md` instead.
 - Do not commit, push, or open PRs unless the user asks.
 - Do not touch `.env` files. Do not write to `~/.claude/` or other machine-wide paths.
 - Do not add items from the PRD Deferred list as work.
