@@ -421,6 +421,26 @@ Credentials: you put the token in a project-local ignored file `harness.credenti
 
 `seh install` already ignores that filename. Never paste the token in chat. Never write it into git or `harness.config.json`. Project key and field mapping live in config under `agents.tracker`.
 
+**Scoped token (optional, safer).** Instead of a full-access token, create a Jira Cloud API token with scopes. Scopes are an upper limit; the user also needs the project permissions below.
+
+Classic scopes (recommended by Atlassian):
+- `read:jira-work`: read issues, comments, statuses, transitions, and field metadata. Enough for read-only mode.
+- `write:jira-work`: create and edit issues, add comments, transition issues, link issues. Needed for full write only.
+
+Granular scopes (use only if classic scopes are not allowed):
+- `read:issue:jira`, `read:issue-meta:jira`, `read:issue-type:jira`, `read:field-configuration:jira`: read issue data and field/type metadata.
+- `read:issue.transition:jira`, `read:status:jira`, `read:issue-status:jira`: read available transitions and status names.
+- `read:comment:jira`: read comments.
+- `read:project:jira`: read project data; needed to check that the project key exists during `meta`.
+- `write:issue:jira`: create and edit issues.
+- `write:comment:jira`: add comments.
+- `write:issue.property:jira`: set issue properties during transitions.
+- `write:issue-link:jira`: link issues.
+
+Atlassian does not state whether all granular scopes are required or any one suffices, so use classic scopes unless you must use granular ones and verify the result.
+
+Project permissions the user also needs in the Jira project: Browse projects (without it the project looks missing even when the key is right); Create issues and Edit issues; Transition issues; Add comments; Link issues (full write only).
+
 **Add** (no tracker yet, or you accept the first-run offer). First: read-only mode, yes or no (see [One active tracker](#one-active-tracker)). Then, either way, one question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.seh/scripts/jira meta` lists that project’s statuses, issue types, and fields. Read-only: map only `blocker` (if you use `depends`) and `fetchFields`; status moves are writes, so nothing else is mapped. Full write: map each seh step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
 
 `null` means that step does not call a Jira transition. There is no file fallback. If a mapped status is missing from that issue type’s workflow, work stops — fix the mapping in `/_setit-se`.
