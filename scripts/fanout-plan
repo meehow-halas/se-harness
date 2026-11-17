@@ -1,5 +1,5 @@
 #!/bin/sh
-# fanout-plan --skill <planit|doit|checkit|shipit|runit> --keys <k,...> [--variant review|update]
+# fanout-plan --skill <planit|doit|checkit|runit|shipit> --keys <k,...> [--variant review|update]
 #   [--depends <key:dep,...>] [--done <k,...>] [--running <k,...>] [--max <n>]
 # Stateless planner for multi-key fan-out. Prints which keys may start a session now.
 # Does not start sessions, read the tracker, or touch git. When agents.baseBranch
@@ -65,9 +65,9 @@ deps_of() {
 }
 
 case $skill in
-  planit|doit|checkit|shipit|runit) ;;
-  '') blocked "missing --skill" "pass --skill planit, doit, checkit, shipit or runit" ;;
-  *) blocked "unknown skill $skill" "use planit, doit, checkit, shipit or runit" ;;
+  planit|doit|checkit|runit|shipit) ;;
+  '') blocked "missing --skill" "pass --skill planit, doit, checkit, runit or shipit" ;;
+  *) blocked "unknown skill $skill" "use planit, doit, checkit, runit or shipit" ;;
 esac
 
 if [ -z "$keys" ]; then

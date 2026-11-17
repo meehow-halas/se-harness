@@ -71,7 +71,7 @@ For **each** named task independently:
 If spec or prompt is missing:
 
 ```text
-BLOCKED: spec and prompt are missing — run /{{prefix}}planit or /{{prefix}}shipit
+BLOCKED: spec and prompt are missing — run /{{prefix}}planit or /{{prefix}}runit
 ```
 
 Read status from the active tracker. Compare to `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). If status is already the configured `implemented`, `in review`, or `done` string:
@@ -107,4 +107,4 @@ When all phases have `continue`, status stays `in progress`. Do not start Review
 
 ## After Implementer finishes
 
-Report each task key, its `worktree:` (git enabled only), and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/{{prefix}}checkit` (one Reviewer round, same list) or `/{{prefix}}shipit` for a single leftover. Do **not** start review.
+Report each task key, its `worktree:` (git enabled only), and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/{{prefix}}checkit` (one Reviewer round, same list) or `/{{prefix}}runit` for a single leftover. Do **not** start review.

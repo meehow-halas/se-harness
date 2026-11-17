@@ -5,7 +5,7 @@ description: Run the Architect once for a request. Use when the user runs /{{pre
 
 # /{{prefix}}planit
 
-Spec only. Launch the Architect once. When that finishes, offer `/{{prefix}}doit` or `/{{prefix}}shipit`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill.
+Spec only. Launch the Architect once. When that finishes, offer `/{{prefix}}doit` or `/{{prefix}}runit`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill.
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands. Do not merge a PR.
 
@@ -81,6 +81,6 @@ Report the task key, title, type, tracker, and that status stays at the configur
 Offer the next step. Do **not** start it:
 
 - `/{{prefix}}doit` — implement this spec (Consultant loop inside Implementer)
-- `/{{prefix}}shipit` — full path from here
+- `/{{prefix}}runit` — full path from here
 
 Do not start Reviewer. Do not call git scripts. When Jira or ADO is the active tracker, the Architect calls `.seh/scripts/jira` or `.seh/scripts/ado` by `kind`; this skill does not. Do not write spec, prompt, or log yourself.

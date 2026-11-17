@@ -88,7 +88,7 @@ describe("fanout-plan", () => {
 
   test("unmet dependency outside the invocation blocks only that key", () => {
     const out = fields(
-      plan(["--skill", "shipit", "--keys", "MK-1,MK-2", "--depends", "MK-2:EXT-99"])
+      plan(["--skill", "runit", "--keys", "MK-1,MK-2", "--depends", "MK-2:EXT-99"])
     );
     assert.deepEqual(out.ready, ["MK-1"]);
     assert.deepEqual(out.lines, ["blocked: MK-2 needs EXT-99 (not done)"]);
@@ -97,7 +97,7 @@ describe("fanout-plan", () => {
   test("external dependency marked done does not block", () => {
     const out = fields(
       plan([
-        "--skill", "shipit", "--keys", "MK-1,MK-2", "--depends", "MK-2:EXT-99", "--done", "EXT-99",
+        "--skill", "runit", "--keys", "MK-1,MK-2", "--depends", "MK-2:EXT-99", "--done", "EXT-99",
       ])
     );
     assert.deepEqual(out.ready, ["MK-1", "MK-2"]);
@@ -142,24 +142,24 @@ describe("fanout-plan", () => {
     assert.ok(!out.lines.some((l) => /^stuck: /.test(l)), result.stdout);
   });
 
-  test("runit plans like the other skills: dependent waits, then starts once its dependency is done", () => {
-    const out = fields(plan(["--skill", "runit", "--keys", "RU-1,RU-2,RU-3", "--depends", "RU-3:RU-1"]));
+  test("shipit plans like the other skills: dependent waits, then starts once its dependency is done", () => {
+    const out = fields(plan(["--skill", "shipit", "--keys", "RU-1,RU-2,RU-3", "--depends", "RU-3:RU-1"]));
     assert.equal(out.mode, "parallel");
     assert.deepEqual(out.ready, ["RU-1", "RU-2"]);
     assert.deepEqual(out.lines, ["waiting: RU-3 after RU-1"]);
 
     const next = fields(
-      plan(["--skill", "runit", "--keys", "RU-1,RU-2,RU-3", "--depends", "RU-3:RU-1", "--done", "RU-1"])
+      plan(["--skill", "shipit", "--keys", "RU-1,RU-2,RU-3", "--depends", "RU-3:RU-1", "--done", "RU-1"])
     );
     assert.deepEqual(next.ready, ["RU-2", "RU-3"]);
     assert.deepEqual(next.lines, []);
   });
 
-  test("runit with git disabled plans sequentially with max 1", () => {
+  test("shipit with git disabled plans sequentially with max 1", () => {
     withTempDir((dir) => {
       writeHarnessConfig(dir, "");
       const out = fields(
-        runScript("fanout-plan", ["--skill", "runit", "--keys", "GD-1,GD-2", "--max", "3"], { cwd: dir })
+        runScript("fanout-plan", ["--skill", "shipit", "--keys", "GD-1,GD-2", "--max", "3"], { cwd: dir })
       );
       assert.equal(out.mode, "sequential");
       assert.equal(out.max, "1");
@@ -168,13 +168,13 @@ describe("fanout-plan", () => {
     });
   });
 
-  test("unknown skill hint lists runit", () => {
+  test("unknown skill hint lists shipit", () => {
     const stdout = blockedResult(["--skill", "ship", "--keys", "NS-1"]);
-    assert.match(stdout, /use planit, doit, checkit, shipit or runit/);
+    assert.match(stdout, /use planit, doit, checkit, runit or shipit/);
   });
 
-  test("missing --skill hint lists runit", () => {
-    assert.match(blockedResult(["--keys", "NS-1"]), /runit/);
+  test("missing --skill hint lists shipit", () => {
+    assert.match(blockedResult(["--keys", "NS-1"]), /shipit/);
   });
 
   test("missing --skill is blocked", () => {

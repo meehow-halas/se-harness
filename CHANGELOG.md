@@ -2,6 +2,12 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] - 2026-11-17
+
+### Changed
+
+- Skill names swapped. `/<prefix>shipit` is now the parallel, dependency-ordered, auto-merge skill for many specced tasks (was `/<prefix>runit`); `/<prefix>runit` is now the single-task pipeline Architect → Implementer → Reviewer (was `/<prefix>shipit`). Children started by `shipit` run `/<prefix>runit <KEY>`; the run report is `docs/run-reports/<YYYY-MM-DD-HHMM>-shipit.md`; `fanout-plan` accepts both names as before. Migration: replace old `/shipit` with `/runit`, and old `/runit` with `/shipit`. `/<prefix>setit-se` regenerates both skills on the version change.
+
 ## [1.3.0] - 2026-11-17
 
 ### Added

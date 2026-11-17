@@ -12,7 +12,7 @@ The only supported adoption path:
 
 1. **Bootstrap** — `npx -p se-harness seh install` (npm or GitHub). Result: `.seh/` plus the install-owned `/{{prefix}}setit-se` skill in every `skillsDir`, and `.seh/` and `harness.credentials.local.json` entries in the project-root `.gitignore`. Setup is not done. Do not offer work skills yet.
 2. **Finish setup** — `/{{prefix}}setit-se` only. The CLI does not configure the project.
-3. **Work** — `/{{prefix}}shipit`, `/{{prefix}}runit`, `/{{prefix}}planit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}grillit`, or later `/{{prefix}}setit-se`.
+3. **Work** — `/{{prefix}}runit`, `/{{prefix}}shipit`, `/{{prefix}}planit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}grillit`, or later `/{{prefix}}setit-se`.
 4. **Remove bootstrap (optional)** — `seh uninstall` with the **same source** as install. Removes `.seh/`, the install-owned `/{{prefix}}setit-se` skill from every `skillsDir`, and the install-owned session-start hook command. Leaves `harness.config.json` and files `/{{prefix}}setit-se` generated.
 
 CLI in v1: `seh install` and `seh uninstall` only.
@@ -28,9 +28,9 @@ Exactly four product agents. Live copies live under every `agentsDir` in `.seh/r
 | Role | Job |
 |------|-----|
 | Architect | Spec + prompt + first log row on the active tracker. Status stays at the configured `todo` string. Read-only on application code. No git writes. |
-| Implementer | Implements the spec (`feature` or `bug`). Own phase plan. Runs inline in the session that invoked `/{{prefix}}doit` or `/{{prefix}}shipit`, not as a subagent. After each phase, that session launches Consultant. Calls `.seh/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
+| Implementer | Implements the spec (`feature` or `bug`). Own phase plan. Runs inline in the session that invoked `/{{prefix}}doit` or `/{{prefix}}runit`, not as a subagent. After each phase, that session launches Consultant. Calls `.seh/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
 | Consultant | Code quality on the phase diff. Does not edit product code. Does not talk to the user. Does not judge spec compliance. Not a user-facing skill. |
-| Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, then git allowlist scripts. Does not merge the PR, except in a `/{{prefix}}runit` child launched with `Auto-merge: yes` (then via `merge-pr`). |
+| Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, then git allowlist scripts. Does not merge the PR, except in a `/{{prefix}}shipit` child launched with `Auto-merge: yes` (then via `merge-pr`). |
 
 Models and optional role `rules` (reviewer may have `checklist`) come from `agents.roles` in `harness.config.json`. Each role’s `model` is keyed by host `id`. Brainstorm turns use `agents.brainstorm.model` for this host the same way.
 
@@ -42,8 +42,8 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | `/{{prefix}}planit` | Architect once. Offer the next step; do not start it. |
 | `/{{prefix}}doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
 | `/{{prefix}}checkit` | One Reviewer round per named task: review or update from base. An accepted review ends with commit, PR and `done`. |
-| `/{{prefix}}shipit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task only. |
-| `/{{prefix}}runit` | Many specced tasks: one `/{{prefix}}shipit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. |
+| `/{{prefix}}runit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task only. |
+| `/{{prefix}}shipit` | Many specced tasks: one `/{{prefix}}runit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. |
 | `/{{prefix}}grillit` | Members, app context, and a consult round. |
 
 ## Tracker

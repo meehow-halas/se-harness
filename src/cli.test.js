@@ -911,7 +911,7 @@ describe("seh install --prefix", () => {
     fs.rmSync(path.join(pkg, "skills", "setit-se", "marker.txt"), { force: true });
     fs.writeFileSync(
       path.join(pkg, "agents", "a.md"),
-      "go: /{{prefix}}shipit\n"
+      "go: /{{prefix}}runit\n"
     );
     return { pkg, project };
   }
@@ -930,7 +930,7 @@ describe("seh install --prefix", () => {
         assert.equal(exists(path.join(project, host, "skills", "setit-se")), false);
       }
       assert.equal(read(path.join(project, ".seh", "PREFIX")), "_\n");
-      assert.equal(read(path.join(project, ".seh", "agents", "a.md")), "go: /_shipit\n");
+      assert.equal(read(path.join(project, ".seh", "agents", "a.md")), "go: /_runit\n");
       assert.match(result.stdout, /Next: run \/_setit-se in the project/);
     });
   });
@@ -948,7 +948,7 @@ describe("seh install --prefix", () => {
           assert.equal(exists(path.join(project, host, "skills", "_setit-se")), false);
         }
         assert.equal(read(path.join(project, ".seh", "PREFIX")), "my-\n");
-        assert.equal(read(path.join(project, ".seh", "agents", "a.md")), "go: /my-shipit\n");
+        assert.equal(read(path.join(project, ".seh", "agents", "a.md")), "go: /my-runit\n");
         assert.match(result.stdout, /Next: run \/my-setit-se in the project/);
       });
     }
@@ -1018,7 +1018,7 @@ describe("seh install --prefix", () => {
         assert.equal(result.status, 0);
         assert.equal(read(path.join(project, ".seh", "PREFIX")), `${stored}\n`);
         assert.match(result.stdout, new RegExp(`run /${stored}setit-se`));
-        assert.equal(read(path.join(project, ".seh", "agents", "a.md")), `go: /${stored}shipit\n`);
+        assert.equal(read(path.join(project, ".seh", "agents", "a.md")), `go: /${stored}runit\n`);
         for (const host of HOST_DIRS) {
           assert.equal(exists(path.join(project, host, "skills", `${stored}setit-se`)), true, host);
           assert.equal(exists(path.join(project, host, "skills", "_setit-se")), false, host);
@@ -1154,19 +1154,28 @@ describe("seh install --prefix", () => {
       for (const f of walk(path.join(project, ".seh"))) {
         assert.equal(read(f).includes("{{prefix}}"), false, f);
       }
-      for (const name of ["planit", "doit", "checkit", "shipit", "runit", "grillit", "setit-se"]) {
+      for (const name of ["planit", "doit", "checkit", "runit", "shipit", "grillit", "setit-se"]) {
         assert.equal(exists(path.join(project, ".seh", "skills", name, "SKILL.md")), true, name);
       }
       assert.match(read(path.join(project, ".claude", "skills", "q_setit-se", "SKILL.md")), /^---\nname: q_setit-se\n/);
-      assert.match(read(path.join(project, ".seh", "skills", "shipit", "SKILL.md")), /\/q_doit/);
       const runit = read(path.join(project, ".seh", "skills", "runit", "SKILL.md"));
-      assert.match(runit, /\/q_runit/);
-      assert.match(runit, /\/q_shipit/);
+      assert.match(runit, /^---\nname: runit\n/);
+      assert.match(runit, /\/q_doit/);
+      assert.match(runit, /Full path for \*\*one task\*\*/);
+      assert.doesNotMatch(runit, /fanout-plan --skill/);
+      assert.match(runit, /Fan-out child: yes/);
+      const shipit = read(path.join(project, ".seh", "skills", "shipit", "SKILL.md"));
+      assert.match(shipit, /^---\nname: shipit\n/);
+      assert.match(shipit, /\/q_shipit/);
+      assert.match(shipit, /\/q_runit/);
+      assert.match(shipit, /fanout-plan --skill shipit/);
+      assert.doesNotMatch(shipit, /Full path for \*\*one task\*\*/);
+      assert.match(shipit, /-shipit\.md/);
       const walkNames = (d) =>
         fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
           e.isDirectory() ? walkNames(path.join(d, e.name)) : [e.name]
         );
-      assert.deepEqual(walkNames(path.join(project, ".seh", "skills", "runit")).filter((n) => /\.test\.js$/.test(n)), []);
+      assert.deepEqual(walkNames(path.join(project, ".seh", "skills", "shipit")).filter((n) => /\.test\.js$/.test(n)), []);
     });
   });
 });

@@ -1,17 +1,15 @@
 ---
 name: shipit
-description: Full path Architect → Implementer (Consultant inside) → Reviewer. Use when the user runs /{{prefix}}shipit. Starts at the first missing stage.
+description: Run many specced tasks in parallel, one session per task, each /{{prefix}}runit with auto-merge; a dependent task starts after its dependency is merged. Use when the user runs /{{prefix}}shipit.
 ---
 
 # /{{prefix}}shipit
 
-Full path for **one task**. Single-stage skills do not chain; **this** skill runs the pipeline. Starts at the first missing stage. Does not merge the GitHub PR, except in a fan-out child launched with `Auto-merge: yes`. There is no user-facing Consultant skill (Consultant stays inside Implementer). A list of keys:
+Fan-out run for **specced** tasks. For each task the parent starts one session that runs `/{{prefix}}runit <KEY>` with auto-merge into `agents.baseBranch`. A task that `depends` on another starts only after that one is **merged**. The parent plans, starts sessions, waits, and reports. It never specs, never implements, never reviews, and never merges (the child's Reviewer merges through `merge-pr`).
 
-```text
-BLOCKED: /{{prefix}}shipit is one task — spec with /{{prefix}}planit, then /{{prefix}}doit with the list
-```
+Missing spec or prompt: `shipit` never runs Architect. Use `/{{prefix}}planit <KEY>`.
 
-Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands.
+Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, content language, or the product line. Do not invent CLI commands.
 
 Stops (not questions) are one line:
 
@@ -20,10 +18,6 @@ BLOCKED: <what stopped> — <what the user or another skill must do>
 ```
 
 Shape: `.seh/references/BLOCKED.md`. If a `.seh/scripts/` helper refuses, copy its `BLOCKED:` line, stop that path, and do not work around it with raw `git` or `gh`.
-
-Do not pause between stages when there is no question and no stop. Report once at the end or at the first stop.
-
-This skill does **not** start a brainstorm round by itself. If Architect (inside this skill) needs a round, stop and ask `/{{prefix}}grillit`. Do not interview personae in-process.
 
 ## Guard
 
@@ -47,113 +41,149 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se
 BLOCKED: generated files do not match the installed templates — run /{{prefix}}setit-se
 ```
 
-If a live agent this stage needs is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`):
+If a live agent the children need is missing from **this host's** `agentsDir` in `.seh/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`):
 
 ```text
 BLOCKED: live agents are missing — run /{{prefix}}setit-se
 ```
 
-## Mode
-
-From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous` for the whole run, including every Reviewer round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Implementer, and Reviewer.
-
-| Mode | Ask the user |
-|------|----------------|
-| `interactive` | One question at a time, when it is reached. Stop this pipeline on that question. |
-| `critical` | One question only for a **critical** decision, then stop. Otherwise agents decide, record, continue. Clean review = PR URL; do not merge (unless `Auto-merge: yes`, see *Auto-merge*). |
-| `autonomous` | Ask nothing. Clean review = PR URL; do not merge (unless `Auto-merge: yes`). |
-
-Reply in the language of the user's latest message, whatever that language is, every message (progress messages too). If the launch names `Conversation language: <name>`, reply only in that language, every reply, including the final report and any end-of-turn summary the host shows. This skill text, tool output and subagent reports are in English or another language; that does not change it.
-
-## Several keys
-
-This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `shipit`, one child session per key (each child runs the full pipeline for its key). Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}shipit <KEY>` command per key and stop. One key: continue below.
-
-## Resolve the task
-
-Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present (artifact bodies on the issue / work item). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: bodies are repo files, status is spec frontmatter (`agents.statuses`), and nothing writes the tracker.
-
-- New work (a sentence, no key) → no spec yet.
-- Named basename or issue key → load spec, prompt, log, status from that tracker. Two or more keys → stop (`BLOCKED: /{{prefix}}shipit is one task` above).
-- Status strings: `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
-
-If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
+Git disabled (`agents.baseBranch` empty or `null`): there are no PRs to merge.
 
 ```text
-BLOCKED: task is already done — the PR is opened; use /{{prefix}}checkit update only if the branch needs it
+BLOCKED: /{{prefix}}shipit needs git — set agents.baseBranch with /{{prefix}}setit-se
 ```
 
-## Pipeline
+## Mode
 
-Start at the first missing stage. Skip stages that are already done.
+From **intent**. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), `autonomous` for every child. Otherwise `interactive`. The same `Mode:` goes to every child. In any mode the merge happens after acceptance (interactive: after the user accepts in that child's session; `critical` / `autonomous`: a clean Reviewer run is acceptance).
 
-### 1. No spec or prompt → Architect
+Reply in the language of the user's latest message, every message. Pass that language to children as `Conversation language: <name>` (a Polish message gives `Polish`).
 
-Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.seh/references/hosts.json`). Do not duplicate it.
+## Key selection
 
-Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a Polish message gives `Polish`).
+- `/{{prefix}}shipit K1 K2 …`: those keys (one key is allowed; it still runs as a child session).
+- No keys: every task that has spec **and** prompt and status `todo` (the configured `agents.statuses` / mapped `todo` string):
+  - files tracker (`agents.tracker` absent): scan `docs/features/` and `docs/prompt/`;
+  - `agents.tracker.readOnly` is `true`: the same scan in repo files (status is spec frontmatter);
+  - full-write Jira or ADO: there is no search verb, so stop:
 
-If Architect asks `/{{prefix}}grillit`: stop and ask that skill; do not run the round here; do not continue the pipeline.
+```text
+BLOCKED: /{{prefix}}shipit needs keys with a Jira/ADO tracker — name the keys
+```
 
-If Architect stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
+No tasks found: `BLOCKED: no todo tasks with spec and prompt — run /{{prefix}}planit first`.
 
-On success, status stays `todo`. Continue to stage 2 without pausing.
+## Resolve (parent, once)
 
-### 2. Spec + prompt, no implementation → Implementer
+Per key, from the active tracker, as `/{{prefix}}runit` resolves one key (spec, prompt, status, `depends`). Check PR state with `.seh/scripts/pr-state <KEY>` (`state: merged|open|none`, `merged_at:`, `merge_commit:`, `url:`).
 
-No implementation means status is still the configured `todo` string (Architect does not advance past `todo`).
+- No spec or prompt: `BLOCKED: run /{{prefix}}planit <KEY> first`. That key is not started; dependents are `blocked`.
+- Status `done` and `pr-state` is `merged`: pass in `--done`, no session. Counts as "skipped (already merged)".
+- Status `done` and `pr-state` is `open`: `BLOCKED: <KEY> is done but its PR is not merged — merge it, then rerun /{{prefix}}shipit`. Not started; dependents wait.
+- Status `in progress` / `implemented` / `in review`: already running somewhere. Pass in `--running` (see *Manual hosts*; on the desktop host check `list_sessions` first).
+- `depends` between keys in this invocation: pass `--depends KEY:DEP`. The same key list is used for `--keys`.
+- `depends` on a key **outside** the invocation: satisfied when `pr-state <DEP>` is `merged` (pass it in `--done`; it is not in `--keys`). For a read-only tracker key with no local spec: satisfied when its tracker status equals `agents.tracker.statuses.blocker`. Otherwise that key is `blocked`.
 
-Follow the live Implementer file for this host (`<agentsDir>/implementer.md`) inline in this session, not as a subagent. Launch Consultant from this session after each phase as a subagent (the host’s subagent launch); do not launch Consultant as a skill.
+## Plan and go-ahead
 
-**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout. Skip the next step's `start-task` and omit `Worktree:` below.
+Call the planner:
 
-Run `.seh/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent). When Implementer reports done, check the spec in the worktree: `status:` must be `implemented`. Otherwise stop with `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
+```text
+.seh/scripts/fanout-plan --skill shipit --keys <K1,K2,...> [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
+```
 
-If Implementer stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
+Default `--max 4`; more needs the user's yes. Output: `mode`, `max`, `ready`, `waiting`, `blocked`, `queued`, `stuck` (procedure and field meanings: `.seh/references/session-fanout.md`). `mode: sequential` cannot occur here (git is enabled). A `BLOCKED:` from the planner: fix the arguments and retry.
 
-On success, status is `implemented`. Continue to stage 3 without pausing.
+Before starting anything, show the keys, the `depends` edges, the first wave (`ready`) and the rest (`waiting`, `blocked`, `queued`), and say that finished tasks are **merged into `agents.baseBranch`**. Ask **once** for the go-ahead. This is the only question the parent asks. No answer = start nothing. Reruns after a go-ahead (next waves) do not ask again.
 
-### 3. Implementation exists → Reviewer
+Record the run start time, and `git rev-parse origin/<base>` (base commit before).
 
-Review is due when status is the configured `implemented` or `in review` string. If it is `in progress`, a fix round is open after a ❌: run stage 2 again.
+## Start sessions
 
-Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round: `Variant: review`.
+Follow `.seh/references/session-fanout.md` (sections *Start sessions* and *Per-skill placement*, row `shipit`) with these specifics:
 
-Pass the same `Mode:`, the task key, and `Worktree: <abs>`. Add `Auto-merge: yes` only under the rule in *Auto-merge*; otherwise do not merge.
+- `sessionSpawn` is `start_session` (Claude Code desktop app): one `start_session` per `ready` key, `title` `shipit <KEY>`.
+- The child prompt is **exactly these five lines**, in this order, and nothing else:
 
-If Reviewer stops on `BLOCKED:` or `Q<n>` (including interactive acceptance), stop the pipeline and report.
+```text
+/{{prefix}}runit <KEY>
+Mode: <mode>
+Conversation language: <language>
+Fan-out child: yes
+Auto-merge: yes
+```
 
-- No open ❌ → stage 5.
-- Open ❌ → stage 4.
-- ⚠️ only → do not start a fix round; continue to stage 5 if Acceptance allows, else report.
+- No `Worktree:` line. The parent does not run `start-task`: the child's Architect (if ever) uses the launch checkout and the Implementer / Reviewer create the worktree.
+- Context goes in `background` (at least 80 characters: the run goal, the sibling keys, the `depends` edges, that done means merged into the base branch).
+- `wake_when_done: true`. Record each session's start time and link.
+- Do not start `waiting`, `blocked` or `queued` keys.
 
-### 4. Open ❌ → Implementer (those items only), then Reviewer again
+## Wake
 
-Max **three** Reviewer rounds total for this task (count Reviewer reports in the log plus this run). The same ❌ with no code change ends the loop: report and stop.
+When woken, read `list_sessions` / `get_session` for every started key.
 
-Apply the Implementer procedure inline in this session with **only** the open ❌ items. Consultant runs again only on phases those fixes belong to (Implementer’s caps). Then Reviewer again (`Variant: review`).
+1. A session that ended: run `.seh/scripts/pr-state <KEY>`.
+   - `state: merged` → the key is finished: add it to `--done`. Record `merged_at:` and `merge_commit:`.
+   - Anything else (no PR, open PR, `BLOCKED:`, `Q<n>`, the session still waiting on the user) → the key did **not** finish. Remove it from `--keys` (and from `--running` unless its session is still alive) on the next planner call, so its dependents report `blocked`. Also drop that key's own `--depends KEY:DEP` entries (the planner refuses a `--depends` entry whose key is not in `--keys`); entries that name it as the dependency stay. Keep its `BLOCKED:` line or open `Q<n>` and the session link for the report. A `Q<n>` is answered by the user in that session; do not relay it.
+2. A session still running → `--running`.
+3. Call `fanout-plan` again with the updated lists and start the next `ready` keys.
 
-Do not start a fourth Reviewer round.
+Stop when `ready` is empty and nothing is running (including after blocks). Then write the run report and the end report.
 
-### 5. Finish
+A child's `BLOCKED:` or `Q<n>` does not stop siblings.
 
-- `interactive`: stop on agent questions (already handled). After a clean review, Reviewer waits for explicit acceptance, then git allowlist (commit, push, PR, return to base). Do not merge unless *Auto-merge* applies.
-- `critical` / `autonomous`: a clean Reviewer run is acceptance. Report the PR URL (and the merge result when *Auto-merge* applies). Do not merge otherwise.
-- `autonomous`: the final report asks nothing. List the agents' recorded decisions (`Q<n>`) as done facts; no follow-up question, no choice buttons, no "should I change X?". The user changes a decision with a new request.
+## Manual hosts
 
-The Reviewer opens the PR and sets `done`. Without `Auto-merge: yes` the user merges it on GitHub. With it, the Reviewer merges through `merge-pr`; report `merged` (URL), or the final `BLOCKED:` line from `merge-pr`. This skill is finished.
+`sessionSpawn` is `manual` (Codex, Cursor, OpenCode): print one command block per `ready` key, then stop:
 
-## Auto-merge
+````text
+/{{prefix}}runit <KEY>
+Mode: <mode>
+Conversation language: <language>
+Fan-out child: yes
+Auto-merge: yes
+````
 
-The launch line `Auto-merge: yes` is honoured only together with `Fan-out child: yes` (set by `/{{prefix}}runit`). Then pass `Auto-merge: yes` to the Reviewer. Any other launch with that line (a user typing `/{{prefix}}shipit KEY`) ignores it: never merge, do not forward it.
+Tell the user to paste each block in a new session. The parent keeps no state between runs: rerun `/{{prefix}}shipit` (same keys) later. The rerun recomputes from `pr-state` and the tracker status: `merged` → `--done`; status `in progress` / `implemented` / `in review` → `--running`; then it prints the next wave. When the rerun finds nothing left to start and nothing running, write the run report (this is the end of the fan-out). Times of sessions the parent did not start are `n/a`.
 
-## Launch payload (every agent)
+## Run report
 
-- `Mode: <same mode for the whole run>`
-- Task key when it exists
-- `Worktree: <abs>` for Implementer and Reviewer (not Architect)
-- User request
-- `Conversation language: <name>` always (a Polish message gives `Polish`)
-- Stage 4: the ❌ list only
+Written by the parent when the fan-out ends: `ready` is empty and nothing is running, including a stop on blocks, and on the final `manual` rerun. Not written on an intermediate wave.
 
-Live files are copies from `/{{prefix}}setit-se` under every `agentsDir` in `.seh/references/hosts.json`, not symlinks to `.seh/agents/`. In this session use the copy this host loaded.
+- Path: `docs/run-reports/<YYYY-MM-DD-HHMM>-shipit.md` in the launch checkout (local time of run start; add `-2`, `-3` … if the name exists). Create the directory if needed.
+- Language: `agents.contentLanguage`.
+- Always a file, regardless of tracker. **Never** written to Jira/ADO (trackers get only the normal per-task log/comments from the agents). **Never committed**: the user commits it if wanted.
+- Timing: the parent records its own timestamps (run start, each session start, the wake on which it saw the session end). Merge time is `merged_at:` from `pr-state`. A value the parent cannot know (for example session times on a `manual` host) is written as `n/a`, never estimated.
+
+Sections, in this order:
+
+1. **Header**: run start / end, total duration, mode, host, `agents.baseBranch`, base commit before (`git rev-parse origin/<base>` at start) and after (at end), key selection (named keys or "all `todo`"), `--max`.
+2. **Summary counts**: merged / blocked / question pending / not started (dependency blocked) / skipped (already merged before the run).
+3. **Per-task table**: key, title (from spec), wave number, session link, start, end, duration, status, PR URL, merge commit, merged at, result (`merged` / `BLOCKED: …` / `Q<n>` / not started).
+4. **Done**: per merged task, what was delivered (one or two lines from the spec goal / the CHANGELOG line the child added).
+5. **Agent runs**: one line per task, counts only, read from the task log, plus the log path (do not copy log rows): `Implementer phases N · Consultant passes N (C items N, debt accepted N) · Reviewer rounds N (❌ N, ⚠️ N)`. Full-write Jira/ADO: Consultant `n/a` (not logged on the work item). Brainstorm personae are not reported (they do not run inside `/{{prefix}}shipit`).
+6. **Not done and why**: per task not merged, the exact `BLOCKED:` line or open `Q<n>` and the session where it is; tasks never started and which dependency stopped them.
+7. **Decisions taken by agents** (`autonomous` / `critical`): the `Q<n>` decisions recorded in each task log, as facts, so the user can review them.
+8. **Open warnings**: ⚠️ items the Reviewer left (not blocking, not fixed).
+9. **Dependency graph and actual order**: edges from `depends` and the waves as they ran.
+10. **What is left**: tasks still `todo` / `in progress` / with an open PR, with their status.
+11. **Next actions for the user**: concrete commands or steps (answer `Q<n>` in session X, `/{{prefix}}checkit update <KEY>`, merge PR Y by hand, `/{{prefix}}planit <KEY>`, rerun `/{{prefix}}shipit <keys>` for the rest, commit the report), most important first.
+
+## End report (chat)
+
+A short table plus the report path; the file holds the detail:
+
+| Key | Session | State |
+|-----|---------|-------|
+| `<KEY>` | `[title](#local_<id>)` | `merged` / `BLOCKED: …` / `Q<n>` / waiting / not started |
+
+Then: `Run report: docs/run-reports/<file>`. In `autonomous` mode the report asks nothing: no follow-up question, no choice buttons.
+
+## Rules
+
+- Children never spawn children. A session whose prompt has `Fan-out child: yes` runs exactly its one key in place (`/{{prefix}}runit`); it never runs this procedure and never calls `start_session`. Subagents inside a child are allowed.
+- The parent never merges and never does a child's work (no specs, no implementation, no review, no `start-task`, no `merge-pr`).
+- `Auto-merge: yes` goes only into the child prompt of this skill. It is never added for `/{{prefix}}doit`, `/{{prefix}}checkit` or a user-launched `/{{prefix}}runit`.
+- Run only `/{{prefix}}runit` children. Never start another skill's session, for example `planit` for a missing spec.
+- Children share no notes folder and no side channel. The parent does not create one.
+- Do not add lines to the child prompt. A missing required line: do not spawn that key; report `BLOCKED: fan-out prompt incomplete for <KEY> — <missing line>`.

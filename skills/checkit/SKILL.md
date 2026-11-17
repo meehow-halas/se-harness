@@ -7,7 +7,7 @@ description: One Reviewer round per named task (review or update from base). An 
 
 One Reviewer round per named task. Parse intent: **review** (default) or **update** from base. One variant for the whole invocation. Do not chain stages. Do not launch Architect. Do not merge the GitHub PR. An accepted review is the end of the feature: the Reviewer commits, opens the PR and sets `done`.
 
-Prefer reporting ❌ and offering `/{{prefix}}doit`. Do not chain into Implementer unless this invocation is a review ❌ handoff the user **asked to fix here**. `/{{prefix}}shipit` owns the fix-round loop.
+Prefer reporting ❌ and offering `/{{prefix}}doit`. Do not chain into Implementer unless this invocation is a review ❌ handoff the user **asked to fix here**. `/{{prefix}}runit` owns the fix-round loop.
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands.
 
@@ -79,7 +79,7 @@ BLOCKED: task is ambiguous — name the feature basename, Jira key, or ADO work 
 If spec or prompt is missing for a named task, stop **that** task and continue the others:
 
 ```text
-BLOCKED: spec and prompt are missing — run /{{prefix}}planit or /{{prefix}}shipit
+BLOCKED: spec and prompt are missing — run /{{prefix}}planit or /{{prefix}}runit
 ```
 
 ## Status gate (before Reviewer)
@@ -114,6 +114,6 @@ Do not merge. After a clean accepted review, the Reviewer may open a PR; this sk
 
 Report the variant, each task key, ✅/⚠️/❌, status, `worktree:` (git enabled only), and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
 
-- Open ❌ → offer `/{{prefix}}doit` (those items only, same list) or `/{{prefix}}shipit` for a single task. Do not start them unless the user already asked to fix in this invocation.
+- Open ❌ → offer `/{{prefix}}doit` (those items only, same list) or `/{{prefix}}runit` for a single task. Do not start them unless the user already asked to fix in this invocation.
 - Clean review accepted → the Reviewer committed, opened the PR and set `done` (git disabled: no commit or PR, only changelog and `done`). Report the PR URL when there is one. Nothing left for this skill; the user merges on GitHub, and that does not reopen the task.
 - Update finished → report; do not review unless they also asked for review (they did not: this invocation was update only).

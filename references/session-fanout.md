@@ -1,6 +1,6 @@
 # Session fan-out
 
-Shared procedure for work skills (`/{{prefix}}planit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}shipit`) when the user names **two or more** keys. One key = run the skill in this session as before. `/{{prefix}}runit` uses the same procedure with the differences marked `runit` below; its own steps are in `.seh/skills/runit/SKILL.md`.
+Shared procedure for work skills (`/{{prefix}}planit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}runit`) when the user names **two or more** keys. One key = run the skill in this session as before. `/{{prefix}}shipit` uses the same procedure with the differences marked `shipit` below; its own steps are in `.seh/skills/shipit/SKILL.md`.
 
 Planner: `.seh/scripts/fanout-plan`. Host adapter: `sessionSpawn` in `.seh/references/hosts.json` for this host.
 
@@ -31,13 +31,13 @@ Only when `sessionSpawn` is `start_session`. For each key in `ready`, one `mcp__
 - `use_worktree`: `false`
 - `cwd`: not passed. The app refuses a worktree path as `cwd` (observed: `cwd` under `.git/seh-worktrees/` is not in `list_start_targets`). The child starts in the launch checkout and works in the worktree named by the `Worktree:` line.
 - `title`: `<skill> <KEY>` (under 60 chars)
-- `prompt`: exactly these lines, in this order, and nothing else: the skill invocation for one key, for example `/{{prefix}}doit MT-01`; `Mode: <mode>`; `Conversation language: <language of the user's messages in this session, e.g. Polish>` (required: without it the child answers in a language of its own choice); `Fan-out child: yes` (marker, required); for a `doit` or `checkit` key only, `Worktree: <abs>`; for a `runit` key, `/{{prefix}}shipit <KEY>` as the invocation and a final `Auto-merge: yes` line (no `Worktree:`). Do not add folders, notes files, shared paths, or extra instructions to the prompt. Context for the child goes in `background` only.
+- `prompt`: exactly these lines, in this order, and nothing else: the skill invocation for one key, for example `/{{prefix}}doit MT-01`; `Mode: <mode>`; `Conversation language: <language of the user's messages in this session, e.g. Polish>` (required: without it the child answers in a language of its own choice); `Fan-out child: yes` (marker, required); for a `doit` or `checkit` key only, `Worktree: <abs>`; for a `shipit` key, `/{{prefix}}runit <KEY>` as the invocation and a final `Auto-merge: yes` line (no `Worktree:`). Do not add folders, notes files, shared paths, or extra instructions to the prompt. Context for the child goes in `background` only.
 - `Mode:` comes from the user's words, not a default. If the user asked for independent work (for example `samodzielnie`, `autonomous`, `bez pytań`), `autonomous`: no questions, a clean Reviewer run is acceptance and the feature ends with the PR. Otherwise `interactive`.
 - `background`: at least 80 characters: the parent's goal, that this session is one of N parallel keys, the sibling keys, and what done looks like for this key.
-- `model`: optional. The role model for this skill's main role from `harness.config.json` → `agents.roles.<role>.model["<host id>"]` (`architect` for planit, `implementer` for doit and shipit, `reviewer` for checkit). Pass it only when the app accepts it; if the app ignores it, the child runs on the session's model.
+- `model`: optional. The role model for this skill's main role from `harness.config.json` → `agents.roles.<role>.model["<host id>"]` (`architect` for planit, `implementer` for doit and runit, `reviewer` for checkit). Pass it only when the app accepts it; if the app ignores it, the child runs on the session's model.
 - `wake_when_done`: `true`
 
-**Prompt check (before every `start_session` call).** Write the prompt as a list of lines and check each line against this list: the skill invocation, `Mode: …`, `Conversation language: …`, `Fan-out child: yes`, `Worktree: …` (doit and checkit only), and `Auto-merge: yes` (`runit` only; never for another skill). Any other line, including a shared folder, notes file, path, or extra instruction, is deleted before the call. Nothing is written to a file or folder outside the spawn itself. If a required line cannot be filled, do not spawn that key; report `BLOCKED: fan-out prompt incomplete for <KEY> — <missing line>`.
+**Prompt check (before every `start_session` call).** Write the prompt as a list of lines and check each line against this list: the skill invocation, `Mode: …`, `Conversation language: …`, `Fan-out child: yes`, `Worktree: …` (doit and checkit only), and `Auto-merge: yes` (`shipit` only; never for another skill). Any other line, including a shared folder, notes file, path, or extra instruction, is deleted before the call. Nothing is written to a file or folder outside the spawn itself. If a required line cannot be filled, do not spawn that key; report `BLOCKED: fan-out prompt incomplete for <KEY> — <missing line>`.
 
 Do not start sessions for keys in `waiting`, `blocked`, or `queued`.
 
@@ -50,14 +50,14 @@ For `manual` (other hosts, Codex included: it has no host API to start a session
 | `/{{prefix}}planit` | launch checkout, `use_worktree: false` | Architect is spec-only, no git. Parallel specs must write disjoint files. |
 | `/{{prefix}}doit` | worktree from `.seh/scripts/start-task <KEY>` run by the parent; child starts in the launch checkout | Parent runs `start-task` before spawning. Prompt carries `Worktree: <abs>`. The child cds there. |
 | `/{{prefix}}checkit` review or update | as `/{{prefix}}doit` | Safe in parallel. |
-| `/{{prefix}}shipit` | Architect in launch checkout; Implementer and Reviewer in the worktree | One key per session by definition. |
-| `/{{prefix}}runit` | as `/{{prefix}}shipit` (child runs `/{{prefix}}shipit <KEY>`); no `Worktree:` line | Child prompt carries `Auto-merge: yes`. Parent never runs `start-task`. |
+| `/{{prefix}}runit` | Architect in launch checkout; Implementer and Reviewer in the worktree | One key per session by definition. |
+| `/{{prefix}}shipit` | as `/{{prefix}}runit` (child runs `/{{prefix}}runit <KEY>`); no `Worktree:` line | Child prompt carries `Auto-merge: yes`. Parent never runs `start-task`. |
 
 Do not use app-created worktrees (`use_worktree: true`) for seh tasks: they would sit outside `seh-worktrees/<task>`.
 
 ## 5. Between waves
 
-When woken, read `list_sessions` / `get_session` for each started key. A key that finished is added to `--done`, a key still running to `--running`. `runit`: a key finishes for dependents only when `.seh/scripts/pr-state <KEY>` prints `state: merged`; a child that ended without a merged PR is dropped from `--keys` (its dependents then report `blocked`). Call the planner again with those lists and start the next `ready` keys.
+When woken, read `list_sessions` / `get_session` for each started key. A key that finished is added to `--done`, a key still running to `--running`. `shipit`: a key finishes for dependents only when `.seh/scripts/pr-state <KEY>` prints `state: merged`; a child that ended without a merged PR is dropped from `--keys` (its dependents then report `blocked`). Call the planner again with those lists and start the next `ready` keys.
 
 Stop the whole fan-out and report when `ready` is empty and nothing is running.
 
