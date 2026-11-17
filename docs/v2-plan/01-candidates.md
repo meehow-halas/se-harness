@@ -2,12 +2,12 @@
 
 ## Goal
 
-Keep the nine PRD Deferred candidates in one place, each with its reason and PRD reference, so a later version scope can pick them deliberately.
+Keep the eight PRD Deferred candidates in one place, each with its reason and PRD reference, so a later version scope can pick them deliberately.
 
 ## Scope in
 
 - Record each candidate with: what it is, why it is deferred (risk or constraint), PRD reference.
-- Candidates: auto-merge; auto-install of a newer version; Consultant as a user-facing skill; changing `agents.contentLanguage` mid-task; file-tracker status and log helpers in `.seh/scripts/`; Jira Server / Data Center; local git without remote or `gh` as a separate mode; running `.seh/scripts/` on Windows; symlinks from live agents to `.seh/agents/`.
+- Candidates: auto-install of a newer version; Consultant as a user-facing skill; changing `agents.contentLanguage` mid-task; file-tracker status and log helpers in `.seh/scripts/`; Jira Server / Data Center; local git without remote or `gh` as a separate mode; running `.seh/scripts/` on Windows; symlinks from live agents to `.seh/agents/`.
 
 ## Scope out
 
@@ -24,7 +24,7 @@ Keep the nine PRD Deferred candidates in one place, each with its reason and PRD
 
 ## Acceptance criteria
 
-- Nine candidates listed with PRD references.
+- Eight candidates listed with PRD references.
 - Each candidate has a reason.
 - No candidate is marked approved.
 

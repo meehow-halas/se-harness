@@ -18,10 +18,11 @@ Bramka `depends` w Architect i Reviewer sprawdza status `done`, ustawiany przy o
 - Ten sam problem dla spec, która już ma otwarte `depends` (bez Architekta w tym przebiegu): `runit` etap 2 robi `start-task` przed bramką Implementera, więc spec trafia do worktree z base sprzed merge zależności, a ponowne uruchomienie stoi na `BLOCKED`, dopóki user nie usunie worktree. Bramka przed `start-task` musi czytać status zależności niezależnie od lokalnego base (np. `pr-state`), inaczej da fałszywe `BLOCKED` w `shipit` (lokalny base parenta jest nieaktualny).
 
 ## Powiązane pliki
-- `agents/architect.md:168` — bramka `depends` przed implementacją
+- `agents/architect.md:170` — reguła `depends` (musi być `done` przed implementacją); od 1.3.2 Architect już nie zatrzymuje się na otwartym `depends` (`:66`)
 - `agents/reviewer.md:51` — stop, gdy `depends` nie jest `done`
 - `references/session-fanout.md` — komunikat „rerun after <DEP> is merged”
 
 ## Historia
 - 2026-11-17 — utworzenie
 - 2026-11-17 — dopisany przypadek spec z otwartym `depends` przed `start-task` (bramka po Architekcie w `runit` już jest)
+- 2026-11-17 — odświeżone odwołania do linii po porządkach w docs/
