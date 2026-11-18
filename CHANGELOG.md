@@ -13,7 +13,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 - Designer (`agents/designer.md`): second contract, `Design file: <path>` (writes only that file, `D<n>` inside it, `ready` after acceptance or write).
 - Architect (`agents/architect.md`): input `Design: <path>`. Writes `ui: true`, the UX/UI decisions section and `UX:` criteria from the file; conflict is a `Q<n>`; `draft` asks (interactive), `BLOCKED` (critical) or `Q<n>` (autonomous); logs `design: <path>`; never edits the file.
-- `/<prefix>planit`, `/<prefix>runit`: accept a design file the user names and pass `Design:`; the Designer stage is skipped when the spec has a UX section. `/<prefix>runit` with a design file for a task that already has a spec stops with `BLOCKED` (rebuild with `/<prefix>planit <KEY> <path>`) instead of ignoring the file.
+- `/<prefix>planit`, `/<prefix>runit`: accept a design file the user names and pass `Design:`; the Designer stage is skipped when the spec has a UX section. `/<prefix>runit` with a design file for a task that already has a spec stops with `BLOCKED` (rebuild with `/<prefix>planit <KEY> <path>`) instead of ignoring the file, unless the spec log already has `design: <that path>`. Several keys plus a design file is `BLOCKED` in both skills (fan-out would drop the file).
 - Designer description and opening line name both contracts (spec and design file).
 - `/<prefix>setit-se`, `src/cli.js`, `references/AGENTS.md`: `designit` in generation, prefix cleanup, host commands, `invokePrefix` and the consumer skill list.
 
