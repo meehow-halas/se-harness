@@ -300,7 +300,7 @@ On a confirmed role `model` cell change only: rewrite that one file’s `model:`
 
 Install writes **only** `/{{prefix}}setit-se` live (already in every `skillsDir`). This skill generates the rest.
 
-Read the prefix from `.seh/PREFIX` (first line, may be empty). Copy these directories from `.seh/skills/` to **each** `skillsDir`, if they exist in `.seh/skills/`. The live directory is `<prefix><name>`, and its `SKILL.md` frontmatter `name:` is rewritten to `<prefix><name>` (the slash command):
+Read the prefix from `.seh/PREFIX` (first line, may be empty). Copy these directories from `.seh/skills/` to **each** `skillsDir`, if they exist in `.seh/skills/`. The live directory is `<prefix><name>`, and its `SKILL.md` frontmatter `name:` is rewritten to the bare `<prefix><name>` (for example `_doit`). No leading `/` in `name:`: the host adds the slash, so `/` in it gives `//_doit`:
 
 - `planit`
 - `doit`
