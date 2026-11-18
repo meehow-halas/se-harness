@@ -67,10 +67,19 @@ Brainstorm uses the same map shape on `agents.brainstorm.model`. `/_grillit` ask
 
 From the project directory, pick one source and reuse it later for uninstall:
 
-```text
+```bash
 npx -p se-harness seh install
+```
+
+```bash
 npx -p github:meehow-halas/se-harness seh install
+```
+
+```bash
 npx -p github:meehow-halas/se-harness#<ref> seh install
+```
+
+```bash
 npx -p https://github.com/meehow-halas/se-harness seh install
 ```
 
