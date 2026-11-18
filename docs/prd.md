@@ -655,7 +655,7 @@ If the user names another config key (model, base branch, …), do that key firs
 
 One task. A list of keys is a stop: spec with `/<prefix>planit`, then `/<prefix>doit` with the list.
 
-1. No spec or prompt → Architect (launch checkout; no git, no worktree). With a design file the user named, the Architect gets `Design: <path>` (see Architect).
+1. No spec or prompt → Architect (launch checkout; no git, no worktree). With a design file the user named, the Architect gets `Design: <path>` (see Architect). A design file named for a task that already has a spec is `BLOCKED` (rebuild the spec with `/<prefix>planit <KEY> <path>` first); it is never ignored silently.
 1b. Spec has `ui: true`, `agents.designer.enabled` is `true`, and the spec has no **UX/UI decisions** section → Designer (launch checkout; no git, no worktree), before step 2. Interactive: stop on its questions like the Architect's. A spec built from a design file already has that section, so the step is skipped.
 2. Spec+prompt (and the UX section when step 1b applies), no implementation → Implementer in the task worktree, Consultant inside each phase.
 3. Implementation exists → Reviewer in that worktree.

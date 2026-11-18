@@ -83,6 +83,12 @@ BLOCKED: task is already done — the PR is opened; use /{{prefix}}checkit updat
 
 Start at the first missing stage. Skip stages that are already done.
 
+A design file the user named reaches only the Architect (stage 1). If the task already has a spec and prompt, do not ignore the file silently; stop before any stage:
+
+```text
+BLOCKED: <KEY> already has a spec — run /{{prefix}}planit <KEY> <design path> to rebuild it from the design, then /{{prefix}}runit <KEY>
+```
+
 ### 1. No spec or prompt → Architect
 
 Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.seh/references/hosts.json`). Do not duplicate it.

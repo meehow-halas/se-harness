@@ -6,8 +6,8 @@ Planning: complete
 ## Etapy
 | NN | Etap | Wykonawca | Status | Weryfikacja |
 |----|------|-----------|--------|-------------|
-| 01 | [PRD: skill designit i plik projektu](01-prd.md) | mixed | planned | przegląd agenta + akceptacja tekstu PRD przez użytkownika |
-| 02 | [Wdrożenie designit](02-designit.md) | agent | planned | `npm test` (cli) + przegląd agenta + zgoda na 1.5.0 |
+| 01 | [PRD: skill designit i plik projektu](01-prd.md) | mixed | done | przegląd agenta + akceptacja tekstu PRD przez użytkownika |
+| 02 | [Wdrożenie designit](02-designit.md) | agent | done | `npm test` (cli) + przegląd agenta + zgoda na 1.5.0 |
 
 ## Przepływ docelowy
 
