@@ -248,6 +248,30 @@ sys.stdout.write(b.strip())
   printf '%s' "$_flat" | sed -n 's/.*"baseBranch"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
 }
 
+# Print agents.reportChange as "true" or "false". Missing config file or missing
+# key = true. Exit 2 when harness.config.json is unreadable JSON or the value is
+# not a boolean.
+read_report_change() {
+  _cfg=$(config_path)
+  if [ ! -f "$_cfg" ]; then
+    printf 'true'
+    return 0
+  fi
+  if ! command -v node >/dev/null 2>&1; then
+    return 2
+  fi
+  node -e '
+var fs = require("fs");
+var c;
+try { c = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); } catch (e) { process.exit(2); }
+var a = c && c.agents;
+if (!a || typeof a !== "object" || !("reportChange" in a)) { process.stdout.write("true"); process.exit(0); }
+var v = a.reportChange;
+if (v === true || v === false) { process.stdout.write(String(v)); process.exit(0); }
+process.exit(2);
+' "$_cfg"
+}
+
 # Git is disabled when harness.config.json exists and agents.baseBranch is
 # present but empty or null. Call before require_git. Prints UNCHANGED with
 # "git: disabled" plus any extra lines passed in, then exits 0. Returns

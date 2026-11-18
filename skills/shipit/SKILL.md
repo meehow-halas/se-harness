@@ -161,7 +161,7 @@ Sections, in this order:
 1. **Header**: run start / end, total duration, mode, host, `agents.baseBranch`, base commit before (`git rev-parse origin/<base>` at start) and after (at end), key selection (named keys or "all `todo`"), `--max`.
 2. **Summary counts**: merged / blocked / not started (dependency blocked) / skipped (already merged before the run).
 3. **Per-task table**: key, title (from spec), wave number, session link, start, end, duration, status, PR URL, merge commit, merged at, result (`merged` / `BLOCKED: …` / `Q<n>` / not started).
-4. **Done**: per merged task, what was delivered (one or two lines from the spec goal / the CHANGELOG line the child added).
+4. **Done**: per merged task, what was delivered (one or two lines from the spec goal / the change record line the child added).
 5. **Agent runs**: one line per task, counts only, read from the task log, plus the log path (do not copy log rows): `Implementer phases N · Consultant passes N (C items N, debt accepted N) · Reviewer rounds N (❌ N, ⚠️ N)`. Full-write Jira/ADO: Consultant `n/a` (not logged on the work item). Brainstorm personae are not reported (they do not run inside `/{{prefix}}shipit`).
 6. **Not done and why**: per task not merged, the exact `BLOCKED:` line or open `Q<n>` and the session where it is; tasks never started and which dependency stopped them.
 7. **Decisions taken by agents** (`autonomous` / `critical`): the `Q<n>` decisions recorded in each task log, as facts, so the user can review them.

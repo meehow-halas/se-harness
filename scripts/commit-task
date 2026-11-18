@@ -2,7 +2,10 @@
 # commit-task <task> [--message <text>] [--] <path> [<path> ...]
 # git add of the listed paths only, then git commit on the task branch.
 # After an update-from-base merge, --message may be omitted (finishes the merge).
-# Reads project-root harness.config.json. No rebase, reset, or force.
+# Reads project-root harness.config.json. When agents.reportChange is true or
+# missing, a changed CHANGELOG.md at the project root is added too. Otherwise
+# (false, invalid, or unreadable) nothing extra is added; listed paths always are.
+# No rebase, reset, or force.
 
 . "$(dirname "$0")/lib.sh"
 
@@ -53,6 +56,9 @@ require_not_base "$task" "$base"
 branch=$(task_branch "$task")
 require_on_task "$branch"
 
+flag=$(read_report_change 2>/dev/null) || flag=
+changelog=$(project_root)/CHANGELOG.md
+
 if [ -z "$paths" ]; then
   blocked "no paths listed" "pass the files to add and commit"
 fi
@@ -81,6 +87,13 @@ for p in $paths; do
 done
 IFS=$old_ifs
 set +f
+
+if [ "$flag" = "true" ] && [ -n "$(git status --porcelain -- "$changelog" 2>/dev/null)" ]; then
+  if ! out=$(git add -- "$changelog" 2>&1); then
+    blocked "git add failed ($out)" "fix CHANGELOG.md and retry commit-task"
+  fi
+  added=yes
+fi
 
 if [ "$added" = "no" ]; then
   blocked "no paths listed" "pass the files to add and commit"

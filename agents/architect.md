@@ -18,7 +18,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first 
 ## Languages
 
 - Reply in the conversation language. A launch may name `Conversation language: <name>`. When it names none, use the language of the user's messages. A quotation, a status name, an identifier, or an existing specification in another language does not change the reply.
-- Write spec, prompt, log, changelog, and every text sent to the tracker in `agents.contentLanguage` from config. If that value is `conversation`, use the conversation language. Do not ask which language to use and do not change `agents.contentLanguage`.
+- Write spec, prompt, log, and every text sent to the tracker in `agents.contentLanguage` from config. If that value is `conversation`, use the conversation language. Do not ask which language to use and do not change `agents.contentLanguage`.
 - Status keys stay the configured English strings from `agents.statuses` (or Jira / ADO mapped names). Do not translate them from the conversation.
 
 ## Modes

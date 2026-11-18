@@ -1,0 +1,107 @@
+#!/bin/sh
+# record-change <task> --text <one line>
+# Adds one entry to the Unreleased "Changed" section of CHANGELOG.md at the project
+# root (created above the first "## " heading when missing), when
+# agents.reportChange in harness.config.json is not false. Otherwise
+# prints UNCHANGED and writes nothing (exit 0; the flow continues). Does not
+# stage or commit: commit-task does that. Works with git disabled.
+
+. "$(dirname "$0")/lib.sh"
+
+task=
+text=
+has_text=no
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --text)
+      if [ $# -lt 2 ]; then
+        blocked "missing value for --text" "pass record-change <task> --text <one line>"
+      fi
+      text=$2
+      has_text=yes
+      shift 2
+      ;;
+    -*)
+      blocked "unknown option $1" "pass record-change <task> --text <one line>"
+      ;;
+    *)
+      if [ -n "$task" ]; then
+        blocked "unexpected argument $1" "pass record-change <task> --text <one line>"
+      fi
+      task=$1
+      shift
+      ;;
+  esac
+done
+
+require_task "$task"
+
+if [ "$has_text" = "no" ] || [ -z "$text" ]; then
+  blocked "no text" "pass record-change <task> --text <one line describing the change>"
+fi
+
+case $text in
+  *"
+"*) blocked "text must be one line" "shorten --text to one line" ;;
+esac
+
+if flag=$(read_report_change); then
+  :
+else
+  blocked "agents.reportChange in harness.config.json is not a boolean, or the file is unreadable" "set agents.reportChange to true or false"
+fi
+
+if [ "$flag" = "false" ]; then
+  unchanged "report: disabled" "task: $task"
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  blocked "node is required to write CHANGELOG.md" "install node, then retry record-change"
+fi
+
+root=$(project_root)
+file=$root/CHANGELOG.md
+date=$(date +%Y-%m-%d)
+entry="$task ($date): $text"
+
+if ! out=$(node -e '
+var fs = require("fs");
+var p = process.argv[1];
+var entry = process.argv[2];
+var src = fs.existsSync(p) ? fs.readFileSync(p, "utf8") : "# Changelog\n";
+var lines = src.split("\n");
+var u = lines.findIndex(function (l) { return /^## \[?Unreleased\]?\s*$/i.test(l); });
+if (u < 0) {
+  var first = lines.findIndex(function (l) { return /^## /.test(l); });
+  var block = ["## [Unreleased]", "", "### Changed", "", "- " + entry, ""];
+  if (first < 0) {
+    while (lines.length && lines[lines.length - 1] === "") lines.pop();
+    lines = lines.concat([""], block);
+  } else {
+    lines.splice.apply(lines, [first, 0].concat(block));
+  }
+} else {
+  var end = lines.findIndex(function (l, i) { return i > u && /^## /.test(l); });
+  if (end < 0) end = lines.length;
+  var c = -1;
+  for (var i = u + 1; i < end; i++) {
+    if (/^### Changed\s*$/.test(lines[i])) { c = i; break; }
+  }
+  if (c < 0) {
+    lines.splice(u + 1, 0, "", "### Changed", "", "- " + entry);
+  } else {
+    var ins = c + 1;
+    while (ins < lines.length && lines[ins].trim() === "") ins++;
+    lines.splice(ins, 0, "- " + entry);
+    if (ins < lines.length && !/^\s*$/.test(lines[ins]) && !/^- /.test(lines[ins])) {
+      lines.splice(ins + 1, 0, "");
+    }
+  }
+}
+fs.writeFileSync(p, lines.join("\n"));
+' "$file" "$entry" 2>&1); then
+  blocked "could not write CHANGELOG.md ($out)" "check CHANGELOG.md is writable, then retry record-change"
+fi
+
+ok "task: $task" "changelog: CHANGELOG.md" "entry: $entry"
