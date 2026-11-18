@@ -196,7 +196,7 @@ Settled records stay files under `docs/brainstorm/`. They are not the task track
 
 - Role-play a persona or the facilitator in this skill.
 - Copy facilitator templates into any `agentsDir` or `agents.roles`.
-- Interview personae from Architect, Implementer, Consultant, or Reviewer.
+- Interview personae from Architect, Designer, Implementer, Consultant, or Reviewer.
 - Hand-edit generated member markdown.
 - Touch `agents.roles` for a brainstorm model.
 - Copy one host’s brainstorm `model` onto another host’s launch.

@@ -51,7 +51,7 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 
 ## Mode
 
-From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous` for the whole run, including every Reviewer round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Implementer, and Reviewer.
+From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous` for the whole run, including every Reviewer round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Designer, Implementer, and Reviewer.
 
 | Mode | Ask the user |
 |------|----------------|
@@ -73,7 +73,7 @@ Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.t
 - Named basename or issue key → load spec, prompt, log, status from that tracker (files tracker or read-only: the task worktree copy when a seh worktree exists for the key, else the launch checkout). Two or more keys → *Several keys*. A key with no spec yet (neither in the task worktree nor in the launch checkout): with git enabled and a files or read-only tracker, run `.seh/scripts/pr-state <KEY>` first, because after `return-to-base` the spec may exist only on the task branch. `state: open` → the already-done stop below; `state: merged` → `BLOCKED: task is already merged — <url>; start new work with a new request`; `state: none` → stage 1 (Architect).
 - Status strings: `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
 
-If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
+If status is already the configured **`done`** string, stop. Do not re-run Architect, Designer, Implementer, or Reviewer:
 
 ```text
 BLOCKED: task is already done — the PR is opened; use /{{prefix}}checkit update only if the branch needs it
@@ -107,7 +107,7 @@ The spec stays `todo` in the launch checkout; the rerun starts at the first miss
 
 Applies only when all three hold: the spec frontmatter has `ui: true`; `agents.designer.enabled` is `true` in `harness.config.json`; the spec has no **UX/UI decisions** section. Otherwise skip to stage 2 (a spec with `ui: false` or no `ui`, or a disabled Designer, never runs it). Also run it when the Architect just ran in this run and wrote `ui: true`.
 
-Follow the live Designer file for this host (`<agentsDir>/designer.md`). Launch it as a subagent in the launch checkout: no git, no worktree, no `Worktree:` line. Pass `Mode:` (the same mode as the Architect), the task key, `Conversation language: <name>` always, and, if the user approved a change to an existing UX section, `User approval: <the user's own words, verbatim>`.
+Follow the live Designer file for this host (`<agentsDir>/designer.md`). Launch it as a subagent in the launch checkout: no git, no worktree, no `Worktree:` line. Pass `Mode:` (the same mode as the Architect), the task key, `Conversation language: <name>` always, and, if the user approved the UX section the Designer showed (new or a change to an existing one), `User approval: <the user's own words, verbatim>`.
 
 If the Designer stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report. Interactive: the UX section is shown before write, so questions and the confirmation are normal stops. On success, status stays `todo`; continue to stage 2 without pausing.
 

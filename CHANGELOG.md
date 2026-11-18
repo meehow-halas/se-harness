@@ -7,6 +7,8 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 ### Fixed
 
 - `references/harness.config.md`: `agents.designer.enabled` on the first `/<prefix>setit-se` run is asked once (recommended `true` when a UI stack was detected), not written without a question. Matches `/<prefix>setit-se` and the PRD.
+- Designer in `interactive`: approval of a **new** UX section can now arrive as `User approval:` from `/<prefix>planit` / `/<prefix>runit` (before, only a change to an existing section was forwarded, so a rerun could stop again on the same section).
+- `runit`, `grillit`, `references/session-fanout.md`: role lists name the Designer (same mode as the run; no persona interviews; allowed as a subagent in a fan-out child).
 
 ## [1.4.0] - 2026-11-18
 

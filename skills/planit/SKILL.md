@@ -78,7 +78,7 @@ If the Architect stops with a `BLOCKED:` line or a question (`Q<n>`), report tha
 
 After the Architect finishes without `BLOCKED:` or a question, read the spec it wrote. Run the Designer once only when **both** hold: the spec frontmatter has `ui: true`, and `agents.designer.enabled` is `true` in `harness.config.json`. Otherwise skip this section; a spec with `ui: false` or no `ui`, or a disabled Designer, never runs it.
 
-Follow the live Designer file for this host (`<agentsDir>/designer.md`). Do not duplicate it. Pass at least `Mode: <the same mode as the Architect>`, the task key, `Conversation language: <name>` always, and, when the user approved a change to an existing UX section in this session, `User approval: <the user's own words, verbatim>`. The Designer works in the launch checkout, with no git and no worktree, and does not change status.
+Follow the live Designer file for this host (`<agentsDir>/designer.md`). Do not duplicate it. Pass at least `Mode: <the same mode as the Architect>`, the task key, `Conversation language: <name>` always, and, when the user approved the UX section the Designer showed (new or a change to an existing one) in this session, `User approval: <the user's own words, verbatim>`. The Designer works in the launch checkout, with no git and no worktree, and does not change status.
 
 The Designer is launched by this skill, not by the Architect (a subagent cannot launch one). If the Designer stops with a `BLOCKED:` line or a question (`Q<n>`), report that and stop. Do not continue to implementation.
 

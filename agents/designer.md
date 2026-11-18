@@ -26,7 +26,7 @@ If the spec has no `ui: true` (absent counts as `false`), or `agents.designer.en
 
 A launch names `Mode: interactive`, `Mode: critical`, or `Mode: autonomous` (the same mode the Architect got). With no mode, the mode is `interactive`.
 
-- `interactive`: one question at a time, with `Q<n>: <question> — Recommendation: <answer> (<reason>)`, and wait. Show the UX section and the added criteria before writing them.
+- `interactive`: one question at a time, with `Q<n>: <question> — Recommendation: <answer> (<reason>)`, and wait. Show the UX section and the added criteria before writing them. Approval counts when the user gives it in this session, or when the launch passes `User approval: <the user's own words>` for this task; accept that line, record it once in the log with the words quoted, and write. A summary, a paraphrase, or your own inference does not count.
 - `critical`: one question only for a **critical** UX decision, then stop. Decide everything else, write it, record each as `D<n>`.
 - `autonomous`: ask nothing. Follow the existing spec and the project's design system. Record every decision as `D<n>`. Never leave a choice open for the user.
 
