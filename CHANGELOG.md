@@ -2,7 +2,7 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
-## [1.3.4] - 2026-11-18
+## [1.4.0] - 2026-11-18
 
 ### Added
 

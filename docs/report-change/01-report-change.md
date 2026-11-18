@@ -39,7 +39,7 @@ Poza zakresem:
 - [ ] `agents/reviewer.md` nie zawiera nazwy `CHANGELOG.md` w krokach po akceptacji (poza opisem w dokumentacji, jeśli jest potrzebny).
 - [ ] Implementer i doit zawierają jawny zakaz edycji `CHANGELOG.md`.
 - [ ] `npm test` przechodzi (najwęższe testy najpierw; potem całość przed zakończeniem).
-- [x] Wersja 1.3.4 (patch) ustalona przez użytkownika (Q5).
+- [x] Wersja 1.4.0 (minor) zatwierdzona przez użytkownika (Q5).
 
 ## Weryfikacja
 - `node --test scripts/record-change.test.js scripts/commit-task.test.js` (nazwy dopasować do istniejących plików testowych).
