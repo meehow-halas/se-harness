@@ -9,7 +9,7 @@ Zob. `docs/report-change/01-report-change.md` (sekcja Cel). Skopiowana pełna tr
 - Pakiet seh: `agents/`, `packs/`, `skills/`, `brainstorm/`, `references/`, `scripts/`, `src/` są kopiowane przez `seh install` do `.seh/`. Edytuj tylko w tych katalogach.
 - Skrypty git/helpery to POSIX sh w `scripts/`; mają testy `scripts/<name>.test.js` obok siebie. Przykładowe wzorce: `scripts/commit-task`, `scripts/commit-task.test.js`, `scripts/lib.sh` (jeśli istnieje) — przeczytaj je najpierw przez Grep, nie czytaj całych plików.
 - Konfiguracja: `harness.config.json` w projekcie konsumującym; skrypty czytają `agents.baseBranch` itd. przez proste parsowanie. Sprawdź, jak `scripts/commit-task` czyta konfigurację i powtórz ten sam mechanizm dla `agents.reportChange`.
-- Zmiany w shipped katalogach wymagają wpisu w `CHANGELOG.md` pod bieżącą wersją oraz bumpu wersji w `package.json` (patrz `CLAUDE.md` projektu). Wersja: 1.3.4 (patch, decyzja użytkownika Q5).
+- Zmiany w shipped katalogach wymagają wpisu w `CHANGELOG.md` pod bieżącą wersją oraz bumpu wersji w `package.json` (patrz `CLAUDE.md` projektu). Wersja: 1.4.0 (minor, decyzja użytkownika Q5).
 
 ## Spec (pełna treść)
 Cel: Reviewer po akceptacji wywołuje `.seh/scripts/record-change <task> --text <opis>` i nie zna nazwy `CHANGELOG.md`. Skrypt zapisuje wpis, gdy `agents.reportChange` jest `true` (default przy braku klucza), a przy `false` kończy z kodem 0 i wypisuje `UNCHANGED` z linią `report: disabled`. `commit-task` sam dołącza zmieniony `CHANGELOG.md` tylko przy fladze `true`; ścieżki podane jawnie commituje zawsze.
@@ -22,8 +22,8 @@ Zakres:
 - `agents/implementer.md` (linie ok. 8 i 104) i `skills/doit/SKILL.md` (linia ok. 10): jawny zakaz edycji `CHANGELOG.md`, także wbrew regułom projektu (Q2).
 - `references/harness.config.md`: opis klucza `agents.reportChange` i `"reportChange": true` w szkielecie.
 - `references/AGENTS.md`, `docs/prd.md`: krok changelogu warunkowy przez `agents.reportChange`.
-- `CHANGELOG.md`: wpis pod 1.3.4.
-- `package.json`: version 1.3.4.
+- `CHANGELOG.md`: wpis pod 1.4.0.
+- `package.json`: version 1.4.0.
 
 Poza zakresem: podkomenda `seh` (CLI v1 ma tylko `install` i `uninstall`); wymuszanie przez hooki lub system plików; commit, push, PR.
 
@@ -40,7 +40,7 @@ Kryteria akceptacji:
 - [ ] `agents/reviewer.md` nie zawiera `CHANGELOG.md` w krokach po akceptacji.
 - [ ] Implementer i doit zawierają jawny zakaz edycji `CHANGELOG.md`.
 - [ ] `npm test` przechodzi; najpierw uruchom wąskie testy.
-- [x] Wersja 1.3.4 (patch) ustalona przez użytkownika (Q5).
+- [x] Wersja 1.4.0 (minor) zatwierdzona przez użytkownika (Q5).
 
 Weryfikacja: `node --test scripts/record-change.test.js scripts/commit-task.test.js`, potem `npm test`. Zacytuj prawdziwy wynik (liczbę testów i błędy, jeśli są).
 

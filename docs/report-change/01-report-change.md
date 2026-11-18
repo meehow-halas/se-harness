@@ -12,8 +12,8 @@ W zakresie:
 - `agents/implementer.md` (linie ok. 8 i 104) i `skills/doit/SKILL.md` (linia ok. 10): jawny zakaz edycji `CHANGELOG.md`, także wbrew regułom projektu (Q2).
 - `references/harness.config.md`: opis klucza `agents.reportChange` i wartość `"reportChange": true` w szkielecie.
 - `references/AGENTS.md`, `docs/prd.md`: zmiany kroku changelogu na warunkowe przez `agents.reportChange`.
-- `CHANGELOG.md`: wpis pod wersją 1.3.4.
-- `package.json`: `version` 1.3.4 (patch, decyzja użytkownika Q5).
+- `CHANGELOG.md`: wpis pod wersją 1.4.0.
+- `package.json`: `version` 1.4.0 (minor, decyzja użytkownika Q5).
 
 Poza zakresem:
 - Podkomenda `seh` (CLI v1 ma tylko `install` i `uninstall`).
@@ -26,20 +26,20 @@ Poza zakresem:
 - Q2 (zmienione): Implementer i doit mają jawny zakaz edycji `CHANGELOG.md`; neutralny zakaz przegrywał z regułami projektu.
 - Q3: `commit-task` nie blokuje przez flagę; `false` wyłącza tylko auto-dołączanie.
 - Q4: `record-change` wstawia `## [Unreleased]` nad pierwszy nagłówek `## ` dowolnej postaci; wpisy zawsze pod `### Changed` (świadome uproszczenie).
-- Q5: wersja 1.3.4 (patch) na polecenie użytkownika, mimo że reguła projektu dla nowego klucza wskazuje minor.
+- Q5: wersja 1.4.0 (minor) zatwierdzona przez użytkownika; zgodnie z regułą projektu dla nowego klucza konfiguracji.
 
 ## Kryteria akceptacji
-- [ ] `scripts/record-change` istnieje, jest wykonywalny i jest w `scripts/*.test.js` testowany.
-- [ ] Przy `reportChange: true` skrypt dopisuje wpis do `CHANGELOG.md` (format: task, data, opis) i kończy z kodem 0.
-- [ ] Przy `reportChange: false` skrypt nie zmienia żadnego pliku, kończy z kodem 0 i wypisuje `UNCHANGED` z linią `report: disabled`.
-- [ ] Brak klucza w `harness.config.json` zachowuje się jak `true`.
-- [ ] Wartość testowa klucza nie jest hardcodowana (testy używają różnych opisów, nazw zadań i dat).
-- [ ] `commit-task` przy `true`/braku klucza i zmienionym `CHANGELOG.md` dołącza ten plik sam; przy `false` lub złej wartości go sam nie dołącza i nie zwraca BLOCKED; jawnie podany `CHANGELOG.md` jest commitowany przy każdej wartości.
-- [ ] `record-change` przy nagłówkach bez nawiasów (`## v2.1.0`) wstawia wpis nad najnowszą wersją, nie na końcu pliku.
-- [ ] `agents/reviewer.md` nie zawiera nazwy `CHANGELOG.md` w krokach po akceptacji (poza opisem w dokumentacji, jeśli jest potrzebny).
-- [ ] Implementer i doit zawierają jawny zakaz edycji `CHANGELOG.md`.
+- [x] `scripts/record-change` istnieje, jest wykonywalny i jest w `scripts/*.test.js` testowany.
+- [x] Przy `reportChange: true` skrypt dopisuje wpis do `CHANGELOG.md` (format: task, data, opis) i kończy z kodem 0. (test: `record-change.test.js` „agents.reportChange true appends…”)
+- [x] Przy `reportChange: false` skrypt nie zmienia żadnego pliku, kończy z kodem 0 i wypisuje `UNCHANGED` z linią `report: disabled`. (test: „agents.reportChange false writes nothing…”)
+- [x] Brak klucza w `harness.config.json` zachowuje się jak `true`. (test: „a missing agents.reportChange key behaves as true”)
+- [x] Wartość testowa klucza nie jest hardcodowana (testy używają różnych opisów, nazw zadań i dat).
+- [x] `commit-task` przy `true`/braku klucza i zmienionym `CHANGELOG.md` dołącza ten plik sam; przy `false` lub złej wartości go sam nie dołącza i nie zwraca BLOCKED; jawnie podany `CHANGELOG.md` jest commitowany przy każdej wartości. (testy `commit-task.test.js:221-276`)
+- [x] `record-change` przy nagłówkach bez nawiasów (`## v2.1.0`) wstawia wpis nad najnowszą wersją, nie na końcu pliku. (test: „headings without brackets…”)
+- [x] `agents/reviewer.md` nie zawiera nazwy `CHANGELOG.md` w krokach po akceptacji (poza opisem w dokumentacji, jeśli jest potrzebny).
+- [x] Implementer i doit zawierają jawny zakaz edycji `CHANGELOG.md`.
 - [ ] `npm test` przechodzi (najwęższe testy najpierw; potem całość przed zakończeniem).
-- [x] Wersja 1.4.0 (minor) zatwierdzona przez użytkownika (Q5).
+- [x] Wersja 1.4.0 (minor) zatwierdzona przez użytkownika (Q5); w `package.json` i `CHANGELOG.md` ustawiona.
 
 ## Weryfikacja
 - `node --test scripts/record-change.test.js scripts/commit-task.test.js` (nazwy dopasować do istniejących plików testowych).
