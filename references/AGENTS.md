@@ -41,7 +41,7 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 |-------|------|
 | `/{{prefix}}setit-se` | First-time setup when config is missing; later, one parameter at a time (including tracker). |
 | `/{{prefix}}planit` | Architect once, then the Designer when the spec has `ui: true` and `agents.designer.enabled` is `true`. Offer the next step; do not start it. Optional input: a design file from `/{{prefix}}designit` (then no Designer stage). |
-| `/{{prefix}}designit` | Designer once, UX/UI only, before the spec: writes `docs/designs/<slug>.design.md`. No tracker, no spec, no git. Needs the Designer enabled. Offers `/{{prefix}}planit` with the file. |
+| `/{{prefix}}designit` | Designer once, UX/UI only, before the spec: writes `docs/designs/<slug>.design.md`. No tracker, no spec, no git. Needs the Designer enabled. Offers `/{{prefix}}planit` with the file. Intent "learn conventions": writes `docs/designs/ux-conventions.md` (the project's UX rules, read by the Designer on later runs) and offers nothing after it. |
 | `/{{prefix}}doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
 | `/{{prefix}}checkit` | One Reviewer round per named task: review or update from base. An accepted review ends with commit, PR and `done`. |
 | `/{{prefix}}runit` | Architect → (Designer) → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session; several keys fan out (`.seh/references/session-fanout.md`), with no dependency ordering; git disabled: run in this session in dependency order. |

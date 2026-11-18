@@ -58,6 +58,22 @@ To change the design later, run `/_designit docs/designs/login-screen.design.md`
 
 Why: the UX is worked out on its own, without the requirements and the tracker. The file stays in the repo. The Architect uses it only when you name it, so nothing picks up a half-finished design by itself.
 
+### Teach the Designer your UX conventions
+
+```text
+/_designit learn the project's UX conventions
+```
+
+1. Same gate as above: the Designer must be enabled.
+2. The Designer scans the UI code, design tokens, component library and docs. It also reads the `ux-a11y` pack to spot where the project differs from it.
+3. It shows the whole file, then writes `docs/designs/ux-conventions.md` (`status: draft`): about 50 one-line rules, each with `path:line` evidence. A project practice that breaks a `ux-a11y` rule is proposed under **Deviations from ux-a11y**, with the pack rule quoted, the practice and the reason.
+4. You accept the rules and each deviation. Then it sets `ready`. Nothing is offered after it: no `/_planit`, no `/_runit`.
+5. Later, `/_designit`, `/_planit` and `/_runit` use the file. Its rules beat the generic WCAG / HIG baseline, and a decision based on it ends in `(ux-conventions)`. With `ready`, the Consultant no longer flags the accepted deviations in `/_runit`.
+
+Rerun the command to update the file; it changes only what is new or outdated. In critical or autonomous mode, deviations are only listed in the report as proposals, never written. A `draft` file is a hint only: no deviation counts until it is `ready`.
+
+Why: the generic rules do not know your product. A deviation without your approval would let the Implementer and the Consultant disagree, so a person always decides.
+
 ### Implement one task
 
 ```text
@@ -282,6 +298,7 @@ Every stop is one line, `BLOCKED: <what> — <what to do>`. Common ones:
 | `the Designer is disabled — enable it in /_setit-se` | `/_designit` needs the Designer | Turn it on in `/_setit-se` |
 | `design … is draft — finish it in /_designit or rerun interactive` | Critical mode got a design file still in `draft` | Finish it with `/_designit`, or rerun interactive |
 | `MT-01 already has a spec — run /_planit MT-01 <design path> …` | `/_runit` got a design file for a task whose spec was not built from it | Rebuild the spec with `/_planit`, then `/_runit MT-01` |
+| `conventions file write did not persist for docs/designs/ux-conventions.md` | `/_designit` "learn conventions" could not save the file (checked after a retry) | Check the folder is writable, rerun |
 | `generated files do not match the installed templates` | seh was updated but the project was not | Run `/_setit-se` |
 
 A question (`Q<n>`) is not a stop in interactive mode: answer it in that session and the run continues.

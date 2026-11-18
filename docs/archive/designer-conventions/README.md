@@ -8,8 +8,8 @@ Planning: complete
 |----|------|-----------|--------|-------------|
 | 01 | [Konwencje UX: designit, Designer, Consultant, PRD](01-conventions.md) | agent | done | `npm test` (cli) + przegląd agenta |
 | 02 | [Test manualny w projekcie z UI](02-manual-test.md) | user | done | potwierdzenie użytkownika |
-| 03 | [Dokumentacja: README, EXAMPLES, AGENTS.md szablon](03-docs.md) | agent | planned | `npm test` + przegląd diffu |
-| 04 | [Weryfikacja całości realizacji i archiwizacja](04-final-verification.md) | mixed | planned | świeży agent, `npm test`, raport PASS/GAP; akceptacja użytkownika → archiwum |
+| 03 | [Dokumentacja: README, EXAMPLES, AGENTS.md szablon](03-docs.md) | agent | done | `npm test` + przegląd diffu |
+| 04 | [Weryfikacja całości realizacji i archiwizacja](04-final-verification.md) | mixed | done | świeży agent, `npm test`, raport PASS/GAP; akceptacja użytkownika → archiwum |
 
 ## Przepływ docelowy
 ```

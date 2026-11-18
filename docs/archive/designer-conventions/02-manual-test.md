@@ -19,11 +19,11 @@ Q5.
 6. `/_designit sam naucz się konwencji` (autonomous) na projekcie z odstępstwem → plik bez nowych odstępstw, raport je proponuje.
 
 ## Kryteria akceptacji
-- [ ] Krok 2: plik konwencji ma kształt z `01`, dowody wskazują istniejące linie.
-- [ ] Krok 3: decyzja oparta o konwencję jest oznaczona.
-- [ ] Krok 4: Consultant pomija tylko wymienioną regułę.
-- [ ] Krok 5: `draft` nie wyłącza reguły.
-- [ ] Krok 6: autonomous nie dopisuje odstępstw.
+- [x] Krok 2: plik konwencji ma kształt z `01`, dowody wskazują istniejące linie.
+- [x] Krok 3: decyzja oparta o konwencję jest oznaczona.
+- [x] Krok 4: Consultant pomija tylko wymienioną regułę.
+- [x] Krok 5: `draft` nie wyłącza reguły.
+- [x] Krok 6: autonomous nie dopisuje odstępstw.
 
 ## Weryfikacja
 Potwierdzenie użytkownika per kryterium.
@@ -33,3 +33,6 @@ Projekt konsumencki (poza tym repo).
 
 ## Zależy od
 01 (`done`).
+
+## Potwierdzenie użytkownika
+Kryteria kroków 2–6 potwierdzone przez użytkownika w osobnej sesji (relacja użytkownika w tej sesji, 2026-11-18: „potwierdziłem w innej sesji”).

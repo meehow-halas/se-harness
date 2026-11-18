@@ -22,11 +22,11 @@ Q6 (krok 04 = weryfikacja całości).
 7. Po wszystkich `PASS`: pytanie do użytkownika o akceptację realizacji. Po akceptacji — archiwizacja (patrz Zakres); bez akceptacji etap zostaje `in progress`.
 
 ## Kryteria akceptacji
-- [ ] Punkty 1–6 `PASS`, każdy z dowodem (`path:line` albo wynik polecenia).
-- [ ] `npm test` zielony — wynik zacytowany.
-- [ ] Brak plików zmienionych poza listami etapów 01 i 03 (`git status`).
-- [ ] Użytkownik zaakceptował realizację (jego słowa w specu).
-- [ ] Plan w `docs/archive/designer-conventions/`, bez `*.brief.md`; `docs/designer-conventions/` nie istnieje; linki w `docs/README.md` i w plikach planu działają.
+- [x] Punkty 1–6 `PASS`, każdy z dowodem (`path:line` albo wynik polecenia).
+- [x] `npm test` zielony — wynik zacytowany.
+- [x] Brak plików zmienionych poza listami etapów 01 i 03 (`git status`).
+- [x] Użytkownik zaakceptował realizację (jego słowa w specu).
+- [x] Plan w `docs/archive/designer-conventions/`, bez `*.brief.md`; `docs/designer-conventions/` nie istnieje; linki w `docs/README.md` i w plikach planu działają.
 
 ## Weryfikacja
 `npm test`; raport agenta weryfikującego; luki → nowy etap (patrz Zakres), potem ponowne 04.
@@ -36,3 +36,6 @@ Tylko odczyt: wszystkie pliki z etapów 01 i 03, `git diff`, `git status`.
 
 ## Zależy od
 03 (`done`).
+
+## Akceptacja użytkownika
+2026-11-18: „akceptuję realizację”. Plan zarchiwizowany.

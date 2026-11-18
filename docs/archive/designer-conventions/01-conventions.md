@@ -62,15 +62,15 @@ updated: YYYY-MM-DD
 - Jeśli `docs/designs/ux-conventions.md` istnieje ze `status: ready`, naruszenie reguły `ux-a11y` wymienionej w „Deviations from ux-a11y” nie jest findingiem. Inne reguły i statusy `draft` — bez zmian.
 
 ## Kryteria akceptacji
-- [ ] `skills/designit/SKILL.md` rozpoznaje intencję konwencji i przekazuje `Conventions file: docs/designs/ux-conventions.md`; w tym trybie nie oferuje `/planit` / `/runit`.
-- [ ] `agents/designer.md` ma kontrakt Conventions-file (wejście, wyjście = tylko ten plik, tryby, reguła „odstępstwa tylko po akceptacji usera”, weryfikacja zapisu z `BLOCKED`, raport).
-- [ ] `agents/designer.md` w kontraktach spec i design-file czyta plik, jeśli istnieje; precedencja i `D<n> (ux-conventions)` opisane; brak pliku = bez zmian.
-- [ ] `agents/consultant.md`: reguła z „Deviations from ux-a11y” przy `status: ready` nie jest findingiem; reszta packa bez zmian.
-- [ ] `references/ux-conventions.md` istnieje w kształcie z planu; `seh install` kopiuje go do `.seh/references/`.
-- [ ] `docs/prd.md` opisuje mechanizm (Designer, designit, pack `ux-a11y`, Consultant) i ma decyzję w „Decisions”; Deferred nietknięte.
-- [ ] `package.json` `1.6.0`; `CHANGELOG.md` `## [1.6.0]` z Added/Changed.
-- [ ] `src/cli.test.js` asercje: plik szablonu po install; `designit` zawiera `docs/designs/ux-conventions.md`. Test failuje bez szablonu.
-- [ ] `npm test` zielony.
+- [x] `skills/designit/SKILL.md` rozpoznaje intencję konwencji i przekazuje `Conventions file: docs/designs/ux-conventions.md`; w tym trybie nie oferuje `/planit` / `/runit`.
+- [x] `agents/designer.md` ma kontrakt Conventions-file (wejście, wyjście = tylko ten plik, tryby, reguła „odstępstwa tylko po akceptacji usera”, weryfikacja zapisu z `BLOCKED`, raport).
+- [x] `agents/designer.md` w kontraktach spec i design-file czyta plik, jeśli istnieje; precedencja i `D<n> (ux-conventions)` opisane; brak pliku = bez zmian.
+- [x] `agents/consultant.md`: reguła z „Deviations from ux-a11y” przy `status: ready` nie jest findingiem; reszta packa bez zmian.
+- [x] `references/ux-conventions.md` istnieje w kształcie z planu; `seh install` kopiuje go do `.seh/references/`.
+- [x] `docs/prd.md` opisuje mechanizm (Designer, designit, pack `ux-a11y`, Consultant) i ma decyzję w „Decisions”; Deferred nietknięte.
+- [x] `package.json` `1.6.0`; `CHANGELOG.md` `## [1.6.0]` z Added/Changed.
+- [x] `src/cli.test.js` asercje: plik szablonu po install; `designit` zawiera `docs/designs/ux-conventions.md`. Test failuje bez szablonu.
+- [x] `npm test` zielony.
 
 ## Weryfikacja
 - `node --test src/cli.test.js`, potem `npm test`.

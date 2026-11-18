@@ -18,12 +18,12 @@ Opisać tryb konwencji `/_designit` i plik `docs/designs/ux-conventions.md` w do
 Q4 (1.6.0 bez kolejnego bumpu), Q6 (krok 03 = dokumentacja).
 
 ## Kryteria akceptacji
-- [ ] `README.md` opisuje tryb konwencji w tabeli skilli, przy Designerze i przy packu `ux-a11y`; poza tym README bez zmian (diff tylko w tych miejscach).
-- [ ] `EXAMPLES.md` ma przykład trybu konwencji i nowy `BLOCKED` w tabeli stopów; komendy w formie `/_…`.
-- [ ] `references/AGENTS.md` wspomina tryb konwencji w wierszu designit, z `{{prefix}}`.
-- [ ] Brak sprzeczności z `docs/prd.md` i `agents/designer.md` (ścieżka pliku, statusy, reguła odstępstw tylko po akceptacji, Consultant pomija tylko przy `ready`).
-- [ ] `CHANGELOG.md` `[1.6.0]` wymienia zmiany plików shipped z tego etapu.
-- [ ] `npm test` zielony (szablon AGENTS.md jest testowany przez install).
+- [x] `README.md` opisuje tryb konwencji w tabeli skilli, przy Designerze i przy packu `ux-a11y`; poza tym README bez zmian (diff tylko w tych miejscach).
+- [x] `EXAMPLES.md` ma przykład trybu konwencji i nowy `BLOCKED` w tabeli stopów; komendy w formie `/_…`.
+- [x] `references/AGENTS.md` wspomina tryb konwencji w wierszu designit, z `{{prefix}}`.
+- [x] Brak sprzeczności z `docs/prd.md` i `agents/designer.md` (ścieżka pliku, statusy, reguła odstępstw tylko po akceptacji, Consultant pomija tylko przy `ready`).
+- [x] `CHANGELOG.md` `[1.6.0]` wymienia zmiany plików shipped z tego etapu.
+- [x] `npm test` zielony (szablon AGENTS.md jest testowany przez install).
 
 ## Weryfikacja
 - `npm test`.

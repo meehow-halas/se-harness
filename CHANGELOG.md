@@ -8,6 +8,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 - `/<prefix>designit` "learn conventions" (`naucz się konwencji`, `learn conventions`, `ux-conventions`): the Designer scans the project UI and writes `docs/designs/ux-conventions.md` (about 50 lines, `path:line` evidence, section **Deviations from ux-a11y**). Offers no `/<prefix>planit` / `/<prefix>runit` in this mode.
 - `references/ux-conventions.md`: template of the conventions file.
+- `references/AGENTS.md`: the `/<prefix>designit` row mentions the "learn conventions" mode.
 
 ### Changed
 
