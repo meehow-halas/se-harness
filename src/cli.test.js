@@ -278,6 +278,51 @@ describe("seh install", () => {
     });
   });
 
+  test("installs the Designer agent and ships hosts.json designer suggestions equal to the implementer's", () => {
+    withTempDir((project) => {
+      const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
+      assert.equal(result.status, 0, result.stderr);
+      const installed = path.join(project, ".seh", "agents", "designer.md");
+      assert.equal(exists(installed), true);
+      const source = read(path.join(REPO_ROOT, "agents", "designer.md"));
+      assert.ok(source.includes("{{prefix}}"));
+      assert.equal(read(installed), source.replaceAll("{{prefix}}", "_"));
+      const hosts = JSON.parse(
+        read(path.join(project, ".seh", "references", "hosts.json"))
+      ).hosts;
+      assert.ok(hosts.length >= 4);
+      for (const h of hosts) {
+        assert.ok(h.modelSuggest.implementer, `${h.id} has an implementer suggestion`);
+        assert.equal(h.modelSuggest.designer, h.modelSuggest.implementer, h.id);
+      }
+    });
+  });
+
+  test("config skeleton lists the designer role for every host and ships the Designer off", () => {
+    const cfg = JSON.parse(read(path.join(REPO_ROOT, "references", "harness.config.json")));
+    const hosts = JSON.parse(read(path.join(REPO_ROOT, "references", "hosts.json"))).hosts;
+    assert.deepEqual(
+      Object.keys(cfg.agents.roles.designer.model).sort(),
+      hosts.map((h) => h.id).sort()
+    );
+    assert.equal(cfg.agents.designer.enabled, false);
+  });
+
+  test("installs the ux-a11y pack: every rule file scoped by paths, no test files", () => {
+    withTempDir((project) => {
+      const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
+      assert.equal(result.status, 0, result.stderr);
+      const dir = path.join(project, ".seh", "packs", "ux-a11y");
+      const files = fs.readdirSync(dir).sort();
+      assert.deepEqual(files, ["a11y.md", "states.md", "touch-i18n.md"]);
+      for (const f of files) {
+        const body = read(path.join(dir, f));
+        assert.match(body, /^---\npaths:\n(  - ".+"\n)+---\n/, f);
+        assert.equal(body, read(path.join(REPO_ROOT, "packs", "ux-a11y", f)), f);
+      }
+    });
+  });
+
   test("install prints a confirmation naming the project folder and the next step", () => {
     withTempDir((project) => {
       const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });

@@ -23,11 +23,12 @@ Work skills stop before doing work when `harness.config.json` is missing **or** 
 
 ## Roles
 
-Exactly four product agents. Live copies live under every `agentsDir` in `.seh/references/hosts.json` (not symlinks to `.seh/agents/`). Brainstorm members are not agents and are not `@`-addressable. The brainstorm facilitator is a collector runner, not a fifth role.
+Exactly five product agents. Live copies live under every `agentsDir` in `.seh/references/hosts.json` (not symlinks to `.seh/agents/`). Brainstorm members are not agents and are not `@`-addressable. The brainstorm facilitator is a collector runner, not a sixth role.
 
 | Role | Job |
 |------|-----|
 | Architect | Spec + prompt + first log row on the active tracker. Status stays at the configured `todo` string. Read-only on application code. No git writes. |
+| Designer | Only for a spec with `ui: true` and `agents.designer.enabled: true`. Adds the **UX/UI decisions** section and `UX:` acceptance criteria to the spec, and log rows `D<n>`. Read-only on application code. No git writes. Status unchanged. Does not change requirements or Architect decisions. |
 | Implementer | Implements the spec (`feature` or `bug`). Own phase plan. Runs inline in the session that invoked `/{{prefix}}doit` or `/{{prefix}}runit`, not as a subagent. After each phase, that session launches Consultant. Calls `.seh/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
 | Consultant | Code quality on the phase diff. Does not edit product code. Does not talk to the user. Does not judge spec compliance. Not a user-facing skill. |
 | Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: record the change (`record-change`), then git allowlist scripts. Does not merge the PR, except in a `/{{prefix}}shipit` child launched with `Auto-merge: yes` (then via `merge-pr`). |
@@ -39,10 +40,10 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | Skill | Does |
 |-------|------|
 | `/{{prefix}}setit-se` | First-time setup when config is missing; later, one parameter at a time (including tracker). |
-| `/{{prefix}}planit` | Architect once. Offer the next step; do not start it. |
+| `/{{prefix}}planit` | Architect once, then the Designer when the spec has `ui: true` and `agents.designer.enabled` is `true`. Offer the next step; do not start it. |
 | `/{{prefix}}doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
 | `/{{prefix}}checkit` | One Reviewer round per named task: review or update from base. An accepted review ends with commit, PR and `done`. |
-| `/{{prefix}}runit` | Architect → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session; several keys fan out (`.seh/references/session-fanout.md`), with no dependency ordering; git disabled: run in this session in dependency order. |
+| `/{{prefix}}runit` | Architect → (Designer) → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session; several keys fan out (`.seh/references/session-fanout.md`), with no dependency ordering; git disabled: run in this session in dependency order. |
 | `/{{prefix}}shipit` | Many specced tasks: one `/{{prefix}}runit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. |
 | `/{{prefix}}grillit` | Members, app context, and a consult round. |
 

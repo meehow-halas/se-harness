@@ -1,6 +1,6 @@
 ---
 name: runit
-description: Full path Architect → Implementer (Consultant inside) → Reviewer. Use when the user runs /{{prefix}}runit. Starts at the first missing stage.
+description: Full path Architect → (Designer) → Implementer (Consultant inside) → Reviewer. Use when the user runs /{{prefix}}runit. Starts at the first missing stage.
 ---
 
 # /{{prefix}}runit
@@ -43,7 +43,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se
 BLOCKED: generated files do not match the installed templates — run /{{prefix}}setit-se
 ```
 
-If a live agent this stage needs is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`):
+If a live agent this stage needs is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`, and `designer.md` when stage 1b applies):
 
 ```text
 BLOCKED: live agents are missing — run /{{prefix}}setit-se
@@ -101,7 +101,15 @@ BLOCKED: depends on <DEP> — rerun /{{prefix}}runit <KEY> after <DEP> is merged
 
 Git disabled: `after <DEP> is done` (there is no merge).
 
-The spec stays `todo` in the launch checkout; the rerun starts at stage 2 with a worktree cut from the current base. Otherwise continue to stage 2 without pausing.
+The spec stays `todo` in the launch checkout; the rerun starts at the first missing stage (stage 1b when it applies, else stage 2) with a worktree cut from the current base. Otherwise continue without pausing.
+
+### 1b. Spec with `ui: true`, Designer enabled, no UX section → Designer
+
+Applies only when all three hold: the spec frontmatter has `ui: true`; `agents.designer.enabled` is `true` in `harness.config.json`; the spec has no **UX/UI decisions** section. Otherwise skip to stage 2 (a spec with `ui: false` or no `ui`, or a disabled Designer, never runs it). Also run it when the Architect just ran in this run and wrote `ui: true`.
+
+Follow the live Designer file for this host (`<agentsDir>/designer.md`). Launch it as a subagent in the launch checkout: no git, no worktree, no `Worktree:` line. Pass `Mode:` (the same mode as the Architect), the task key, `Conversation language: <name>` always, and, if the user approved a change to an existing UX section, `User approval: <the user's own words, verbatim>`.
+
+If the Designer stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report. Interactive: the UX section is shown before write, so questions and the confirmation are normal stops. On success, status stays `todo`; continue to stage 2 without pausing.
 
 ### 2. Spec + prompt, no implementation → Implementer
 
@@ -155,7 +163,7 @@ The launch line `Auto-merge: yes` is honoured only together with `Fan-out child:
 
 - `Mode: <same mode for the whole run>`
 - Task key when it exists
-- `Worktree: <abs>` for Implementer and Reviewer (not Architect)
+- `Worktree: <abs>` for Implementer and Reviewer (not Architect, not Designer)
 - User request
 - `Conversation language: <name>` always (a Polish message gives `Polish`)
 - Stage 4: the ❌ list only

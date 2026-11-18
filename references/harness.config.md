@@ -8,7 +8,7 @@ Parseable defaults: `harness.config.json` in this directory. External tracker sh
 
 Supported hosts are **not** a tree in this config. They live in `hosts.json` in this directory (`.seh/references/hosts.json` after install). Install and `/{{prefix}}setit-se` always write every row. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format, `modelSuggest`). Codex is the fourth row: `agentFormat: "codex-toml"` (TOML agents via `codex-adapters.cjs`), `skillHide: "openai-yaml"` (work skills get `agents/openai.yaml`), `rulesIndex: "agents-md"` (a seh-managed section in `AGENTS.md` points at `rulesDir`), skills in `.agents/skills`, invoked as `$<prefix><name>`.
 
-`agents.roles.<role>.model` is a map keyed by host `id`. `/{{prefix}}setit-se` writes `model:` in that host’s `agentsDir` from that entry only. Do not copy another host’s model. On a `codex-toml` row an empty string `""` is valid and means no change: the live agent has no `model` and the session model is inherited. A legacy string is invalid for generation: migrate first (prefill every host, then confirm per host). `agents.brainstorm.model` uses the same map shape and is written by `/{{prefix}}grillit`, not `/{{prefix}}setit-se`.
+`agents.designer.enabled` (boolean) turns the Designer stage on. First run: `true` when a UI stack was detected, else `false`; a config without the key means `false`. `agents.roles.<role>.model` is a map keyed by host `id`; roles are architect, designer, implementer, consultant, reviewer. `/{{prefix}}setit-se` writes `model:` in that host’s `agentsDir` from that entry only. Do not copy another host’s model. On a `codex-toml` row an empty string `""` is valid and means no change: the live agent has no `model` and the session model is inherited. A legacy string is invalid for generation: migrate first (prefill every host, then confirm per host). `agents.brainstorm.model` uses the same map shape and is written by `/{{prefix}}grillit`, not `/{{prefix}}setit-se`.
 
 ```json
 {
@@ -30,9 +30,11 @@ Supported hosts are **not** a tree in this config. They live in `hosts.json` in 
     "roles": {
       "architect": { "model": { "claude-code": "opus", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-opus-5-5", "codex": "gpt-6-sol" } },
       "implementer": { "model": { "claude-code": "sonnet", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-sonnet-5-5", "codex": "gpt-6.1-sol" } },
+      "designer": { "model": { "claude-code": "sonnet", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-sonnet-5-5", "codex": "gpt-6.1-sol" } },
       "consultant": { "model": { "claude-code": "haiku", "cursor": "composer-2.5", "opencode": "anthropic/claude-haiku-5-5", "codex": "gpt-6-luna" } },
       "reviewer": { "model": { "claude-code": "sonnet", "cursor": "cursor-grok-4.6-medium", "opencode": "anthropic/claude-sonnet-5-5" } }
     },
+    "designer": { "enabled": false },
     "brainstorm": { "consult": "significant" },
     "reportChange": true
   }

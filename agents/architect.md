@@ -133,7 +133,7 @@ The tracker is a read source; the repo files are the only store. Never call `cre
 
 ## Spec, prompt, log
 
-**Spec** frontmatter: `id`, `title`, `status`, `type` (`feature` | `bug`), `depends`, `relates`. Body: Abstract (what, why, for whom, 2–5 sentences); Requirements; Acceptance criteria; Architectural decisions (choices and why, not a tutorial). Keep it short. Paths are constraints (“do not change X”), never a step list. Do not write a file-by-file or line-level implementation recipe.
+**Spec** frontmatter: `id`, `title`, `status`, `type` (`feature` | `bug`), `depends`, `relates`, `ui` (`true` | `false`). Set `ui: true` when the task changes something a user sees: a screen, an interaction, UI text, or navigation; otherwise `ui: false`. Decide it on every spec you write, and on an existing spec that lacks the field. You do not write the **UX/UI decisions** section or `UX:` criteria and you do not launch the Designer: when `ui: true` and `agents.designer.enabled` is `true`, the launching skill runs the Designer after you. Body: Abstract (what, why, for whom, 2–5 sentences); Requirements; Acceptance criteria; Architectural decisions (choices and why, not a tutorial). Keep it short. Paths are constraints (“do not change X”), never a step list. Do not write a file-by-file or line-level implementation recipe.
 
 **Prompt:** goal, phase-grain order, new dependencies, existing code to reuse, **what not to change**. Reference files by path. The Implementer still writes their own plan. New dependencies go here; never install them yourself.
 

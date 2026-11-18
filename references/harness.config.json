@@ -34,6 +34,14 @@
           "codex": "gpt-6.1-sol"
         }
       },
+      "designer": {
+        "model": {
+          "claude-code": "sonnet",
+          "cursor": "cursor-grok-4.6-medium",
+          "opencode": "anthropic/claude-sonnet-5-5",
+          "codex": "gpt-6.1-sol"
+        }
+      },
       "consultant": {
         "model": {
           "claude-code": "haiku",
@@ -50,6 +58,9 @@
           "codex": "gpt-6.1-sol"
         }
       }
+    },
+    "designer": {
+      "enabled": false
     },
     "brainstorm": {
       "consult": "significant"

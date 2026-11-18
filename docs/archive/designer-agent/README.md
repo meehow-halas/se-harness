@@ -8,9 +8,9 @@ Planning: complete
 
 | NN | Etap | Wykonawca | Status | Weryfikacja |
 |----|------|-----------|--------|-------------|
-| 01 | [PRD: rola Designer](01-prd.md) | mixed | planned | przegląd agenta + akceptacja tekstu PRD przez użytkownika |
-| 02 | [Agent Designer i flow](02-designer-agent.md) | agent | planned | `npm test` (codex-adapters, cli) + scenariusz ręczny |
-| 03 | [Pack ux-a11y](03-ux-a11y-pack.md) | agent | planned | `npm test` (cli) + przegląd agenta |
+| 01 | [PRD: rola Designer](01-prd.md) | mixed | done | przegląd agenta + akceptacja tekstu PRD przez użytkownika |
+| 02 | [Agent Designer i flow](02-designer-agent.md) | agent | done | `npm test` (codex-adapters, cli) + scenariusz ręczny |
+| 03 | [Pack ux-a11y](03-ux-a11y-pack.md) | agent | done | `npm test` (cli) + przegląd agenta |
 
 Przepływ docelowy:
 

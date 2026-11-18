@@ -82,6 +82,14 @@ If spec or prompt is missing for a named task, stop **that** task and continue t
 BLOCKED: spec and prompt are missing — run /{{prefix}}planit or /{{prefix}}runit
 ```
 
+A task whose spec has `ui: true`, while `agents.designer.enabled` is `true` in `harness.config.json`, and that has no **UX/UI decisions** section needs the Designer stage first. Stop **that task** (siblings continue):
+
+```text
+BLOCKED: <KEY> needs the Designer stage — run /{{prefix}}planit <KEY>
+```
+
+Do not launch the Designer from this skill.
+
 ## Status gate (before Reviewer)
 
 Read `status:` in the task's spec (worktree copy when a worktree exists, else the tracker). For `review`, the status must be the configured `implemented` or `in review` string. For `update`, it must be `in progress`, `implemented`, `in review`, or `done` (the PR may already be open). Any other value stops that task: `BLOCKED: status <value> does not allow <variant> — set the status the Implementer should have left, or run /{{prefix}}doit <task>`. Do not launch Reviewer on a task that fails this gate.

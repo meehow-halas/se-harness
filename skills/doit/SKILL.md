@@ -82,6 +82,14 @@ BLOCKED: task is already implemented, in review, or done — use /{{prefix}}chec
 
 A basename/key in `depends` that is not at the configured `done` status is a stop **for that task** (Implementer also enforces this; with `readOnly` `true`, per the `depends` rule in the Implementer file). Do not work around it. Continue the other named tasks.
 
+A task whose spec has `ui: true`, while `agents.designer.enabled` is `true` in `harness.config.json`, and that has no **UX/UI decisions** section needs the Designer stage first. Stop **that task** (siblings continue):
+
+```text
+BLOCKED: <KEY> needs the Designer stage — run /{{prefix}}planit <KEY>
+```
+
+Do not launch the Designer from this skill.
+
 ## Launch Implementer
 
 Follow the live Implementer file for this host (`<agentsDir>/implementer.md` from `.seh/references/hosts.json` — a copy from `/{{prefix}}setit-se`, not a symlink to `.seh/agents/`) **inline in this session**. Do not launch Implementer as a subagent: subagents cannot launch Consultant. Do not duplicate that procedure here. Launch Consultant from this session as a subagent after each phase; do not expose Consultant as a skill.

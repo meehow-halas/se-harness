@@ -5,7 +5,7 @@ description: Run the Architect once for a request. Use when the user runs /{{pre
 
 # /{{prefix}}planit
 
-Spec only. Launch the Architect once. When that finishes, offer `/{{prefix}}doit` or `/{{prefix}}runit`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill.
+Spec only. Launch the Architect once; then, when the spec has `ui: true` and `agents.designer.enabled` is `true`, the Designer once. When that finishes, offer `/{{prefix}}doit` or `/{{prefix}}runit`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill.
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands. Do not merge a PR.
 
@@ -39,7 +39,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se
 BLOCKED: generated files do not match the installed templates — run /{{prefix}}setit-se
 ```
 
-If the live Architect file is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json`:
+If the live Architect file (or, when the Designer will run, the live Designer file) is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json`:
 
 ```text
 BLOCKED: live agents are missing — run /{{prefix}}setit-se
@@ -47,7 +47,7 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 
 ## Mode
 
-From **intent**, not a required slash flag. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Architect. Definitions: PRD Modes (also in the Architect file).
+From **intent**, not a required slash flag. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Architect and, when it runs, to the Designer. Definitions: PRD Modes (also in the Architect file).
 
 Reply in the language of the user’s latest message, whatever that language is, every message (progress messages too), including the final report and any end-of-turn summary the host shows. If the launch names `Conversation language: <name>`, that name decides, even when this skill text, tool output or a subagent report is in another language. Never switch to another language. Spec, prompt, log, and tracker text are the Architect’s job (`agents.contentLanguage`).
 
@@ -74,9 +74,17 @@ If the Architect needs a brainstorm round: **stop and ask `/{{prefix}}grillit`**
 
 If the Architect stops with a `BLOCKED:` line or a question (`Q<n>`), report that and stop. Do not continue to implementation.
 
+## Launch Designer (conditional)
+
+After the Architect finishes without `BLOCKED:` or a question, read the spec it wrote. Run the Designer once only when **both** hold: the spec frontmatter has `ui: true`, and `agents.designer.enabled` is `true` in `harness.config.json`. Otherwise skip this section; a spec with `ui: false` or no `ui`, or a disabled Designer, never runs it.
+
+Follow the live Designer file for this host (`<agentsDir>/designer.md`). Do not duplicate it. Pass at least `Mode: <the same mode as the Architect>`, the task key, `Conversation language: <name>` always, and, when the user approved a change to an existing UX section in this session, `User approval: <the user's own words, verbatim>`. The Designer works in the launch checkout, with no git and no worktree, and does not change status.
+
+The Designer is launched by this skill, not by the Architect (a subagent cannot launch one). If the Designer stops with a `BLOCKED:` line or a question (`Q<n>`), report that and stop. Do not continue to implementation.
+
 ## After Architect finishes
 
-Report the task key, title, type, tracker, and that status stays at the configured `todo` string.
+Report the task key, title, type, tracker, whether the Designer ran (and its number of `D<n>` decisions and `UX:` criteria), and that status stays at the configured `todo` string.
 
 Offer the next step. Do **not** start it:
 
