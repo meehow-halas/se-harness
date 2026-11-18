@@ -87,7 +87,7 @@ npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 
 ### Skill names and `--prefix`
 
-Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. This README shows the default `_` names.
+Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. This README shows the default `_` names.
 
 ```text
 npx -p se-harness seh install --prefix my-
@@ -128,6 +128,7 @@ Say what you want in ordinary language. The assistant matches **intent** to a sk
 | Full path for one task (several keys: one session each) | `/_runit` |
 | Many specced tasks to merged, in dependency order, unattended | `/_shipit` |
 | Spec only | `/_planit` |
+| UX/UI design only, before the spec | `/_designit` |
 | Implementation only | `/_doit` (one task or a list) |
 | One review or update from base | `/_checkit` (one task or a list; one variant) |
 | Change parameters or tracker (Jira / Azure DevOps) | `/_setit-se` |
@@ -179,16 +180,20 @@ If Architect needs a persona round, work skills **stop and ask** `/_grillit`. `/
 | Skill | When | What happens | Example |
 |-------|------|----------------|---------|
 | `/_setit-se` | First config; later models, packs, base branch, tracker | One question at a time; generate live files; does not commit. See [`/_setit-se`](#_setit-se). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" · "connect Azure DevOps" |
-| `/_planit` | Spec only | Architect once, then the Designer when the spec has `ui: true` and `agents.designer.enabled` is `true`; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
+| `/_planit` | Spec only | Architect once, then the Designer when the spec has `ui: true` and `agents.designer.enabled` is `true`; offer next step; **do not start it**. Optional: a design file from `/_designit` (path or slug) — the Architect takes the UX from it and the Designer stage is skipped | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" · "spec login from docs/designs/login.design.md" |
+| `/_designit` | UX/UI design only, before the spec | Designer once; writes `docs/designs/<slug>.design.md` in the repo (status `draft` → `ready`). No tracker, no spec, no git. Needs `agents.designer.enabled`. Offers `/_planit` or `/_runit` with the file; **does not start it** | "design the login screen" · "rework docs/designs/login.design.md" |
 | `/_doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`. Several keys: one session per key (desktop app), or one after another in dependency order (git disabled). Ends with status `implemented` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
 | `/_checkit` | One Reviewer round per named task | Variants: review (default), update from base. One variant for the whole invocation; same worktree / parallel rules as `/_doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" |
-| `/_runit` | Full path, one task per session | Architect → (Designer) → Implementer → Reviewer, starting at the first missing stage; does not merge. Several keys: one session each, no dependency ordering (a task that needs a sibling stops `BLOCKED`, rerun it later). Git disabled: one after another in dependency order | "add password reset from spec through PR" · "run MT-01 MT-02 MT-03 samodzielnie" |
+| `/_runit` | Full path, one task per session | Architect → (Designer) → Implementer → Reviewer, starting at the first missing stage; does not merge. Optional design file as for `/_planit`. Several keys: one session each, no dependency ordering (a task that needs a sibling stops `BLOCKED`, rerun it later). Git disabled: one after another in dependency order | "add password reset from spec through PR" · "run MT-01 MT-02 MT-03 samodzielnie" |
 | `/_shipit` | Many specced tasks to merged | Needs git and a spec + prompt per task. Asks once for a go-ahead, then one `/_runit` session per task with auto-merge; a dependent task starts after its dependency is merged. Writes a run report to `docs/run-reports/` | "ship MT-01 MT-02 MT-03 samodzielnie" · "ship all todo tasks" |
 | `/_grillit` | Personae | CRUD members, app context, consult round; does not role-play. See [Brainstorm](#brainstorm). | "consult this spec with the personae" · "build the app context" |
 
 ```mermaid
 flowchart LR
   planit["/_planit"] --> architect[Architect]
+  planit -->|"ui: true"| designer[Designer]
+  designit["/_designit"] --> designer
+  designer -.->|design file| architect
   doit["/_doit"] --> implementer[Implementer]
   implementer --> consultant[Consultant]
   checkit["/_checkit"] --> reviewer[Reviewer]
@@ -235,6 +240,7 @@ It does **not** touch `agents.brainstorm` (that is `/_grillit`), rewrite the pro
 | Setting | First run | Later run | Side effect |
 |---------|-----------|-----------|-------------|
 | Role models | ask per host | yes — one cell `(role, host)` | rewrite `model:` in that host’s `agentsDir` |
+| `agents.designer.enabled` | ask once (recommend yes when a UI stack is detected) | yes | config only; off = no Designer stage and `/_designit` stops `BLOCKED` |
 | `agents.contentLanguage` | ask | yes | config only |
 | `agents.baseBranch` | ask (empty = git disabled) | yes | config only |
 | Optional project rule | one; skip is default | if you ask — stored on the roles (`rules`; reviewer `checklist` when it is a review constraint) | stored on roles |
@@ -255,7 +261,7 @@ Exactly five product agents. Brainstorm members are not agents and are not `@`-a
 | Agent | Job | Must not |
 |-------|-----|----------|
 | **Architect** | Spec + prompt + first log row on the **active tracker** (repo files when Jira or ADO is read-only). Status stays `todo`. Read-only on application code. No worktrees. | Write app code; git; a file-by-file recipe |
-| **Designer** | Only for a spec with `ui: true` when `agents.designer.enabled` is `true`. Adds the **UX/UI decisions** section and `UX:` acceptance criteria to the spec, plus `D<n>` log rows. Same modes as the Architect. Read-only on application code; status unchanged. | Change requirements or Architect decisions; write app code; git |
+| **Designer** | Only for a spec with `ui: true` when `agents.designer.enabled` is `true`. Adds the **UX/UI decisions** section and `UX:` acceptance criteria to the spec, plus `D<n>` log rows. Same modes as the Architect. Through `/_designit`: writes one design file `docs/designs/<slug>.design.md` instead, with no tracker. Read-only on application code; status unchanged. | Change requirements or Architect decisions; write app code; git |
 | **Implementer** | Implements the spec (`feature` or `bug`). Own 2–6 phase plan. After each phase, launches Consultant. Calls `.seh/scripts/start-task` (worktree; does not switch your checkout). Works under `Worktree:`. | Edit `CHANGELOG.md`; open the PR; invent architecture past Questions |
 | **Consultant** | Code **quality** on the **phase diff**. Structured `CONSULT` report. Not a user skill. | Edit product code; talk to the user; judge spec compliance |
 | **Reviewer** | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, commit, push, PR from the worktree. `return-to-base` **removes** that worktree; it does not switch your primary checkout. In a `/_shipit` session only: merges the PR through `merge-pr`. | Merge the PR outside `/_shipit`; treat Consultant `should-fix` as ❌ |
@@ -548,6 +554,7 @@ You merge the PR on GitHub (`/_shipit` merges it for you). The merge does not ch
 | `python` | Python project files |
 | `django` | Django |
 | `fastapi` | FastAPI |
+| `ux-a11y` | UI stack (React Native, Angular, Next.js; React, Vue or Svelte; Django templates). Accessibility, UI states, touch and i18n; scoped to UI files |
 
 ## Git and language
 
