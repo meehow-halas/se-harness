@@ -278,6 +278,51 @@ describe("seh install", () => {
     });
   });
 
+  test("installs the Designer agent and ships hosts.json designer suggestions equal to the implementer's", () => {
+    withTempDir((project) => {
+      const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
+      assert.equal(result.status, 0, result.stderr);
+      const installed = path.join(project, ".seh", "agents", "designer.md");
+      assert.equal(exists(installed), true);
+      const source = read(path.join(REPO_ROOT, "agents", "designer.md"));
+      assert.ok(source.includes("{{prefix}}"));
+      assert.equal(read(installed), source.replaceAll("{{prefix}}", "_"));
+      const hosts = JSON.parse(
+        read(path.join(project, ".seh", "references", "hosts.json"))
+      ).hosts;
+      assert.ok(hosts.length >= 4);
+      for (const h of hosts) {
+        assert.ok(h.modelSuggest.implementer, `${h.id} has an implementer suggestion`);
+        assert.equal(h.modelSuggest.designer, h.modelSuggest.implementer, h.id);
+      }
+    });
+  });
+
+  test("config skeleton lists the designer role for every host and ships the Designer off", () => {
+    const cfg = JSON.parse(read(path.join(REPO_ROOT, "references", "harness.config.json")));
+    const hosts = JSON.parse(read(path.join(REPO_ROOT, "references", "hosts.json"))).hosts;
+    assert.deepEqual(
+      Object.keys(cfg.agents.roles.designer.model).sort(),
+      hosts.map((h) => h.id).sort()
+    );
+    assert.equal(cfg.agents.designer.enabled, false);
+  });
+
+  test("installs the ux-a11y pack: every rule file scoped by paths, no test files", () => {
+    withTempDir((project) => {
+      const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
+      assert.equal(result.status, 0, result.stderr);
+      const dir = path.join(project, ".seh", "packs", "ux-a11y");
+      const files = fs.readdirSync(dir).sort();
+      assert.deepEqual(files, ["a11y.md", "states.md", "touch-i18n.md"]);
+      for (const f of files) {
+        const body = read(path.join(dir, f));
+        assert.match(body, /^---\npaths:\n(  - ".+"\n)+---\n/, f);
+        assert.equal(body, read(path.join(REPO_ROOT, "packs", "ux-a11y", f)), f);
+      }
+    });
+  });
+
   test("install prints a confirmation naming the project folder and the next step", () => {
     withTempDir((project) => {
       const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
@@ -785,6 +830,30 @@ describe("seh uninstall", () => {
       });
     });
 
+    test("designit is an invoke skill: its slash form gets the row's invokePrefix; plain words stay", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        fs.writeFileSync(
+          path.join(pkg, "skills", "setit-se", "SKILL.md"),
+          "---\nname: setit-se\ndescription: x\n---\nRun /{{prefix}}designit then /{{prefix}}planit; not /{{prefix}}designitx or /designit-x.\n"
+        );
+        const hostsFile = path.join(pkg, "references", "hosts.json");
+        const table = JSON.parse(read(hostsFile));
+        for (const h of table.hosts) if (h.id === "codex") h.invokePrefix = "$";
+        fs.writeFileSync(hostsFile, JSON.stringify(table));
+        const result = runCli(["install", "--prefix", "q_"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(
+          read(path.join(project, ".agents", "skills", "q_setit-se", "SKILL.md")),
+          /Run \$q_designit then \$q_planit; not \/q_designitx or \/designit-x\./
+        );
+        assert.match(
+          read(path.join(project, ".claude", "skills", "q_setit-se", "SKILL.md")),
+          /Run \/q_designit then \/q_planit;/
+        );
+      });
+    });
+
     test("hook matcher comes from the row, not a hardcoded value", () => {
       withTempDir((root) => {
         const { pkg, project } = setup(root);
@@ -1154,7 +1223,7 @@ describe("seh install --prefix", () => {
       for (const f of walk(path.join(project, ".seh"))) {
         assert.equal(read(f).includes("{{prefix}}"), false, f);
       }
-      for (const name of ["planit", "doit", "checkit", "runit", "shipit", "grillit", "setit-se"]) {
+      for (const name of ["planit", "designit", "doit", "checkit", "runit", "shipit", "grillit", "setit-se"]) {
         assert.equal(exists(path.join(project, ".seh", "skills", name, "SKILL.md")), true, name);
       }
       assert.match(read(path.join(project, ".claude", "skills", "q_setit-se", "SKILL.md")), /^---\nname: q_setit-se\n/);
@@ -1164,6 +1233,17 @@ describe("seh install --prefix", () => {
       assert.match(runit, /Full path for \*\*one task\*\*/);
       assert.doesNotMatch(runit, /fanout-plan --skill/);
       assert.match(runit, /Fan-out child: yes/);
+      const designit = read(path.join(project, ".seh", "skills", "designit", "SKILL.md"));
+      assert.match(designit, /^---\nname: designit\n/);
+      assert.match(designit, /\/q_designit/);
+      assert.match(designit, /\/q_planit/);
+      assert.match(designit, /BLOCKED: the Designer is disabled — enable it in \/q_setit-se/);
+      assert.equal(exists(path.join(project, ".seh", "references", "design.design.md")), true);
+      assert.match(designit, /Conventions file: docs\/designs\/ux-conventions\.md/);
+      assert.equal(exists(path.join(project, ".seh", "references", "ux-conventions.md")), true);
+      assert.match(read(path.join(project, ".seh", "references", "ux-conventions.md")), /## Deviations from ux-a11y/);
+      assert.match(read(path.join(project, ".seh", "agents", "designer.md")), /Conventions-file contract/);
+      assert.match(read(path.join(project, ".seh", "agents", "consultant.md")), /Deviations from ux-a11y/);
       const shipit = read(path.join(project, ".seh", "skills", "shipit", "SKILL.md"));
       assert.match(shipit, /^---\nname: shipit\n/);
       assert.match(shipit, /\/q_shipit/);

@@ -18,6 +18,7 @@
       "modelSuggest": {
         "architect": "opus",
         "implementer": "sonnet",
+        "designer": "sonnet",
         "consultant": "haiku",
         "reviewer": "sonnet",
         "brainstorm": "sonnet"
@@ -41,6 +42,7 @@
       "modelSuggest": {
         "architect": "cursor-grok-4.6-medium",
         "implementer": "cursor-grok-4.6-medium",
+        "designer": "cursor-grok-4.6-medium",
         "consultant": "composer-2.5",
         "reviewer": "cursor-grok-4.6-medium",
         "brainstorm": "cursor-grok-4.6-medium"
@@ -63,6 +65,7 @@
       "modelSuggest": {
         "architect": "anthropic/claude-opus-5-5",
         "implementer": "anthropic/claude-sonnet-5-5",
+        "designer": "anthropic/claude-sonnet-5-5",
         "consultant": "anthropic/claude-haiku-5-5",
         "reviewer": "anthropic/claude-sonnet-5-5",
         "brainstorm": "anthropic/claude-sonnet-5-5"
@@ -90,6 +93,7 @@
       "modelSuggest": {
         "architect": "gpt-6-sol",
         "implementer": "gpt-6.1-sol",
+        "designer": "gpt-6.1-sol",
         "consultant": "gpt-6-luna",
         "reviewer": "gpt-6.1-sol",
         "brainstorm": "gpt-6.1-sol"

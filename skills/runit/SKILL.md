@@ -1,6 +1,6 @@
 ---
 name: runit
-description: Full path Architect → Implementer (Consultant inside) → Reviewer. Use when the user runs /{{prefix}}runit. Starts at the first missing stage.
+description: Full path Architect → (Designer) → Implementer (Consultant inside) → Reviewer. Use when the user runs /{{prefix}}runit. Starts at the first missing stage.
 ---
 
 # /{{prefix}}runit
@@ -43,7 +43,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se
 BLOCKED: generated files do not match the installed templates — run /{{prefix}}setit-se
 ```
 
-If a live agent this stage needs is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`):
+If a live agent this stage needs is missing from **this host’s** `agentsDir` in `.seh/references/hosts.json` (`architect.md`, `implementer.md`, `reviewer.md`, and `designer.md` when stage 1b applies):
 
 ```text
 BLOCKED: live agents are missing — run /{{prefix}}setit-se
@@ -51,7 +51,7 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 
 ## Mode
 
-From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous` for the whole run, including every Reviewer round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Implementer, and Reviewer.
+From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous` for the whole run, including every Reviewer round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Designer, Implementer, and Reviewer.
 
 | Mode | Ask the user |
 |------|----------------|
@@ -63,7 +63,7 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-This skill runs one task. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). A key without a spec is not blocked: its child starts at the first missing stage, Architect, without user intervention in `autonomous` mode. No dependency ordering: a key whose spec `depends` on a sibling key is not started, and Architect's `depends` on a sibling key stops that child at the *Dependency gate* after the Architect stage; both are `BLOCKED` and the user reruns the key after the dependency is merged (`session-fanout.md`, section 2 and Rules). Full automation with dependencies: `/{{prefix}}shipit` with specs written beforehand; a key that exists nowhere follows *Task source* in the Architect file. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `session-fanout.md` section 2), never in the order given (see stage 2). Two or more keys, git enabled, and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key, with the user's mode words (for example `samodzielnie`), and stop. One key: continue below.
+This skill runs one task. Two or more keys together with a design file: stop before any fan-out with `BLOCKED: a design file goes with one key — run /{{prefix}}runit <KEY> <design path> per key`. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). A key without a spec is not blocked: its child starts at the first missing stage, Architect, without user intervention in `autonomous` mode. No dependency ordering: a key whose spec `depends` on a sibling key is not started, and Architect's `depends` on a sibling key stops that child at the *Dependency gate* after the Architect stage; both are `BLOCKED` and the user reruns the key after the dependency is merged (`session-fanout.md`, section 2 and Rules). Full automation with dependencies: `/{{prefix}}shipit` with specs written beforehand; a key that exists nowhere follows *Task source* in the Architect file. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `session-fanout.md` section 2), never in the order given (see stage 2). Two or more keys, git enabled, and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key, with the user's mode words (for example `samodzielnie`), and stop. One key: continue below.
 
 ## Resolve the task
 
@@ -73,7 +73,7 @@ Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.t
 - Named basename or issue key → load spec, prompt, log, status from that tracker (files tracker or read-only: the task worktree copy when a seh worktree exists for the key, else the launch checkout). Two or more keys → *Several keys*. A key with no spec yet (neither in the task worktree nor in the launch checkout): with git enabled and a files or read-only tracker, run `.seh/scripts/pr-state <KEY>` first, because after `return-to-base` the spec may exist only on the task branch. `state: open` → the already-done stop below; `state: merged` → `BLOCKED: task is already merged — <url>; start new work with a new request`; `state: none` → stage 1 (Architect).
 - Status strings: `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
 
-If status is already the configured **`done`** string, stop. Do not re-run Architect, Implementer, or Reviewer:
+If status is already the configured **`done`** string, stop. Do not re-run Architect, Designer, Implementer, or Reviewer:
 
 ```text
 BLOCKED: task is already done — the PR is opened; use /{{prefix}}checkit update only if the branch needs it
@@ -83,11 +83,17 @@ BLOCKED: task is already done — the PR is opened; use /{{prefix}}checkit updat
 
 Start at the first missing stage. Skip stages that are already done.
 
+A design file the user named reaches only the Architect (stage 1). If the task already has a spec and prompt whose log has a row `design: <that same path>`, the design is already applied: continue. If the task already has a spec and prompt without that row, do not ignore the file silently; stop before any stage:
+
+```text
+BLOCKED: <KEY> already has a spec — run /{{prefix}}planit <KEY> <design path> to rebuild it from the design, then /{{prefix}}runit <KEY>
+```
+
 ### 1. No spec or prompt → Architect
 
 Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.seh/references/hosts.json`). Do not duplicate it.
 
-Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a Polish message gives `Polish`).
+Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a Polish message gives `Polish`). When the user named a design file from `/{{prefix}}designit` (path or slug; a slug resolves to `docs/designs/<slug>.design.md`; never search `docs/designs/`), also pass `Design: <path>`.
 
 If Architect asks `/{{prefix}}grillit`: stop and ask that skill; do not run the round here; do not continue the pipeline.
 
@@ -101,7 +107,15 @@ BLOCKED: depends on <DEP> — rerun /{{prefix}}runit <KEY> after <DEP> is merged
 
 Git disabled: `after <DEP> is done` (there is no merge).
 
-The spec stays `todo` in the launch checkout; the rerun starts at stage 2 with a worktree cut from the current base. Otherwise continue to stage 2 without pausing.
+The spec stays `todo` in the launch checkout; the rerun starts at the first missing stage (stage 1b when it applies, else stage 2) with a worktree cut from the current base. Otherwise continue without pausing.
+
+### 1b. Spec with `ui: true`, Designer enabled, no UX section → Designer
+
+Applies only when all three hold: the spec frontmatter has `ui: true`; `agents.designer.enabled` is `true` in `harness.config.json`; the spec has no **UX/UI decisions** section. Otherwise skip to stage 2 (a spec with `ui: false` or no `ui`, or a disabled Designer, never runs it). Also run it when the Architect just ran in this run and wrote `ui: true`. A spec the Architect built from a design file (`Design: <path>`) already has the UX section, so this stage is skipped.
+
+Follow the live Designer file for this host (`<agentsDir>/designer.md`). Launch it as a subagent in the launch checkout: no git, no worktree, no `Worktree:` line. Pass `Mode:` (the same mode as the Architect), the task key, `Conversation language: <name>` always, and, if the user approved the UX section the Designer showed (new or a change to an existing one), `User approval: <the user's own words, verbatim>`.
+
+If the Designer stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report. Interactive: the UX section is shown before write, so questions and the confirmation are normal stops. On success, status stays `todo`; continue to stage 2 without pausing.
 
 ### 2. Spec + prompt, no implementation → Implementer
 
@@ -155,7 +169,7 @@ The launch line `Auto-merge: yes` is honoured only together with `Fan-out child:
 
 - `Mode: <same mode for the whole run>`
 - Task key when it exists
-- `Worktree: <abs>` for Implementer and Reviewer (not Architect)
+- `Worktree: <abs>` for Implementer and Reviewer (not Architect, not Designer)
 - User request
 - `Conversation language: <name>` always (a Polish message gives `Polish`)
 - Stage 4: the ❌ list only

@@ -50,12 +50,12 @@ One session per key (multi-key `/_planit`, `/_doit`, `/_checkit`, `/_runit`, and
 
 First-run suggestions come from that host row’s `modelSuggest`. seh does not translate a Claude alias into a Cursor id.
 
-| Host | Architect | Implementer | Consultant | Reviewer |
-|------|-----------|-------------|------------|----------|
-| Claude Code | `opus` | `sonnet` | `haiku` | `sonnet` |
-| Cursor | `cursor-grok-4.6-medium` | `cursor-grok-4.6-medium` | `composer-2.5` | `cursor-grok-4.6-medium` |
-| OpenCode | `anthropic/claude-opus-5-5` | `anthropic/claude-sonnet-5-5` | `anthropic/claude-haiku-5-5` | `anthropic/claude-sonnet-5-5` |
-| Codex | `gpt-6-sol` | `gpt-6.1-sol` | `gpt-6-luna` | `gpt-6.1-sol` |
+| Host | Architect | Designer | Implementer | Consultant | Reviewer |
+|------|-----------|----------|-------------|------------|----------|
+| Claude Code | `opus` | `sonnet` | `sonnet` | `haiku` | `sonnet` |
+| Cursor | `cursor-grok-4.6-medium` | `cursor-grok-4.6-medium` | `cursor-grok-4.6-medium` | `composer-2.5` | `cursor-grok-4.6-medium` |
+| OpenCode | `anthropic/claude-opus-5-5` | `anthropic/claude-sonnet-5-5` | `anthropic/claude-sonnet-5-5` | `anthropic/claude-haiku-5-5` | `anthropic/claude-sonnet-5-5` |
+| Codex | `gpt-6-sol` | `gpt-6.1-sol` | `gpt-6.1-sol` | `gpt-6-luna` | `gpt-6.1-sol` |
 
 Codex model ids are unverified per account. Choose "no change" to omit `model` and inherit the session model.
 
@@ -87,7 +87,7 @@ npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 
 ### Skill names and `--prefix`
 
-Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. This README shows the default `_` names.
+Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. This README shows the default `_` names.
 
 ```text
 npx -p se-harness seh install --prefix my-
@@ -128,6 +128,7 @@ Say what you want in ordinary language. The assistant matches **intent** to a sk
 | Full path for one task (several keys: one session each) | `/_runit` |
 | Many specced tasks to merged, in dependency order, unattended | `/_shipit` |
 | Spec only | `/_planit` |
+| UX/UI design only, before the spec | `/_designit` |
 | Implementation only | `/_doit` (one task or a list) |
 | One review or update from base | `/_checkit` (one task or a list; one variant) |
 | Change parameters or tracker (Jira / Azure DevOps) | `/_setit-se` |
@@ -179,16 +180,20 @@ If Architect needs a persona round, work skills **stop and ask** `/_grillit`. `/
 | Skill | When | What happens | Example |
 |-------|------|----------------|---------|
 | `/_setit-se` | First config; later models, packs, base branch, tracker | One question at a time; generate live files; does not commit. See [`/_setit-se`](#_setit-se). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" · "connect Azure DevOps" |
-| `/_planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
+| `/_planit` | Spec only | Architect once, then the Designer when the spec has `ui: true` and `agents.designer.enabled` is `true`; offer next step; **do not start it**. Optional: a design file from `/_designit` (path or slug) — the Architect takes the UX from it and the Designer stage is skipped | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" · "spec login from docs/designs/login.design.md" |
+| `/_designit` | UX/UI design only, before the spec | Designer once; writes `docs/designs/<slug>.design.md` in the repo (status `draft` → `ready`). No tracker, no spec, no git. Needs `agents.designer.enabled`. Offers `/_planit` or `/_runit` with the file; **does not start it**. Intent "learn conventions": the Designer scans the UI and writes `docs/designs/ux-conventions.md` instead (see [Designer](#agents)); offers nothing after it | "design the login screen" · "rework docs/designs/login.design.md" · "learn the project's UX conventions" |
 | `/_doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`. Several keys: one session per key (desktop app), or one after another in dependency order (git disabled). Ends with status `implemented` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
 | `/_checkit` | One Reviewer round per named task | Variants: review (default), update from base. One variant for the whole invocation; same worktree / parallel rules as `/_doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" |
-| `/_runit` | Full path, one task per session | Architect → Implementer → Reviewer, starting at the first missing stage; does not merge. Several keys: one session each, no dependency ordering (a task that needs a sibling stops `BLOCKED`, rerun it later). Git disabled: one after another in dependency order | "add password reset from spec through PR" · "run MT-01 MT-02 MT-03 samodzielnie" |
+| `/_runit` | Full path, one task per session | Architect → (Designer) → Implementer → Reviewer, starting at the first missing stage; does not merge. Optional design file as for `/_planit`. Several keys: one session each, no dependency ordering (a task that needs a sibling stops `BLOCKED`, rerun it later). Git disabled: one after another in dependency order | "add password reset from spec through PR" · "run MT-01 MT-02 MT-03 samodzielnie" |
 | `/_shipit` | Many specced tasks to merged | Needs git and a spec + prompt per task. Asks once for a go-ahead, then one `/_runit` session per task with auto-merge; a dependent task starts after its dependency is merged. Writes a run report to `docs/run-reports/` | "ship MT-01 MT-02 MT-03 samodzielnie" · "ship all todo tasks" |
 | `/_grillit` | Personae | CRUD members, app context, consult round; does not role-play. See [Brainstorm](#brainstorm). | "consult this spec with the personae" · "build the app context" |
 
 ```mermaid
 flowchart LR
   planit["/_planit"] --> architect[Architect]
+  planit -->|"ui: true"| designer[Designer]
+  designit["/_designit"] --> designer
+  designer -.->|design file| architect
   doit["/_doit"] --> implementer[Implementer]
   implementer --> consultant[Consultant]
   checkit["/_checkit"] --> reviewer[Reviewer]
@@ -215,7 +220,7 @@ If `harness.config.json` is missing, that is a **first run**. If the file is alr
 
 1. Reads the repo and states inferred choices so you can object.
 2. **Project PRD.** Uses an existing one and does not rewrite it. If none exists, gathers from the repo, asks only for facts the repo does not contain, then writes `docs/prd.md`. Config stores a one-line product plus `agents.docs`, not the PRD body.
-3. **Questions** (before it writes config): for each host, then for each of the four roles, one model (suggest that host’s `modelSuggest`; see [Models per host](#models-per-host)); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
+3. **Questions** (before it writes config): for each host, then for each of the five roles, one model (suggest that host’s `modelSuggest`; see [Models per host](#models-per-host)); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
 4. Writes `harness.config.json` (`seh.generatedFrom` = `.seh/VERSION`) and generates live agents, work skills, and rule packs from `.seh/` into **every** host tree. Each live agent’s `model:` is `agents.roles.<role>.model[<host.id>]` only.
 5. Merges project-root `AGENTS.md` and/or `CLAUDE.md` with the seh template, shows the full proposed markdown, and waits for acceptance. The result is always `AGENTS.md`. It writes `CLAUDE.md` only when `.claude/` was present and/or `CLAUDE.md` already existed (prefer a symlink to `AGENTS.md`; if the link fails, an independent file with the same body).
 6. Offers an external tracker (Jira or Azure DevOps) **once**. A decline is stored; add, change, or remove later is this same skill.
@@ -235,6 +240,7 @@ It does **not** touch `agents.brainstorm` (that is `/_grillit`), rewrite the pro
 | Setting | First run | Later run | Side effect |
 |---------|-----------|-----------|-------------|
 | Role models | ask per host | yes — one cell `(role, host)` | rewrite `model:` in that host’s `agentsDir` |
+| `agents.designer.enabled` | ask once (recommend yes when a UI stack is detected) | yes | config only; off = no Designer stage and `/_designit` stops `BLOCKED` |
 | `agents.contentLanguage` | ask | yes | config only |
 | `agents.baseBranch` | ask (empty = git disabled) | yes | config only |
 | Optional project rule | one; skip is default | if you ask — stored on the roles (`rules`; reviewer `checklist` when it is a review constraint) | stored on roles |
@@ -250,11 +256,12 @@ It does **not** touch `agents.brainstorm` (that is `/_grillit`), rewrite the pro
 
 ## Agents
 
-Exactly four product agents. Brainstorm members are not agents and are not `@`-addressable. Interview defaults depend on the host (see [Models per host](#models-per-host)); config stores a map, not one string per role.
+Exactly five product agents. Brainstorm members are not agents and are not `@`-addressable. Interview defaults depend on the host (see [Models per host](#models-per-host)); config stores a map, not one string per role.
 
 | Agent | Job | Must not |
 |-------|-----|----------|
 | **Architect** | Spec + prompt + first log row on the **active tracker** (repo files when Jira or ADO is read-only). Status stays `todo`. Read-only on application code. No worktrees. | Write app code; git; a file-by-file recipe |
+| **Designer** | Only for a spec with `ui: true` when `agents.designer.enabled` is `true`. Adds the **UX/UI decisions** section and `UX:` acceptance criteria to the spec, plus `D<n>` log rows. Same modes as the Architect. Through `/_designit`: writes one design file `docs/designs/<slug>.design.md` instead, with no tracker. Reads `docs/designs/ux-conventions.md` when it exists: it wins over the generic WCAG / HIG baseline in what it describes. `/_designit` "learn conventions" writes that file (about 50 rules with `path:line` evidence; `draft` → `ready`; deviations from `ux-a11y` only after you accept them). Read-only on application code; status unchanged. | Change requirements or Architect decisions; write app code; git |
 | **Implementer** | Implements the spec (`feature` or `bug`). Own 2–6 phase plan. After each phase, launches Consultant. Calls `.seh/scripts/start-task` (worktree; does not switch your checkout). Works under `Worktree:`. | Edit `CHANGELOG.md`; open the PR; invent architecture past Questions |
 | **Consultant** | Code **quality** on the **phase diff**. Structured `CONSULT` report. Not a user skill. | Edit product code; talk to the user; judge spec compliance |
 | **Reviewer** | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, commit, push, PR from the worktree. `return-to-base` **removes** that worktree; it does not switch your primary checkout. In a `/_shipit` session only: merges the PR through `merge-pr`. | Merge the PR outside `/_shipit`; treat Consultant `should-fix` as ❌ |
@@ -301,7 +308,7 @@ The Reviewer starts from `implemented` (or from `in review` on a later round wit
 
 Optional extra viewpoints while specifying. Members are markdown **personae**, not seh roles and not `@`-targets. The skill orchestrates; it does not role-play.
 
-There is still a **facilitator**, but it is not a fifth product agent: no model in `agents.roles`, no `/_setit-se` question. It is an isolated collector. Implementer, Consultant, and Reviewer never run a round. `/_setit-se` does not edit members.
+There is still a **facilitator**, but it is not a sixth product agent: no model in `agents.roles`, no `/_setit-se` question. It is an isolated collector. Implementer, Consultant, and Reviewer never run a round. `/_setit-se` does not edit members.
 
 ```mermaid
 flowchart LR
@@ -547,6 +554,7 @@ You merge the PR on GitHub (`/_shipit` merges it for you). The merge does not ch
 | `python` | Python project files |
 | `django` | Django |
 | `fastapi` | FastAPI |
+| `ux-a11y` | UI stack (React Native, Angular, Next.js; React, Vue or Svelte; Django templates). Accessibility, UI states, touch and i18n; scoped to UI files. A rule listed under **Deviations from ux-a11y** in a `ready` `docs/designs/ux-conventions.md` is not a Consultant finding |
 
 ## Git and language
 

@@ -94,14 +94,24 @@ describe("agentToToml", { skip: !HAVE_TOML && "python3 tomllib unavailable" }, (
     assert.equal(rw.developer_instructions, "body\n");
   });
 
-  test("all four shipped agent templates convert", () => {
-    for (const role of ["architect", "implementer", "consultant", "reviewer"]) {
+  test("all shipped agent templates convert", () => {
+    for (const role of ["architect", "designer", "implementer", "consultant", "reviewer"]) {
       const md = fs.readFileSync(path.join(AGENTS_DIR, role + ".md"), "utf8");
       const p = parseToml(lib.agentToToml(md, { model: "m" }));
       assert.equal(p.name, role);
       assert.ok(p.description.length > 0);
       assert.ok(p.developer_instructions.includes("You are the"));
     }
+  });
+
+  test("designer template: given model is written, empty model omits the key", () => {
+    const md = fs.readFileSync(path.join(AGENTS_DIR, "designer.md"), "utf8");
+    const withModel = parseToml(lib.agentToToml(md, { model: "gpt-designer-x" }));
+    assert.equal(withModel.model, "gpt-designer-x");
+    assert.equal(withModel.name, "designer");
+    const without = parseToml(lib.agentToToml(md, { model: "" }));
+    assert.equal("model" in without, false);
+    assert.doesNotMatch(without.developer_instructions, /^model:/m);
   });
 
   test("rejects a file without frontmatter or name", () => {

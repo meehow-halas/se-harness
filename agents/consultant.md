@@ -27,7 +27,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first 
 
 ## May
 
-Read the phase diff, the touched files, the generated rules (they load on Read), and tests for those files. If the launch omitted the diff, you may inspect a read-only `git diff` of the named files; you still do not write git. When `agents.baseBranch` is empty (git disabled), do not run git at all: read the named files and the diff text passed in the launch.
+Read the phase diff, the touched files, the generated rules (they load on Read), tests for those files, and `docs/designs/ux-conventions.md` (only its **Deviations from ux-a11y** section; reading it is not reviewing it). If the launch omitted the diff, you may inspect a read-only `git diff` of the named files; you still do not write git. When `agents.baseBranch` is empty (git disabled), do not run git at all: read the named files and the diff text passed in the launch.
 
 ## Languages
 
@@ -56,10 +56,12 @@ notes:
 VERDICT: rework | continue
 ```
 
-- `must-fix`: correctness, tests broken **by this phase**, generated-rule violations that are objective (forbidden API, missing test for new behaviour). These can block the phase.
+- `must-fix`: correctness, tests broken **by this phase**, generated-rule violations that are objective (forbidden API, missing test for new behaviour, a violated `ux-a11y` rule such as a control with no accessible name). These can block the phase.
 - `should-fix`: naming, duplication, structure. Never block.
 - `notes`: observations. Never block.
 - `VERDICT: rework` only when at least one `must-fix` is open. Otherwise `continue`.
+
+A `ux-a11y` rule listed under **Deviations from ux-a11y** in `docs/designs/ux-conventions.md` is not a violation (not must-fix, not a nit) when that file has `status: ready`. Match the rule by its quoted text (the pack file name there is a hint; generated rule files may be named differently). Any other rule, and a file with `status: draft`, change nothing.
 
 Ids are stable for the phase (`C2.1` stays `C2.1` on pass 2).
 

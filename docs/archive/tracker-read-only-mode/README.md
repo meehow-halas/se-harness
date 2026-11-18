@@ -38,7 +38,7 @@ When `readOnly` is `true`: `artifactsOnTrackerOnly` is ignored and treated as `f
 | 02 | [scripts](02-scripts.md) | done | legacy: not re-run |
 | 03 | [seh-setup](03-seh-setup.md) | done | legacy: not re-run |
 | 04 | [runtime](04-runtime.md) | done | legacy: not re-run |
-| 05 | [verification](05-verification.md) | done | legacy: not re-run; manual test in [manual-tests/tracker-read-only.md](../../manual-tests/tracker-read-only.md) |
+| 05 | [verification](05-verification.md) | done | legacy: not re-run; manual test in [manual-test.md](manual-test.md) |
 | 06 | [readme](06-readme.md) | done | legacy: not re-run |
 
 Parallelism (original plan): stages 02 and 03 may run in parallel after 01 (different files). Stage 03 must not ship before 02 is `done`.
