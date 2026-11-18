@@ -1,11 +1,11 @@
 ---
 name: designit
-description: Run the Designer once to design UX/UI before the spec and write a design file. Use when the user runs /{{prefix}}designit. Offers /{{prefix}}planit with the file; does not start it.
+description: Run the Designer once to design UX/UI before the spec and write a design file, or (on "learn conventions") to write the project's UX conventions file. Use when the user runs /{{prefix}}designit. Offers /{{prefix}}planit with the design file; does not start it.
 ---
 
 # /{{prefix}}designit
 
-UX/UI design only, before the spec. Launch the Designer once. It writes one design file, `docs/designs/<slug>.design.md`, in the repo. Do not touch the tracker, write a spec, prompt, or log, or use git. Do not launch Architect, Implementer, Consultant, or Reviewer. When it finishes, offer `/{{prefix}}planit` with the file; do not start it.
+UX/UI design only, before the spec. Launch the Designer once. It writes one design file, `docs/designs/<slug>.design.md`, in the repo. Do not touch the tracker, write a spec, prompt, or log, or use git. Do not launch Architect, Implementer, Consultant, or Reviewer. When it finishes, offer `/{{prefix}}planit` with the file; do not start it. Exception: the conventions mode (see **Learn conventions**) writes `docs/designs/ux-conventions.md` and offers nothing.
 
 Read `harness.config.json` at run time. Do not guess `agents.designer.enabled`, content language, or the product line. Do not invent CLI commands.
 
@@ -56,6 +56,10 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 From **intent**, not a required slash flag. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Designer. Definitions: PRD Modes (also in the Designer file).
 
 Reply in the language of the user’s latest message, whatever that language is, every message (progress messages too), including the final report and any end-of-turn summary the host shows. If the launch names `Conversation language: <name>`, that name decides. Never switch to another language. The design file is written in `agents.contentLanguage` (the Designer’s job).
+
+## Learn conventions
+
+If the user asks to learn the project's UX conventions (`naucz się konwencji`, `learn conventions`, `ux-conventions`), this is the conventions mode, not a design. Launch the Designer once with `Conventions file: docs/designs/ux-conventions.md` instead of `Design file:`, plus `Mode`, `Conversation language`, and `User approval:` as below. Iterating on an existing file is allowed. No slug, no sentence-to-design. Report the path, `status`, the number of rules, and the deviations from `ux-a11y` (written / proposed); state that no tracker was touched. Do **not** offer `/{{prefix}}planit` or `/{{prefix}}runit` in this mode. Skip **Resolve the input** and the design-file steps below.
 
 ## Resolve the input
 

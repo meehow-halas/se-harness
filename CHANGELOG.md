@@ -2,6 +2,18 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] - 2026-11-18
+
+### Added
+
+- `/<prefix>designit` "learn conventions" (`naucz się konwencji`, `learn conventions`, `ux-conventions`): the Designer scans the project UI and writes `docs/designs/ux-conventions.md` (about 50 lines, `path:line` evidence, section **Deviations from ux-a11y**). Offers no `/<prefix>planit` / `/<prefix>runit` in this mode.
+- `references/ux-conventions.md`: template of the conventions file.
+
+### Changed
+
+- Designer (`agents/designer.md`): third contract, `Conventions-file`. In the spec and design-file contracts it reads the file when it exists; the file beats the generic WCAG / HIG baseline in what it describes; decisions based on it end in `(ux-conventions)`. Deviations from `ux-a11y` enter the file only after user approval (proposals in critical / autonomous).
+- Consultant (`agents/consultant.md`): a `ux-a11y` rule listed under **Deviations from ux-a11y** in a `status: ready` conventions file is not a finding. Matched by the quoted rule text; the Consultant may read that file. The Designer keeps headings and quoted pack rules verbatim whatever `agents.contentLanguage` is.
+
 ## [1.5.0] - 2026-11-18
 
 ### Added

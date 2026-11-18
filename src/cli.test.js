@@ -1239,6 +1239,11 @@ describe("seh install --prefix", () => {
       assert.match(designit, /\/q_planit/);
       assert.match(designit, /BLOCKED: the Designer is disabled — enable it in \/q_setit-se/);
       assert.equal(exists(path.join(project, ".seh", "references", "design.design.md")), true);
+      assert.match(designit, /Conventions file: docs\/designs\/ux-conventions\.md/);
+      assert.equal(exists(path.join(project, ".seh", "references", "ux-conventions.md")), true);
+      assert.match(read(path.join(project, ".seh", "references", "ux-conventions.md")), /## Deviations from ux-a11y/);
+      assert.match(read(path.join(project, ".seh", "agents", "designer.md")), /Conventions-file contract/);
+      assert.match(read(path.join(project, ".seh", "agents", "consultant.md")), /Deviations from ux-a11y/);
       const shipit = read(path.join(project, ".seh", "skills", "shipit", "SKILL.md"));
       assert.match(shipit, /^---\nname: shipit\n/);
       assert.match(shipit, /\/q_shipit/);
