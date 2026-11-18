@@ -2,6 +2,12 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.4.1] - 2026-11-18
+
+### Fixed
+
+- `references/harness.config.md`: `agents.designer.enabled` on the first `/<prefix>setit-se` run is asked once (recommended `true` when a UI stack was detected), not written without a question. Matches `/<prefix>setit-se` and the PRD.
+
 ## [1.4.0] - 2026-11-18
 
 ### Added
