@@ -38,6 +38,8 @@ const ALL_SCRIPTS = [
   ["push-task", ["001-feature"]],
   ["open-pr", ["001-feature"]],
   ["update-from-base", ["001-feature"]],
+  ["merge-pr", ["001-feature"]],
+  ["pr-state", ["001-feature"]],
   ["return-to-base", []],
 ];
 const TASK_SCRIPTS = ALL_SCRIPTS.filter(([name]) => name !== "return-to-base");
@@ -75,7 +77,14 @@ describe("scripts source allowlist", () => {
       assert.equal(gitSubcommand("rebase").test(body), false, name);
       assert.equal(gitSubcommand("reset").test(body), false, name);
       assert.equal(forcePush.test(body), false, name);
-      assert.equal(prMerge.test(body), false, name);
+      if (name === "merge-pr") {
+        // The only script allowed to merge: squash, nothing else.
+        const merges = body.match(/\bgh\s+pr\s+merge\b[^\n]*/g) || [];
+        assert.equal(merges.length, 1, name);
+        assert.ok(merges[0].startsWith('gh pr merge "$number" --squash 2>&1)'), merges[0]);
+      } else {
+        assert.equal(prMerge.test(body), false, name);
+      }
     }
   });
 });

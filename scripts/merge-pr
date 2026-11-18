@@ -1,0 +1,63 @@
+#!/bin/sh
+# merge-pr <task>
+# gh pr merge <number> --squash for the open PR of the task branch into
+# agents.baseBranch. No --auto, --admin, --delete-branch, rebase, or force.
+
+. "$(dirname "$0")/lib.sh"
+
+git_gate
+require_git
+
+if ! command -v gh >/dev/null 2>&1; then
+  blocked "gh is not available" "install GitHub CLI (gh) and retry merge-pr"
+fi
+if ! command -v node >/dev/null 2>&1; then
+  blocked "node is not available" "install node and retry merge-pr"
+fi
+
+if [ $# -gt 1 ]; then
+  blocked "expected exactly one task argument" "usage: merge-pr <task>"
+fi
+task=${1-}
+require_task "$task"
+read_base_branch
+base=$SEH_BASE_BRANCH
+require_not_base "$task" "$base"
+
+branch=$(task_branch "$task")
+
+if ! list=$(gh pr list --head "$branch" --base "$base" --state all \
+  --json number,state,url,mergeable,mergedAt,mergeCommit,headRefName 2>&1); then
+  blocked "gh pr list failed ($list)" "fix the gh error, then retry merge-pr"
+fi
+rc=0
+info=$(printf '%s' "$list" | node "$(dirname "$0")/pr-json.js" merge) || rc=$?
+if [ "$rc" -ne 0 ]; then
+  blocked "unreadable gh output" "retry merge-pr"
+fi
+
+field() {
+  printf '%s\n' "$info" | sed -n "s/^$1: //p" | head -n 1
+}
+state=$(field state)
+url=$(field url)
+
+case $state in
+  none)
+    blocked "no open pull request for $branch" "run open-pr $task first"
+    ;;
+  merged)
+    unchanged "branch: $branch" "base: $base" "url: $url" "state: merged"
+    ;;
+esac
+
+number=$(field number)
+if [ "$(field mergeable)" = "CONFLICTING" ]; then
+  blocked "$branch conflicts with $base" "run update-from-base $task, resolve, commit-task, push-task, then retry merge-pr"
+fi
+
+if ! out=$(gh pr merge "$number" --squash 2>&1); then
+  blocked "merge failed ($out)" "fix the cause (checks, branch protection, gh error); do not merge by hand with other flags"
+fi
+
+ok "branch: $branch" "base: $base" "url: $url" "state: merged"

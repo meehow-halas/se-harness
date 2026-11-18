@@ -63,7 +63,9 @@ Shape: `.seh/references/BLOCKED.md`. Do not use `BLOCKED: rule=<id> …`.
 
 If the tracker script refuses (except `link`), copy its `BLOCKED:` line into the report, stop that path, and do not work around it with raw `curl` or `az boards`. `link` failure: comment that fact on the ticket / work item and continue.
 
-Stops include: open blocker on `depends`, user approval missing in interactive, a mapped Jira or ADO status that is not on that issue / work item type’s workflow (tell the user to fix the mapping in `/{{prefix}}setit-se`).
+An open `depends` (a dependency not yet at the configured `done` status) is not a stop for you: record it in `depends` and write the spec. The Implementer and Reviewer gate on it; `/{{prefix}}runit` checks it after your stage.
+
+Stops include: user approval missing in interactive, a mapped Jira or ADO status that is not on that issue / work item type’s workflow (tell the user to fix the mapping in `/{{prefix}}setit-se`).
 
 ## Tracker
 
@@ -158,6 +160,8 @@ Read `harness.config.json`, project `AGENTS.md` / `CLAUDE.md`, and `agents.docs`
 **Existing task** (files, Jira or ADO): read spec, prompt, and log (read-only: `get` for tracker scalars plus the repo files). Analyze what is present and what is missing. Update under **Existing spec (what wins)** above.
 
 **New task:** propose title and type (`feature` or `bug`). When Writing the specification allows it, choose the key (basename, or create the Jira issue / ADO work item with `create` — never `create` when `readOnly` is `true`) and write spec + prompt + first log row.
+
+**Key given by the launch, no spec** (for example `runit` fan-out child): if the key has no spec, prompt or log, take the content from the launch request and the tracker item (title, description) when one exists; the launch carries no other text. Files tracker: new task with the key as basename. Jira / ADO with full write: if the issue / work item exists, treat it as an existing task; if it does not exist, `BLOCKED: <KEY> not found in the tracker — create it or give a new request without a key` (never invent a tracker key). Read-only tracker: as files tracker, key as `id`.
 
 ### 3. Questions and split
 

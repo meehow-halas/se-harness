@@ -19,13 +19,16 @@ require_node() {
 }
 
 credentials_path() {
-  _root=$(repo_root)
+  _root=$(project_root)
   if [ -f "$_root/harness.credentials.local.json" ]; then
     printf '%s/harness.credentials.local.json\n' "$_root"
     return 0
   fi
-  _main=$(CDPATH= cd -- "$(dirname "$(abs_git_common_dir)")" && pwd)
-  if [ -f "$_main/harness.credentials.local.json" ]; then
+  _main=
+  if git rev-parse --git-common-dir >/dev/null 2>&1; then
+    _main=$(CDPATH= cd -- "$(dirname "$(abs_git_common_dir)")" && pwd)
+  fi
+  if [ -n "$_main" ] && [ -f "$_main/harness.credentials.local.json" ]; then
     printf '%s/harness.credentials.local.json\n' "$_main"
     return 0
   fi
@@ -43,7 +46,6 @@ require_tracker_config() {
 }
 
 load_ado() {
-  require_git
   require_curl
   require_node
   require_tracker_config

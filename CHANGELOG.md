@@ -2,6 +2,46 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] - 2026-11-17
+
+### Changed
+
+- `/<prefix>runit` with several keys and no spec: not `BLOCKED`; each child starts at Architect. With git disabled, several `runit` keys run in this session in dependency order from `fanout-plan` (`mode: sequential`), not in the order given; a sibling `depends` found by Architect sends the key back to `waiting`. No dependency ordering in a parallel `runit` fan-out (git enabled): a sibling `depends` already in the spec means the key is not started, and one found by Architect stops that child after the Architect stage; both are `BLOCKED` (rerun after the dependency is merged). Dependency-ordered automation stays `/<prefix>shipit` with specs written beforehand. Removed contradicting texts (`runit is one task` block, PRD stops list). `shipit` keeps its missing-spec `BLOCKED`.
+- `/<prefix>doit` and `/<prefix>checkit` with several keys and git disabled: run in this session in dependency order from `fanout-plan` (`mode: sequential`), not in the order given. With git disabled this holds on every host, `manual` included (no per-key commands are printed).
+
+### Fixed
+
+- Architect no longer stops on an open `depends`: it writes the spec and records the dependency, so dependent tasks can be specced ahead for `/<prefix>shipit`. Implementer and Reviewer still gate on it.
+- `/<prefix>runit`: dependency gate right after its Architect stage (before `start-task`): an open `depends` is `BLOCKED` and the spec stays in the launch checkout, so the rerun does not re-run Architect or reuse a worktree cut from the old base. Resolve reads the task worktree copy when a seh worktree exists.
+- Fan-out and `/<prefix>shipit`: a child waiting on the user (open `Q<n>`, interactive acceptance) counts as running; its dependents keep waiting and the run report waits for it. Only a final `BLOCKED:` drops a key.
+- Git disabled (`sequential`): a `Q<n>` is answered in the same session and the key continues; it is no longer dropped.
+- `/<prefix>shipit` resolve checks `pr-state` first: a merged key is skipped without a spec check, so a rerun no longer reports it `run /<prefix>planit first` when its spec is only on the base branch.
+- `/<prefix>runit` with no local spec (files / read-only tracker, git enabled) checks `pr-state` before Architect: an open PR is `task is already done`, a merged one `task is already merged`, so a rerun after `return-to-base` no longer specs the task again.
+- `/<prefix>shipit` on the desktop host: a key at `in progress` / `implemented` / `in review` with no live session is planned again (its child resumes at the first missing stage) instead of staying `running` forever. A `runit` run that starts at the Reviewer stage gets `Worktree:` from `start-task` (idempotent). The run report drops the always-zero "question pending" count.
+- Fan-out: `/<prefix>planit` with several keys no longer reports a key without a spec as `BLOCKED: run /<prefix>planit first`; its child writes the spec. Only `doit`, `checkit` and `shipit` keep that stop.
+- `manual` hosts: printed per-key commands carry the user's mode words (for example `samodzielnie`). The fan-out end report asks nothing in `autonomous` mode.
+- Reviewer auto-merge (`Auto-merge: yes`): after resolving a conflict with the base branch, the project's test/lint/typecheck runs before `push-task`; failing checks are `BLOCKED` with no merge. Up to 3 conflict-resolution attempts (was 1), since the base moves while sibling tasks merge.
+- `references/harness.config.md`: ADO field-map values are explained in place instead of linking to a repo planning doc that is not installed in consuming projects.
+
+## [1.3.1] - 2026-11-17
+
+### Changed
+
+- Skill names swapped. `/<prefix>shipit` is now the parallel, dependency-ordered, auto-merge skill for many specced tasks (was `/<prefix>runit`); `/<prefix>runit` is now the single-task pipeline Architect → Implementer → Reviewer (was `/<prefix>shipit`). Children started by `shipit` run `/<prefix>runit <KEY>`; the run report is `docs/run-reports/<YYYY-MM-DD-HHMM>-shipit.md`; `fanout-plan` accepts both names as before. Migration: replace old `/shipit` with `/runit`, and old `/runit` with `/shipit`. `/<prefix>setit-se` regenerates both skills on the version change.
+
+### Fixed
+
+- `.seh/scripts/ado` no longer stops with `BLOCKED: this directory is not a git repository` in a project without git (git disabled). It reads `harness.config.json` and `harness.credentials.local.json` from the project root, and from the main checkout only when run inside a git worktree, the same as `jira`.
+
+## [1.3.0] - 2026-11-17
+
+### Added
+
+- `.seh/scripts/merge-pr <task>`: `gh pr merge <number> --squash` for the open PR of the task branch into `agents.baseBranch`. Conflict, missing PR, and gh failures are `BLOCKED:`; an already merged PR is `UNCHANGED`. No `--auto`, `--admin`, `--delete-branch`, rebase, or force.
+- `.seh/scripts/pr-state <task>`: read-only `state: merged|open|none` (with `url:`, and `merged_at:` / `merge_commit:` when merged) for `<task>` or `<task>-N` into the configured base.
+- Reviewer merge step (opt-in): with launch line `Auto-merge: yes`, after `open-pr` the Reviewer runs `merge-pr` (one `update-from-base` retry on conflict), then `return-to-base`. `/<prefix>shipit` forwards the line only together with `Fan-out child: yes`; a user-launched run never merges. Default behaviour is unchanged.
+- `/<prefix>runit` work skill: many specced tasks (named keys, or all `todo` tasks in a files / read-only tracker) run as one `/<prefix>shipit` session each in parallel, with auto-merge into `agents.baseBranch`. A task with `depends` starts after its dependency is merged (`pr-state`). One go-ahead question; `manual` hosts print one command per ready key and recompute on rerun. Writes a run report to `docs/run-reports/<date>-runit.md` (not committed, never sent to Jira/ADO). `fanout-plan` accepts `--skill runit`; `references/session-fanout.md` allows `Auto-merge: yes` in the child prompt for `runit` only.
+
 ## [1.2.1] - 2026-11-14
 
 ### Fixed

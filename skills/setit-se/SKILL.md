@@ -167,7 +167,7 @@ BLOCKED: seh install has not been run here — run seh install (npx -p se-harnes
 
 If any role `model` is still a string, or a map is missing a `hosts.json` `id`, finish **Role model maps** first. Do not regenerate live agents until every role has a complete map.
 
-If `.seh/VERSION` (trimmed) does not equal `seh.generatedFrom`: regenerate live agents, work skills, and rule packs from `.seh/` (same copy rules as first run), set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed package templates changed. That message must name the work-skill renames: `/seh-feature` and `/seh-shipit` are now `/{{prefix}}shipit`; `/seh-setup` is `/{{prefix}}setit-se`, `/seh-planit` is `/{{prefix}}planit`, `/seh-doit` is `/{{prefix}}doit`, `/seh-checkit` is `/{{prefix}}checkit`, `/seh-brainstorm` is `/{{prefix}}grillit`; leftover live `seh-*` skill directories were removed from every `skillsDir`. Do not rewrite `AGENTS.md` or `CLAUDE.md`; mention they may still contain the old name. Then continue below.
+If `.seh/VERSION` (trimmed) does not equal `seh.generatedFrom`: regenerate live agents, work skills, and rule packs from `.seh/` (same copy rules as first run), set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed package templates changed. That message must name the work-skill renames: `/seh-feature` and `/seh-shipit` are now `/{{prefix}}runit`; `/seh-setup` is `/{{prefix}}setit-se`, `/seh-planit` is `/{{prefix}}planit`, `/seh-doit` is `/{{prefix}}doit`, `/seh-checkit` is `/{{prefix}}checkit`, `/seh-brainstorm` is `/{{prefix}}grillit`; leftover live `seh-*` skill directories were removed from every `skillsDir`. Do not rewrite `AGENTS.md` or `CLAUDE.md`; mention they may still contain the old name. Then continue below.
 
 **Missing generated files (repair).** VERSION and prefix may be equal while a host tree is still incomplete, for example after a package added a host row or `commandsDir` without a version change, or after someone deleted a file. Check every row in `.seh/references/hosts.json`:
 
@@ -305,16 +305,17 @@ Read the prefix from `.seh/PREFIX` (first line, may be empty). Copy these direct
 - `planit`
 - `doit`
 - `checkit`
+- `runit`
 - `shipit`
 - `grillit` (when present)
 
 Do **not** overwrite the install-owned `/{{prefix}}setit-se` skill from this copy step. If a listed template is missing, still copy the others; the copied stub (when present) stops with `BLOCKED:` until a later package fills the body.
 
-Cleanup in **each** `skillsDir`: delete a leftover `seh-feature` directory and the pre-prefix names `seh-setup`, `seh-planit`, `seh-doit`, `seh-checkit`, `seh-shipit`, `seh-brainstorm`. If `seh.generatedPrefix` in `harness.config.json` is set and differs from `.seh/PREFIX`, also delete the live directories made with that old prefix (only `setit-se`, `planit`, `doit`, `checkit`, `shipit`, `grillit` with that prefix). Never delete a directory whose name is not on these lists. Do not leave aliases. After generating, set `seh.generatedPrefix` to the `.seh/PREFIX` value (empty string allowed). A prefix change alone (VERSION equal, `seh.generatedPrefix` different) also triggers this regeneration.
+Cleanup in **each** `skillsDir`: delete a leftover `seh-feature` directory and the pre-prefix names `seh-setup`, `seh-planit`, `seh-doit`, `seh-checkit`, `seh-shipit`, `seh-brainstorm`. If `seh.generatedPrefix` in `harness.config.json` is set and differs from `.seh/PREFIX`, also delete the live directories made with that old prefix (only `setit-se`, `planit`, `doit`, `checkit`, `runit`, `shipit`, `grillit` with that prefix). Never delete a directory whose name is not on these lists. Do not leave aliases. After generating, set `seh.generatedPrefix` to the `.seh/PREFIX` value (empty string allowed). A prefix change alone (VERSION equal, `seh.generatedPrefix` different) also triggers this regeneration.
 
 When the host `id` is `cursor` or `opencode`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/{{prefix}}setit-se`). The package templates may omit that field.
 
-**`invokePrefix`.** Templates in `.seh/` name what the user types as slash plus prefix plus name. On a row whose `invokePrefix` is set and is not `/` (today Codex: `$`), in every copied work-skill file and every generated agent file for that host, replace each such slash form (names: `setit-se`, `planit`, `doit`, `checkit`, `shipit`, `grillit`) with `<invokePrefix><prefix><name>`. Do not touch paths such as `.seh/scripts/…`. Rows without `invokePrefix`, or with `/`, get the text as is. In your own messages to the user use the same prefix for this session’s host. The `BLOCKED:` strings printed by `.seh/scripts/` keep `/`: when you relay one on such a host, say it with that host’s prefix.
+**`invokePrefix`.** Templates in `.seh/` name what the user types as slash plus prefix plus name. On a row whose `invokePrefix` is set and is not `/` (today Codex: `$`), in every copied work-skill file and every generated agent file for that host, replace each such slash form (names: `setit-se`, `planit`, `doit`, `checkit`, `runit`, `shipit`, `grillit`) with `<invokePrefix><prefix><name>`. Do not touch paths such as `.seh/scripts/…`. Rows without `invokePrefix`, or with `/`, get the text as is. In your own messages to the user use the same prefix for this session’s host. The `BLOCKED:` strings printed by `.seh/scripts/` keep `/`: when you relay one on such a host, say it with that host’s prefix.
 
 **`skillHide` `openai-yaml`** (today Codex, which has no frontmatter switch). For each copied work skill write `<skillsDir>/<prefix><name>/agents/openai.yaml` with the stdout of `node .seh/references/codex-adapters.cjs openai-yaml` (`policy.allow_implicit_invocation: false`; `$<prefix><name>` still works). Not for `<prefix>setit-se`. Rows without `skillHide` get nothing.
 
@@ -326,7 +327,7 @@ When the host `id` is `cursor` or `opencode`, add frontmatter `disable-model-inv
 - Write nothing else into the command. The skill holds the procedure.
 - Rows with `commandsDir` `null` or missing get no command files.
 - Do not write or overwrite `<prefix>setit-se.md`. Install owns it.
-- Cleanup in **each** `commandsDir` follows the skill cleanup above. When `seh.generatedPrefix` differs from `.seh/PREFIX`, delete `<oldprefix><name>.md` for `planit`, `doit`, `checkit`, `shipit`, `grillit`. Never delete another file.
+- Cleanup in **each** `commandsDir` follows the skill cleanup above. When `seh.generatedPrefix` differs from `.seh/PREFIX`, delete `<oldprefix><name>.md` for `planit`, `doit`, `checkit`, `runit`, `shipit`, `grillit`. Never delete another file.
 
 ### Rule packs
 

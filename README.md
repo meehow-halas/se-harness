@@ -4,7 +4,7 @@ A layer for software engineering work in an AI coding assistant. Supported hosts
 
 One path: request → spec → implementation with quality feedback → review against the spec.
 
-The product and CLI binary are **`seh`**. The npm package is **`se-harness`**. Contracts in full: [`docs/prd.md`](docs/prd.md).
+The product and CLI binary are **`seh`**. The npm package is **`se-harness`**. Contracts in full: [`docs/prd.md`](docs/prd.md). What a run looks like, step by step: [`EXAMPLES.md`](EXAMPLES.md).
 
 ## Requirements
 
@@ -13,6 +13,7 @@ The product and CLI binary are **`seh`**. The npm package is **`se-harness`**. C
 - Do **not** `npm install -g`
 - Do **not** install skills, templates, or a CLI into `~/.claude/`, `~/.cursor/`, `~/.config/opencode/`, `~/.codex/`, or any other machine-wide path
 - Git helpers need `sh` (Windows is out of v1)
+- Git is optional: an empty `agents.baseBranch` turns it off (see [Git and language](#git-and-language))
 
 ## Hosts
 
@@ -37,7 +38,7 @@ Codex differences:
 - **Approve the hook:** after `seh install`, opening the project in Codex shows a notification that hooks need review. Open `/hooks` and accept the seh `SessionStart` hook, otherwise the update check never runs.
 - Sessions per key are not started automatically; one command is printed per key.
 
-One session per key (multi-key `/_planit`, `/_doit`, `/_checkit`, `/_shipit`) starts automatically only in the Claude Code desktop app. Cursor and OpenCode print one command per key.
+One session per key (multi-key `/_planit`, `/_doit`, `/_checkit`, `/_runit`, and every `/_shipit`) starts automatically only in the Claude Code desktop app, with git enabled. Cursor, OpenCode, and Codex print one command per key, keeping your mode words (for example `samodzielnie`). With git disabled, several keys run one after another in the current session on every host.
 
 ### Models per host
 
@@ -66,10 +67,19 @@ Brainstorm uses the same map shape on `agents.brainstorm.model`. `/_grillit` ask
 
 From the project directory, pick one source and reuse it later for uninstall:
 
-```text
+```bash
 npx -p se-harness seh install
+```
+
+```bash
 npx -p github:meehow-halas/se-harness seh install
+```
+
+```bash
 npx -p github:meehow-halas/se-harness#<ref> seh install
+```
+
+```bash
 npx -p https://github.com/meehow-halas/se-harness seh install
 ```
 
@@ -77,7 +87,7 @@ npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 
 ### Skill names and `--prefix`
 
-Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_doit`, `/_checkit`, `/_shipit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. This README shows the default `_` names.
+Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. This README shows the default `_` names.
 
 ```text
 npx -p se-harness seh install --prefix my-
@@ -92,9 +102,10 @@ Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag, an
 | `/_planit` | `/seh-planit` |
 | `/_doit` | `/seh-doit` |
 | `/_checkit` | `/seh-checkit` |
-| `/_shipit` | `/seh-shipit` |
+| `/_runit` | `/seh-shipit` (and `/_shipit` before 1.3.1) |
+| `/_shipit` | new in 1.3.0 (named `/_runit` in 1.3.0) |
 
-**Result:** `.seh/` and the project skill `/_setit-se` in every host `skillsDir` (today `.claude/skills/_setit-se`, `.cursor/skills/_setit-se`, `.opencode/skills/_setit-se`, and `.agents/skills/_setit-se` for Codex), plus the OpenCode command `.opencode/commands/_setit-se.md`. Setup is **not** done. Work skills (`/_shipit`, `/_planit`, `/_doit`, `/_checkit`, `/_grillit`) do not exist yet.
+**Result:** `.seh/` and the project skill `/_setit-se` in every host `skillsDir` (today `.claude/skills/_setit-se`, `.cursor/skills/_setit-se`, `.opencode/skills/_setit-se`, and `.agents/skills/_setit-se` for Codex), plus the OpenCode command `.opencode/commands/_setit-se.md`. Setup is **not** done. Work skills (`/_planit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_grillit`) do not exist yet.
 
 ## 2. Setup
 
@@ -114,14 +125,17 @@ Say what you want in ordinary language. The assistant matches **intent** to a sk
 
 | Intent | Skill |
 |--------|---------|
-| Full path | `/_shipit` |
+| Full path for one task (several keys: one session each) | `/_runit` |
+| Many specced tasks to merged, in dependency order, unattended | `/_shipit` |
 | Spec only | `/_planit` |
 | Implementation only | `/_doit` (one task or a list) |
 | One review or update from base | `/_checkit` (one task or a list; one variant) |
 | Change parameters or tracker (Jira / Azure DevOps) | `/_setit-se` |
 | Personae | `/_grillit` |
 
-After you accept a clean review, the Reviewer commits, opens the PR and sets `done`. That ends the feature. You merge the PR on GitHub; nothing else is needed from seh.
+After you accept a clean review, the Reviewer commits, opens the PR and sets `done`. That ends the feature. You merge the PR on GitHub; nothing else is needed from seh. The one exception is `/_shipit`: its sessions merge their own PRs.
+
+Examples of whole runs, from a single `/_doit` to an overnight `/_shipit`: [`EXAMPLES.md`](EXAMPLES.md).
 
 ## 4. Uninstall (optional)
 
@@ -136,7 +150,7 @@ Removes `.seh/` and the install-owned `/_setit-se` skill from every `skillsDir`.
 
 ## After a package update
 
-Run install again from the same source, then `/_setit-se`, so generated files match the installed templates (`.seh/VERSION` vs `seh.generatedFrom`). That regeneration copies `/_shipit` and deletes leftover live `seh-feature` and the old `seh-*` skills. It does not rewrite project `AGENTS.md`.
+Run install again from the same source, then `/_setit-se`, so generated files match the installed templates (`.seh/VERSION` vs `seh.generatedFrom`). That regeneration copies the work skills and deletes leftover live `seh-feature` and the old `seh-*` skills. It does not rewrite project `AGENTS.md`.
 
 ```text
 npx -p se-harness@latest seh install
@@ -158,17 +172,18 @@ Then run `/_setit-se` in the project.
 
 ## Skills
 
-Consultant is **not** a slash skill. The Implementer launches it. Single-stage skills do not chain; only `/_shipit` runs the full path, and it is **one task**.
+Consultant is **not** a slash skill. The Implementer launches it. Single-stage skills do not chain; `/_runit` runs the full path for one task per session, and `/_shipit` runs many `/_runit` sessions to merged.
 
-If Architect needs a persona round, work skills **stop and ask** `/_grillit`. `/_shipit` does not run that round itself.
+If Architect needs a persona round, work skills **stop and ask** `/_grillit`. `/_runit` does not run that round itself.
 
 | Skill | When | What happens | Example |
 |-------|------|----------------|---------|
 | `/_setit-se` | First config; later models, packs, base branch, tracker | One question at a time; generate live files; does not commit. See [`/_setit-se`](#_setit-se). | "change the architect model" · "change the architect model on Cursor" · "connect Jira" · "connect Azure DevOps" |
 | `/_planit` | Spec only | Architect once; offer next step; **do not start it** | "write a spec for login" · "tighten the spec for 001-login" · "spec PROJ-12" |
-| `/_doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`; parallel when the runtime allows. Ends with status `implemented` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
+| `/_doit` | Spec and prompt already exist | One task or a list. Parent runs `start-task` and launches Implementer per task with `Worktree:`. Several keys: one session per key (desktop app), or one after another in dependency order (git disabled). Ends with status `implemented` | "implement 001-login" · "implement 001-login and 002-logout" · "implement PROJ-12" |
 | `/_checkit` | One Reviewer round per named task | Variants: review (default), update from base. One variant for the whole invocation; same worktree / parallel rules as `/_doit` | "review this" · "review 001-login and 002-logout" · "update this branch from base" |
-| `/_shipit` | Full path, **one task** | Starts at the first missing stage; does not merge. A list of keys is a stop — spec with `/_planit`, then `/_doit`. Implementer and Reviewer still use a worktree | "add password reset from spec through PR" |
+| `/_runit` | Full path, one task per session | Architect → Implementer → Reviewer, starting at the first missing stage; does not merge. Several keys: one session each, no dependency ordering (a task that needs a sibling stops `BLOCKED`, rerun it later). Git disabled: one after another in dependency order | "add password reset from spec through PR" · "run MT-01 MT-02 MT-03 samodzielnie" |
+| `/_shipit` | Many specced tasks to merged | Needs git and a spec + prompt per task. Asks once for a go-ahead, then one `/_runit` session per task with auto-merge; a dependent task starts after its dependency is merged. Writes a run report to `docs/run-reports/` | "ship MT-01 MT-02 MT-03 samodzielnie" · "ship all todo tasks" |
 | `/_grillit` | Personae | CRUD members, app context, consult round; does not role-play. See [Brainstorm](#brainstorm). | "consult this spec with the personae" · "build the app context" |
 
 ```mermaid
@@ -177,11 +192,13 @@ flowchart LR
   doit["/_doit"] --> implementer[Implementer]
   implementer --> consultant[Consultant]
   checkit["/_checkit"] --> reviewer[Reviewer]
-  shipit["/_shipit"] --> architect
-  shipit --> implementer
-  shipit --> reviewer
+  runit["/_runit"] --> architect
+  runit --> implementer
+  runit --> reviewer
   reviewer --> prDone["PR opened, status done"]
   prDone --> humanMerge[You merge on GitHub]
+  shipit["/_shipit"] -->|one session per task| runit
+  reviewer -->|"/_shipit only"| autoMerge[Reviewer merges the PR]
 ```
 
 ## /_setit-se
@@ -219,7 +236,7 @@ It does **not** touch `agents.brainstorm` (that is `/_grillit`), rewrite the pro
 |---------|-----------|-----------|-------------|
 | Role models | ask per host | yes — one cell `(role, host)` | rewrite `model:` in that host’s `agentsDir` |
 | `agents.contentLanguage` | ask | yes | config only |
-| `agents.baseBranch` | ask | yes | config only |
+| `agents.baseBranch` | ask (empty = git disabled) | yes | config only |
 | Optional project rule | one; skip is default | if you ask — stored on the roles (`rules`; reviewer `checklist` when it is a review constraint) | stored on roles |
 | Packs / `packsIgnored` | detect; honour ignore | yes | regenerate rule packs |
 | Status strings | skeleton unless you confirm other strings | yes | config only |
@@ -240,7 +257,7 @@ Exactly four product agents. Brainstorm members are not agents and are not `@`-a
 | **Architect** | Spec + prompt + first log row on the **active tracker** (repo files when Jira or ADO is read-only). Status stays `todo`. Read-only on application code. No worktrees. | Write app code; git; a file-by-file recipe |
 | **Implementer** | Implements the spec (`feature` or `bug`). Own 2–6 phase plan. After each phase, launches Consultant. Calls `.seh/scripts/start-task` (worktree; does not switch your checkout). Works under `Worktree:`. | Edit `CHANGELOG.md`; open the PR; invent architecture past Questions |
 | **Consultant** | Code **quality** on the **phase diff**. Structured `CONSULT` report. Not a user skill. | Edit product code; talk to the user; judge spec compliance |
-| **Reviewer** | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, commit, push, PR from the worktree. `return-to-base` **removes** that worktree; it does not switch your primary checkout. | Merge the PR; treat Consultant `should-fix` as ❌ |
+| **Reviewer** | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, commit, push, PR from the worktree. `return-to-base` **removes** that worktree; it does not switch your primary checkout. In a `/_shipit` session only: merges the PR through `merge-pr`. | Merge the PR outside `/_shipit`; treat Consultant `should-fix` as ❌ |
 
 ### Architect
 
@@ -278,7 +295,7 @@ Consultant never talks to the user. In interactive mode, if `must-fix` is still 
 
 A different axis from Consultant: **does this match the spec** (requirements + acceptance criteria), not how the code is written. Leftover Consultant `should-fix` is not ❌. Leftover `must-fix` may be ❌ only when it actually misses an acceptance criterion.
 
-The Reviewer starts from `implemented` (or from `in review` on a later round without a fix in between) and sets `in review`. ❌ sets `in progress` and sends those items back to the Implementer, who sets `implemented` again. After acceptance: changelog, `done`, commit, push, PR from the worktree; `return-to-base` removes that worktree. You merge on GitHub. Max three Reviewer rounds.
+The Reviewer starts from `implemented` (or from `in review` on a later round without a fix in between) and sets `in review`. ❌ sets `in progress` and sends those items back to the Implementer, who sets `implemented` again. After acceptance: changelog, `done`, commit, push, PR from the worktree; `return-to-base` removes that worktree. You merge on GitHub, except in `/_shipit`, where the Reviewer merges; on a conflict it merges the base in, resolves it, runs the project's checks, and retries (at most 3 attempts). Max three Reviewer rounds.
 
 ## Brainstorm
 
@@ -328,7 +345,7 @@ Do not paste transcripts back into the chat or into the Architect launch. If eve
 
 **Direct consult** (`/_grillit` plus a question or a spec). Needs a ready app context and at least one member. The consult threshold does **not** apply. If you name members, those are asked; otherwise every member. The skill runs personae → facilitator → Architect, then **shows the Architect’s decisions** (not the raw persona replies). You resolve leftover conflicts. A blocker the Architect rejected is still shown.
 
-**During specification** (`/_planit`, or Architect inside `/_shipit`). If Architect needs a round, work skills **stop and ask** `/_grillit`. They do not interview personae in-process. `/_shipit` does not start a round by itself.
+**During specification** (`/_planit`, or Architect inside `/_runit`). If Architect needs a round, work skills **stop and ask** `/_grillit`. They do not interview personae in-process. `/_runit` does not start a round by itself.
 
 A round **on its own** (nobody named a question) runs only when there are at least **two** members **and** the work passes `agents.brainstorm.consult` (`any` / `significant` / `broad` as above).
 
@@ -346,7 +363,7 @@ Two axes. Do not mix them.
 
 ### Interaction
 
-From **intent**, not a required slash flag. Default: `interactive`. Architect, Implementer, and Reviewer take `Mode:` on launch. `/_planit`, `/_doit`, and `/_checkit` pass that mode to the role they launch. You may name the mode in the request so every agent in a `/_shipit` run shares it; you do not assemble it like a CLI flag. Consultant does not take `Mode:`.
+From **intent**, not a required slash flag. Default: `interactive`. Architect, Implementer, and Reviewer take `Mode:` on launch. `/_planit`, `/_doit`, and `/_checkit` pass that mode to the role they launch. You may name the mode in the request so every agent in a `/_runit` or `/_shipit` run shares it; you do not assemble it like a CLI flag. Consultant does not take `Mode:`.
 
 | Mode | Ask the user |
 |------|----------------|
@@ -407,7 +424,7 @@ Task key = basename. Branch name = basename.
 
 Status lives in the spec file frontmatter. The strings come from `agents.statuses` in config. Do not translate them from the conversation language. Change those strings with `/_setit-se` (config only).
 
-When Implementer or Reviewer starts a worktree, `start-task` copies this task’s three files from the launch working tree into the worktree when they exist there.
+When Implementer or Reviewer starts a worktree, `start-task` copies this task’s three files from the launch working tree into the worktree when they exist there, and removes their uncommitted copies from the launch working tree. From then on the task's files live in the worktree, and after the PR on the task branch.
 
 ### Jira tracker
 
@@ -420,6 +437,26 @@ Credentials: you put the token in a project-local ignored file `harness.credenti
 ```
 
 `seh install` already ignores that filename. Never paste the token in chat. Never write it into git or `harness.config.json`. Project key and field mapping live in config under `agents.tracker`.
+
+**Scoped token (optional, safer).** Instead of a full-access token, create a Jira Cloud API token with scopes. Scopes are an upper limit; the user also needs the project permissions below.
+
+Classic scopes (recommended by Atlassian):
+- `read:jira-work`: read issues, comments, statuses, transitions, and field metadata. Enough for read-only mode.
+- `write:jira-work`: create and edit issues, add comments, transition issues, link issues. Needed for full write only.
+
+Granular scopes (use only if classic scopes are not allowed):
+- `read:issue:jira`, `read:issue-meta:jira`, `read:issue-type:jira`, `read:field-configuration:jira`: read issue data and field/type metadata.
+- `read:issue.transition:jira`, `read:status:jira`, `read:issue-status:jira`: read available transitions and status names.
+- `read:comment:jira`: read comments.
+- `read:project:jira`: read project data; needed to check that the project key exists during `meta`.
+- `write:issue:jira`: create and edit issues.
+- `write:comment:jira`: add comments.
+- `write:issue.property:jira`: set issue properties during transitions.
+- `write:issue-link:jira`: link issues.
+
+Atlassian does not state whether all granular scopes are required or any one suffices, so use classic scopes unless you must use granular ones and verify the result.
+
+Project permissions the user also needs in the Jira project: Browse projects (without it the project looks missing even when the key is right); Create issues and Edit issues; Transition issues; Add comments; Link issues (full write only).
 
 **Add** (no tracker yet, or you accept the first-run offer). First: read-only mode, yes or no (see [One active tracker](#one-active-tracker)). Then, either way, one question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.seh/scripts/jira meta` lists that project’s statuses, issue types, and fields. Read-only: map only `blocker` (if you use `depends`) and `fetchFields`; status moves are writes, so nothing else is mapped. Full write: map each seh step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
 
@@ -492,9 +529,9 @@ todo → in progress → implemented → in review → done
 | `in progress` | Implementation + Consultant loop. | Implementer (+ Consultant, launched by them) |
 | `implemented` | Implementation finished; the Reviewer may start. | Implementer (end of its run) |
 | `in review` | A review round is running or waiting for your acceptance. ❌ moves it back to `in progress`. | Reviewer |
-| `done` | Clean review accepted: commit + push + PR opened. The feature is finished. | Reviewer, at acceptance |
+| `done` | Clean review accepted: commit + push + PR opened (git disabled: changelog only). The feature is finished. | Reviewer, at acceptance |
 
-You merge the PR on GitHub. The merge does not change the status; `done` is already set.
+You merge the PR on GitHub (`/_shipit` merges it for you). The merge does not change the status; `done` is already set. Without git the statuses are the same; only the git actions are skipped.
 
 ## Rule packs
 
@@ -515,9 +552,11 @@ You merge the PR on GitHub. The merge does not change the status; `done` is alre
 
 Base branch is `agents.baseBranch` (first setup; suggested default `dev`). Scripts do not guess `main`, `master`, or the current checkout.
 
-Implementer and Reviewer always work in a git worktree: `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/seh-worktrees/001-login`). `start-task` does not switch the caller’s checkout. `return-to-base` from a seh worktree removes it.
+With git enabled, Implementer and Reviewer always work in a git worktree: `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/seh-worktrees/001-login`). `start-task` does not switch the caller’s checkout. `return-to-base` from a seh worktree removes it.
 
-Allowlisted git/`gh` goes through `.seh/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`. Jira Cloud REST goes through `.seh/scripts/jira`; Azure DevOps REST through `.seh/scripts/ado`. No rebase, reset, or force. seh does not merge the PR.
+Allowlisted git/`gh` goes through `.seh/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`, plus `pr-state` (read-only) and `merge-pr` (used only by `/_shipit` sessions). Jira Cloud REST goes through `.seh/scripts/jira`; Azure DevOps REST through `.seh/scripts/ado`. No rebase, reset, or force. seh merges a PR only in `/_shipit`.
+
+**Git disabled.** Set `agents.baseBranch` to an empty value (in `/_setit-se`) for a project without git. Agents then skip branch, worktree, commit, push, PR, and merge steps and work in your checkout. Statuses run the same way, and the Reviewer sets `done` after acceptance with a changelog line. Several keys run one after another in the current session, in dependency order. `/_shipit` and `/_checkit` update need git and stop.
 
 Replies follow the conversation language. Spec, prompt, log, changelog, and PR text follow `agents.contentLanguage` from config. Status strings stay as configured; do not translate them from the conversation.
 
@@ -525,4 +564,4 @@ Replies follow the conversation language. Spec, prompt, log, changelog, and PR t
 
 v1 CLI is only `seh install [--prefix P]` and `seh uninstall`. Everything else is a skill. Install and uninstall loop every host in the **package** `hosts.json` (uninstall still works after `.seh/` is gone).
 
-No extra product agents. No Linear or GitHub Issues as a tracker (files, Jira, Azure DevOps only). No merging pull requests.
+No extra product agents. No Linear or GitHub Issues as a tracker (files, Jira, Azure DevOps only). No merging pull requests outside `/_shipit`.

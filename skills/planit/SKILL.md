@@ -5,7 +5,7 @@ description: Run the Architect once for a request. Use when the user runs /{{pre
 
 # /{{prefix}}planit
 
-Spec only. Launch the Architect once. When that finishes, offer `/{{prefix}}doit` or `/{{prefix}}shipit`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill.
+Spec only. Launch the Architect once. When that finishes, offer `/{{prefix}}doit` or `/{{prefix}}runit`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill.
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands. Do not merge a PR.
 
@@ -53,7 +53,7 @@ Reply in the language of the user’s latest message, whatever that language is,
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `planit`, one child session per key. Before each spawn, run the **Prompt check** in that file: the child prompt has only the allowed lines; no shared folder, notes file, or extra instruction. Do not launch Architect here. Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}planit <KEY>` command per key and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `planit`, one child session per key. Before each spawn, run the **Prompt check** in that file: the child prompt has only the allowed lines; no shared folder, notes file, or extra instruction. Do not launch Architect here. Two or more keys and `sessionSpawn` is `manual`: print one `/{{prefix}}planit <KEY>` command per key, with the user's mode words (for example `samodzielnie`), and stop. One key: continue below.
 
 ## Resolve the request
 
@@ -81,6 +81,6 @@ Report the task key, title, type, tracker, and that status stays at the configur
 Offer the next step. Do **not** start it:
 
 - `/{{prefix}}doit` — implement this spec (Consultant loop inside Implementer)
-- `/{{prefix}}shipit` — full path from here
+- `/{{prefix}}runit` — full path from here
 
 Do not start Reviewer. Do not call git scripts. When Jira or ADO is the active tracker, the Architect calls `.seh/scripts/jira` or `.seh/scripts/ado` by `kind`; this skill does not. Do not write spec, prompt, or log yourself.

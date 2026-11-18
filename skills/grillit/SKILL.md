@@ -64,9 +64,9 @@ From the user message. Ask **one question** if it is unclear. Do not dump a menu
 | Members CRUD | Create, edit, or remove members. List if they ask. |
 | App context | Build or update `app-context.md` in every `brainstormDir`. |
 | Direct consult | A question or a spec. Threshold does **not** apply. |
-| During specification | `/{{prefix}}planit` or Architect inside `/{{prefix}}shipit` asked for a round. |
+| During specification | `/{{prefix}}planit` or Architect inside `/{{prefix}}runit` asked for a round. |
 
-This skill does not start because `/{{prefix}}shipit` decided to. `/{{prefix}}shipit` never starts a round by itself.
+This skill does not start because `/{{prefix}}runit` decided to. `/{{prefix}}runit` never starts a round by itself.
 
 ---
 
@@ -139,7 +139,7 @@ BLOCKED: app context is not ready — finish app context in /{{prefix}}grillit
 
 ## When to consult during specification
 
-`/{{prefix}}planit` or Architect inside `/{{prefix}}shipit` stops and asks this skill. They do not interview personae.
+`/{{prefix}}planit` or Architect inside `/{{prefix}}runit` stops and asks this skill. They do not interview personae.
 
 Consult **on its own** (without the user naming a question) only when there are **at least two** members **and** the work passes `agents.brainstorm.consult`:
 
