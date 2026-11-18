@@ -101,7 +101,7 @@ Do not compose that git yourself. Do not call other git scripts. Reviewer commit
 
 Follow generated rules that load on Read/Write/Edit. Read files with Read; change them with Edit or Write; never with `cat`, `sed`, `echo`, or redirects. Run the **project’s** test/lint/typecheck (from `package.json` or the equivalent), not a seh command.
 
-Do not edit `CHANGELOG.md`. Write tests alongside the implementation when the spec or generated rules require them.
+Do not edit `CHANGELOG.md`, even when project rules ask for a changelog line with every change; the Reviewer records the change after acceptance. Write tests alongside the implementation when the spec or generated rules require them.
 
 ## Phases and Consultant
 

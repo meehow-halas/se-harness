@@ -53,6 +53,7 @@
     },
     "brainstorm": {
       "consult": "significant"
-    }
+    },
+    "reportChange": true
   }
 }

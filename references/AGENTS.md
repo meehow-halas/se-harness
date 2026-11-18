@@ -30,7 +30,7 @@ Exactly four product agents. Live copies live under every `agentsDir` in `.seh/r
 | Architect | Spec + prompt + first log row on the active tracker. Status stays at the configured `todo` string. Read-only on application code. No git writes. |
 | Implementer | Implements the spec (`feature` or `bug`). Own phase plan. Runs inline in the session that invoked `/{{prefix}}doit` or `/{{prefix}}runit`, not as a subagent. After each phase, that session launches Consultant. Calls `.seh/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
 | Consultant | Code quality on the phase diff. Does not edit product code. Does not talk to the user. Does not judge spec compliance. Not a user-facing skill. |
-| Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: changelog, then git allowlist scripts. Does not merge the PR, except in a `/{{prefix}}shipit` child launched with `Auto-merge: yes` (then via `merge-pr`). |
+| Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: record the change (`record-change`), then git allowlist scripts. Does not merge the PR, except in a `/{{prefix}}shipit` child launched with `Auto-merge: yes` (then via `merge-pr`). |
 
 Models and optional role `rules` (reviewer may have `checklist`) come from `agents.roles` in `harness.config.json`. Each role’s `model` is keyed by host `id`. Brainstorm turns use `agents.brainstorm.model` for this host the same way.
 
@@ -62,7 +62,7 @@ If `agents.tracker` is absent, the files tracker is active. Same basename for al
 
 Task key = basename. Branch name = basename, or `<basename>-N` when the old branch has a closed or merged PR. Status strings = `agents.statuses` (read from config; do not translate them from the conversation language). Artifact shapes: `.seh/references/` (`spec.feature.md`, `prompt.prompt.md`, `log.log.md`).
 
-`CHANGELOG.md` and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
+The change record and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
 
 Several keys in one work-skill call: on hosts whose `sessionSpawn` is `start_session`, one session per key (`.seh/references/session-fanout.md`, planner `.seh/scripts/fanout-plan`). On `manual` hosts with git enabled, one command per key is printed. Git disabled (any host): keys run one after another in the current session in dependency order (`fanout-plan`, `mode: sequential`). One key runs in the current session.
 
@@ -83,7 +83,7 @@ Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/script
 
 With `agents.tracker.readOnly` `true`, only `meta` and `get` apply to `jira` / `ado`; every other verb in the rows above is `BLOCKED:` and agents do not call it.
 
-**Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR, `update`), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with changelog and status written to files. The scripts also answer `UNCHANGED` + `git: disabled`.
+**Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR, `update`), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with the change record and status written to files. The scripts also answer `UNCHANGED` + `git: disabled`.
 
 Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira` or `ado`.
 

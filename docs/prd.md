@@ -74,7 +74,7 @@ Only after step 2:
 | Change parameters or Jira | `/<prefix>setit-se` |
 | Personae | `/<prefix>grillit` |
 
-After an accepted review the Reviewer commits, opens the PR and sets `done` (git disabled: changelog and `done` only, no commit or PR). That is the end of the feature. The user merges the GitHub PR; the merge does not change the task status. Exception: a run launched by `/<prefix>shipit` (fan-out child with `Auto-merge: yes`) ends with the Reviewer merging the PR via `merge-pr`.
+After an accepted review the Reviewer commits, opens the PR and sets `done` (git disabled: change record and `done` only, no commit or PR). That is the end of the feature. The user merges the GitHub PR; the merge does not change the task status. Exception: a run launched by `/<prefix>shipit` (fan-out child with `Auto-merge: yes`) ends with the Reviewer merging the PR via `merge-pr`.
 
 ### 4. Remove bootstrap (optional)
 
@@ -154,7 +154,7 @@ The first `/<prefix>setit-se` asks once whether to connect an external tracker (
 
 Switching does **not** migrate. Connect an external tracker → new work is on that tracker only; leftover `docs/features` (etc.) are ignored. Remove the tracker → new work is files only; existing issues/work items are not copied into files.
 
-`CHANGELOG.md` and code stay in git on both modes. `docs/brainstorm/` settled records stay files (not a task tracker).
+The change record and code stay in git on both modes. `docs/brainstorm/` settled records stay files (not a task tracker).
 
 ### Files tracker (default)
 
@@ -355,7 +355,7 @@ Brainstorm members are not agents and are not `@`-addressable.
 - Set status `in progress`.
 - Plan 2–6 phases. A phase is a coherent slice (e.g. model + tests, then API), not one file.
 - After **each** phase: launch Consultant (see below). Do not start the next phase until the Consultant protocol says `continue`.
-- Do not edit `CHANGELOG.md`.
+- Do not edit `CHANGELOG.md`, even when project rules ask for a changelog line with every change; the Reviewer records the change after acceptance.
 - Unclear spec: follow Questions; do not invent architecture beyond that.
 - If the **project** test/lint command fails on code they did not touch: stop and tell the user. Do not label it unrelated and continue.
 - When all phases have `continue`, set status `implemented`. The Reviewer moves it to `in review` when it starts.
@@ -440,9 +440,9 @@ Checks the finished implementation against the spec. Not formatting, not Consult
 - `interactive`: wait for explicit user acceptance. It counts when the user says it in this session, or when the launch passes it as `User acceptance: <the user's own words>` (the launching skill copies the words exactly). Until then: no changelog, no commit, no push, no PR, status stays `in review`.
 - `critical` / `autonomous`: this Reviewer run is acceptance. Then the git steps. Merge only with the launch line `Auto-merge: yes` (see below).
 
-Git disabled: after acceptance only final review in the log → status `done` → `CHANGELOG.md` entry. No commit, push, PR or return. Variant `update` stops with `BLOCKED: update needs git`.
+Git disabled: after acceptance only final review in the log → status `done` → change record (`record-change`). No commit, push, PR or return. Variant `update` stops with `BLOCKED: update needs git`.
 
-After acceptance, in order: final review in the log → status `done` → `CHANGELOG.md` entry → `.seh/scripts/commit-task` (includes `docs/prompt/<task>.prompt.md` when it exists in the worktree) → `.seh/scripts/push-task` → `.seh/scripts/open-pr` (base is `agents.baseBranch` from config) → [only with launch line `Auto-merge: yes`: `.seh/scripts/merge-pr`; on a conflict `BLOCKED:` one attempt is `update-from-base`, resolve, project test/lint/typecheck, `commit-task`, `push-task`, `merge-pr`; at most 3 attempts; failing project checks after resolving, a conflict after the third attempt, or any other failure is `BLOCKED:` for the task] → `.seh/scripts/return-to-base` (only when the worktree is clean). Without `Auto-merge: yes`: do not merge. The Reviewer never composes `gh pr merge` itself. PR body notes unfinished blockers.
+After acceptance, in order: final review in the log → status `done` → `.seh/scripts/record-change` (writes the change record when `agents.reportChange` is not `false`; otherwise `UNCHANGED`, no stop) → `.seh/scripts/commit-task` (includes `docs/prompt/<task>.prompt.md` when it exists in the worktree; adds a changed `CHANGELOG.md` by itself when `agents.reportChange` is `true` or missing; listed paths, `CHANGELOG.md` included, are always committed) → `.seh/scripts/push-task` → `.seh/scripts/open-pr` (base is `agents.baseBranch` from config) → [only with launch line `Auto-merge: yes`: `.seh/scripts/merge-pr`; on a conflict `BLOCKED:` one attempt is `update-from-base`, resolve, project test/lint/typecheck, `commit-task`, `push-task`, `merge-pr`; at most 3 attempts; failing project checks after resolving, a conflict after the third attempt, or any other failure is `BLOCKED:` for the task] → `.seh/scripts/return-to-base` (only when the worktree is clean). Without `Auto-merge: yes`: do not merge. The Reviewer never composes `gh pr merge` itself. PR body notes unfinished blockers.
 
 **Update from base:** when the user asks (e.g. `/<prefix>checkit … update`), or on a merge conflict with `Auto-merge: yes` (see above). Run `.seh/scripts/update-from-base`. Resolve if possible, stop on conflicts.
 

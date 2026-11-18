@@ -2,6 +2,19 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.3.4] - 2026-11-18
+
+### Added
+
+- `scripts/record-change <task> --text <one line>`: adds the change to `CHANGELOG.md` (Unreleased, Changed) when `agents.reportChange` is not `false`. With `false` it prints `UNCHANGED` and writes nothing; the flow does not stop.
+- `harness.config.json` `agents.reportChange` (boolean, default `true` when missing).
+
+### Changed
+
+- `commit-task` adds a changed `CHANGELOG.md` by itself when `agents.reportChange` is `true` or missing. With `false`, an invalid value or no `node` it adds nothing extra and does not stop; listed paths, `CHANGELOG.md` included, are always committed.
+- `record-change` places the Unreleased section above the first `## ` heading of any form (`## 1.2.0`, `## v1.2.0`), and reuses a plain `## Unreleased`.
+- Reviewer, Architect and `checkit`/`shipit` texts say "change record"; the Reviewer calls `record-change` after acceptance and no longer lists `CHANGELOG.md`. Implementer and `doit` keep the explicit "do not edit `CHANGELOG.md`", now also over project rules that ask for a changelog line.
+
 ## [1.3.3] - 2026-11-18
 
 ### Fixed

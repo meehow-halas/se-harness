@@ -17,7 +17,7 @@ BLOCKED: setup is incomplete — run /{{prefix}}setit-se (and seh install first 
 
 ## Must not
 
-- Edit product code, spec, prompt, changelog, or status.
+- Edit product code, spec, prompt, `CHANGELOG.md`, or status.
 - Run git writes or call `.seh/scripts/`.
 - Talk to the user (no questions, no `Q<n>`). The Implementer talks when the debt protocol requires it.
 - Re-open architectural decisions already in the spec. Do not say you would have designed it differently when the spec already decided it.

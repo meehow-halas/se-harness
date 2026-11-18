@@ -115,5 +115,5 @@ Do not merge. After a clean accepted review, the Reviewer may open a PR; this sk
 Report the variant, each task key, ✅/⚠️/❌, status, `worktree:` (git enabled only), and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
 
 - Open ❌ → offer `/{{prefix}}doit` (those items only, same list) or `/{{prefix}}runit` for a single task. Do not start them unless the user already asked to fix in this invocation.
-- Clean review accepted → the Reviewer committed, opened the PR and set `done` (git disabled: no commit or PR, only changelog and `done`). Report the PR URL when there is one. Nothing left for this skill; the user merges on GitHub, and that does not reopen the task.
+- Clean review accepted → the Reviewer committed, opened the PR and set `done` (git disabled: no commit or PR, only the change record and `done`). Report the PR URL when there is one. Nothing left for this skill; the user merges on GitHub, and that does not reopen the task.
 - Update finished → report; do not review unless they also asked for review (they did not: this invocation was update only).
