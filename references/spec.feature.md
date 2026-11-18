@@ -12,7 +12,7 @@ depends: []
 relates: []
 # ui: true when the task changes something a user sees (screen, interaction, UI text, navigation); absent = false.
 # With ui: true and agents.designer.enabled, the Designer adds a `## UX/UI decisions` section after Architectural decisions and `UX:` acceptance criteria.
-# The Architect never writes that heading: its presence tells the skills the Designer stage is done.
+# The Architect writes that heading only from a design file (launch `Design: <path>`). Its presence tells the skills the Designer stage is done.
 ui: false
 ---
 

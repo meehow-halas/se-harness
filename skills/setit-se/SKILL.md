@@ -73,7 +73,7 @@ Change any role models for <host label>? Reply skip or no to keep the table as s
 
 **Missing role (config from before the Designer).** `agents.roles.designer` is absent while the other roles have complete maps. Treat it like a missing host key for that one role: for each host in `hosts.json` (table order), prefill `designer` from that row’s `modelSuggest.designer` (when absent, from `modelSuggest.implementer`; when also absent, ask without a suggestion), show the table of that role, and ask one **change** question per host in the shape above. Skip / no = accept the table. Write the map when every host is confirmed. Then ask the **Designer switch** question below if `agents.designer.enabled` is missing.
 
-**Designer switch.** `agents.designer.enabled` (boolean). One question: enable the Designer stage (it adds UX/UI decisions to specs that have `ui: true`)? Recommendation: yes when a UI stack was detected (see **Rule packs**), otherwise no. Write the answer. A config without the key behaves as `false`; do not write it silently on a later run, ask.
+**Designer switch.** `agents.designer.enabled` (boolean). One question: enable the Designer stage (it adds UX/UI decisions to specs that have `ui: true`; `/{{prefix}}designit` needs it too)? Recommendation: yes when a UI stack was detected (see **Rule packs**), otherwise no. Write the answer. A config without the key behaves as `false`; do not write it silently on a later run, ask.
 
 **Legacy string.** If `model` is a string, the map is incomplete. Prefill every role on every host `id` with that string. Then use **per-host confirm** on each host (mention `modelSuggest` for that host in helper text when a role’s suggest differs from the prefill). Write the map when all hosts are confirmed.
 

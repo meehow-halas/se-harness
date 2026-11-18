@@ -8,5 +8,6 @@ User decisions: `Q<n>: …`. Designer decisions: `D<n>: …`. Consultant items: 
 |------|-------|--------|------|
 | YYYY-MM-DD | architect | spec | First spec and prompt. |
 | YYYY-MM-DD | architect | user decision | Q1: … |
+| YYYY-MM-DD | architect | design | design: docs/designs/<slug>.design.md |
 | YYYY-MM-DD | designer | ux decision | D1: … |
 | YYYY-MM-DD | implementer | phase | C1.1: … |
