@@ -44,11 +44,11 @@ npx -p github:meehow-halas/se-harness#<ref> seh install
 npx -p https://github.com/meehow-halas/se-harness seh install
 ```
 
-**Skill-name prefix.** `seh install --prefix P` (default `_`; allowed characters letters, digits, `_`, `-`; `--prefix ""` for none) sets a prefix for every skill name. Source names in `skills/` have no prefix (`setit-se`, `planit`, `doit`, `checkit`, `runit`, `shipit`, `grillit`); the live directory and the frontmatter `name:` (the slash command) are `<prefix><name>`, so the default commands are `/_setit-se`, `/_planit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_grillit`. Install writes the prefix to `.seh/PREFIX` and replaces the token `{{prefix}}` with it in every text file it copies into `.seh/`. `seh uninstall` reads `.seh/PREFIX` and takes no `--prefix`. Installing again without `--prefix` keeps the prefix in `.seh/PREFIX` (default `_` only when that file is missing or holds a disallowed value). Installing again with another prefix removes the old install-owned setup skill (and its host command). `/<prefix>setit-se` generates the work skills as `<prefix><name>`, records `seh.generatedPrefix`, and removes live skills made with an earlier prefix or the pre-prefix `seh-*` names.
+**Skill-name prefix.** `seh install --prefix P` (default `_`; allowed characters letters, digits, `_`, `-`; `--prefix ""` for none) sets a prefix for every skill name. Source names in `skills/` have no prefix (`setit-se`, `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `grillit`); the live directory and the frontmatter `name:` (the slash command) are `<prefix><name>`, so the default commands are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_grillit`. Install writes the prefix to `.seh/PREFIX` and replaces the token `{{prefix}}` with it in every text file it copies into `.seh/`. `seh uninstall` reads `.seh/PREFIX` and takes no `--prefix`. Installing again without `--prefix` keeps the prefix in `.seh/PREFIX` (default `_` only when that file is missing or holds a disallowed value). Installing again with another prefix removes the old install-owned setup skill (and its host command). `/<prefix>setit-se` generates the work skills as `<prefix><name>`, records `seh.generatedPrefix`, and removes live skills made with an earlier prefix (every work skill, `designit` included) or the pre-prefix `seh-*` names.
 
 `meehow-halas/se-harness` is the GitHub repository that publishes the `se-harness` package (`seh` CLI). A git HTTPS URL is the same as `github:meehow-halas/se-harness`. npm and GitHub are first-class and equivalent.
 
-**Required result:** `.seh/` and the project skill `/<prefix>setit-se` in every supported host `skillsDir` (today `.claude/skills/<prefix>setit-se`, `.cursor/skills/<prefix>setit-se`, `.opencode/skills/<prefix>setit-se`, and `.agents/skills/<prefix>setit-se` for Codex), plus a host command `<commandsDir>/<prefix>setit-se.md` for every row that has `commandsDir` (today OpenCode, `.opencode/commands/`, where a skill is not a slash command). Codex has no `commandsDir` (its only custom-prompt location is machine-wide, which is out); a user invokes a skill there as `$<prefix>setit-se` (or picks it in `/skills`). Docs and skill text use the row's `invokePrefix` (`$` for Codex, `/` elsewhere) in front of the skill name; `/<prefix>…` in this PRD reads as that. Setup is **not** done. `/<prefix>runit`, `/<prefix>shipit`, `/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, and `/<prefix>grillit` do not exist yet and must not be offered. `/<prefix>setit-se` is the skill that finishes first-time setup and later changes the same config.
+**Required result:** `.seh/` and the project skill `/<prefix>setit-se` in every supported host `skillsDir` (today `.claude/skills/<prefix>setit-se`, `.cursor/skills/<prefix>setit-se`, `.opencode/skills/<prefix>setit-se`, and `.agents/skills/<prefix>setit-se` for Codex), plus a host command `<commandsDir>/<prefix>setit-se.md` for every row that has `commandsDir` (today OpenCode, `.opencode/commands/`, where a skill is not a slash command). Codex has no `commandsDir` (its only custom-prompt location is machine-wide, which is out); a user invokes a skill there as `$<prefix>setit-se` (or picks it in `/skills`). Docs and skill text use the row's `invokePrefix` (`$` for Codex, `/` elsewhere) in front of the skill name; `/<prefix>…` in this PRD reads as that. Setup is **not** done. `/<prefix>runit`, `/<prefix>shipit`, `/<prefix>planit`, `/<prefix>designit`, `/<prefix>doit`, `/<prefix>checkit`, and `/<prefix>grillit` do not exist yet and must not be offered. `/<prefix>setit-se` is the skill that finishes first-time setup and later changes the same config.
 
 ### 2. Finish setup
 
@@ -69,6 +69,7 @@ Only after step 2:
 | Full path | `/<prefix>runit` plus what to build |
 | Many specced tasks, merged, in dependency order | `/<prefix>shipit` (keys, or all `todo`) |
 | Spec only | `/<prefix>planit` |
+| UX/UI design only, before the spec | `/<prefix>designit` |
 | Implementation only | `/<prefix>doit` (one task or a list) |
 | One review or update from base | `/<prefix>checkit` (one task or a list; one variant) |
 | Change parameters or Jira | `/<prefix>setit-se` |
@@ -270,11 +271,33 @@ Body:
 2. **Requirements**
 3. **Acceptance criteria**
 4. **Architectural decisions** — choices and why, not a tutorial.
-5. **UX/UI decisions** — only when `ui: true`, written by the Designer (see Designer). Layout, states (loading / empty / error), interaction, copy, accessibility, and existing components or design system to reuse. The Designer also appends its acceptance criteria to **Acceptance criteria**, each marked with the prefix `UX:`.
+5. **UX/UI decisions** — only when `ui: true`, written by the Designer (see Designer). Layout, states (loading / empty / error), interaction, copy, accessibility, and existing components or design system to reuse. The Designer also appends its acceptance criteria to **Acceptance criteria**, each marked with the prefix `UX:`. When the spec is built from a design file (see Design), the Architect writes this section and the `UX:` criteria from that file instead.
 
 Keep it short. If the request is several products, the Architect splits it and records `depends` / `relates`. A basename in `depends` must be `done` before implementation starts. An open `depends` is not a stop for the Architect: it writes the spec (so dependent tasks can be specced ahead for `/<prefix>shipit`); Implementer and Reviewer gate on it, and `/<prefix>runit` stops at a dependency gate after its Architect stage, before `start-task`.
 
 Paths may appear as constraints (“do not change X”), never as a step list.
+
+### Design (`*.design.md`)
+
+Written by `/<prefix>designit` (see Designer). Path: `docs/designs/<slug>.design.md`, always in the repo, whatever `agents.tracker` is (also Jira, Azure DevOps, and `readOnly`). Template: `references/design.design.md`. No config key.
+
+Frontmatter: `id`, `title`, `status` (`draft` \| `ready`).
+
+Body, UX/UI only (no business requirements, no architecture decisions):
+
+1. **Context** — for whom, which problem.
+2. **User flows**
+3. **Screens / layout**
+4. **States** — loading / empty / error.
+5. **Interactions**
+6. **UI copy**
+7. **Accessibility**
+8. **Components / design system to use**
+9. **Decisions** — `D<n>: …`, in this file, not in a log.
+10. **Criteria** — each marked with the prefix `UX:`.
+11. **Open questions**
+
+One design file can feed several specs (the Architect splits); each spec logs the same path. Figma or images are only a text link. Nothing searches `docs/designs/` on its own.
 
 ### Prompt (`*.prompt.md`)
 
@@ -282,7 +305,7 @@ Goal, phase-grain order, new dependencies, existing code to reuse, **what not to
 
 ### Log (`*.log.md`)
 
-Table `date | agent | action | note`. User decisions: `Q<n>: …`. Designer decisions: `D<n>: …`. Consultant items: `C<phase>.<n>: …`. No second approvals file.
+Table `date | agent | action | note`. User decisions: `Q<n>: …`. Designer decisions: `D<n>: …` (for a design file they live in that file, not in a log). A spec built from a design file has a row `design: <path>`. Consultant items: `C<phase>.<n>: …`. No second approvals file.
 
 ---
 
@@ -339,7 +362,7 @@ Exactly five agents. No others.
 | Agent | Model (default) | Job |
 |-------|-----------------|-----|
 | Architect | opus | Spec + prompt. May split tasks. May consult brainstorm members. Read-only on application code. No git writes. |
-| Designer | same as Implementer on every host | Only for specs with `ui: true`: UX/UI decisions section and UX acceptance criteria in the spec. Read-only on application code. No git writes. Status unchanged. |
+| Designer | same as Implementer on every host | Only for specs with `ui: true`: UX/UI decisions section and UX acceptance criteria in the spec; or, through `/<prefix>designit`, a UX design file. Read-only on application code. No git writes. Status unchanged. |
 | Implementer | sonnet | Implements the task (feature or bug). Own phase plan. After each phase, runs Consultant. Tests with the code. |
 | Consultant | haiku | Code **quality** on the phase diff. Does not edit product code. Does not judge spec compliance. |
 | Reviewer | sonnet | Spec compliance (requirements + AC) only. Not style. Commits, pushes, opens PR, returns to base, sets `done`. |
@@ -348,8 +371,9 @@ Brainstorm members are not agents and are not `@`-addressable.
 
 ### Architect
 
-- Input: a sentence, or existing files / the active external tracker.
+- Input: a sentence, or existing files / the active external tracker. Optionally `Design: <path>` (a design file the user named in `/<prefix>planit` or `/<prefix>runit`; the Architect never looks in `docs/designs/` on its own).
 - Output: spec + prompt + first log row **on the active tracker only** (repo files when `agents.tracker.readOnly` is `true`). Status stays `todo`.
+- With `Design: <path>`: the spec gets `ui: true`; the Architect copies the design's decisions into **UX/UI decisions** and its `UX:` criteria into **Acceptance criteria**. A conflict with the requirements is a `Q<n>` for the user. The log has a row `design: <path>`. A missing file is `BLOCKED`. A file with `status: draft`: interactive asks (recommendation: finish it in `/<prefix>designit`); critical ends with `BLOCKED: design <path> is draft — finish it in /<prefix>designit or rerun interactive`; autonomous records a `Q<n>` and continues. The Architect never edits the design file. When it overwrites such a spec, it takes the UX again from the path in the log; the Designer is not run.
 - Does not create or switch branches. Does not call git scripts. Does not use worktrees.
 - Interactive: confirm title, then spec+prompt, before write. Critical/autonomous: write once Questions is satisfied. Approval for an overwrite of an existing spec counts when the user says it in this session or the launch passes `User approval: <the user's own words>` verbatim; the same rule as the Reviewer acceptance.
 
@@ -362,7 +386,9 @@ Conditional: runs only when the spec has `ui: true` **and** `agents.designer.ena
 - Does not create or switch branches, call git scripts, or use worktrees. Works in the launch checkout. Read-only on application code.
 - Does not change requirements or Architect decisions (a conflict is a `Q<n>` for the user), does not edit the prompt beyond the component pointers, and does not launch brainstorm personae.
 - Modes: same as the Architect. Interactive: one question at a time with a recommendation, and the UX section is shown before write. Critical: asks only for a critical UX decision (see Modes), records the rest as `D<n>`. Autonomous: asks nothing, records every decision.
-- The launching skill runs the Designer (the Architect is a subagent and cannot). A later Architect change to a spec that already has a UX section re-runs the Designer under the same rules as an overwrite of a spec: interactive proposes the change, autonomous overwrites.
+- The launching skill runs the Designer (the Architect is a subagent and cannot). A later Architect change to a spec that already has a UX section re-runs the Designer under the same rules as an overwrite of a spec: interactive proposes the change, autonomous overwrites. Exception: a spec built from a design file (see Architect).
+
+**Second entry: `/<prefix>designit`.** Input `Design file: <path>` (the skill passes it) and the mode. The Designer designs UX/UI only, from a sentence or from an existing design file (iteration), and writes only that file (see Design). It has no task key, reads and writes no tracker, creates no spec, prompt or log, and uses no git. Decisions are `D<n>` in the file. Interactive shows the file before write and sets `status: ready` once the user accepts it; critical and autonomous set `ready` after the write. Same agent, same five-agent set; modes as above.
 
 ### Implementer
 
@@ -528,7 +554,7 @@ These scripts do not cover LLM procedure (phases, Consultant, review checklist, 
 | Live file | What setup writes |
 |-----------|-------------------|
 | Host agent files | Copy of `.seh/agents/` plus `model:` from `agents.roles.<role>.model[<host.id>]` into **each** `agentsDir` in `.seh/references/hosts.json`. Not a symlink. Do not copy another host’s model. Cursor `consultant` copies also get `readonly: true`. OpenCode copies drop `name` and `tools` (OpenCode V2 names agents by file and skips a file with a string `tools:`) and get `mode: subagent`; OpenCode `consultant` copies also get `permissions` deny `edit`. Codex copies are TOML (`.codex/agents/<name>.toml`: `name`, `description`, `developer_instructions` from the agent body; `model` only when a model is set, absent = the session model is inherited; no `model_reasoning_effort`). A Codex subagent inherits the parent sandbox, so the agent file cannot enforce read-only: Consultant (and Architect) read-only is instruction text only, and the PRD does not promise more. |
-| Work skills (`/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>runit`, `/<prefix>shipit`, `/<prefix>grillit`) | From `.seh/skills/` into every `skillsDir`. Do not overwrite install-owned `/<prefix>setit-se`. Cursor and OpenCode copies also get `disable-model-invocation: true` (OpenCode: not advertised to the model, still loadable by id, so the host command still works). Codex has no such frontmatter: where the row has `skillHide: "openai-yaml"`, each work skill gets `<skill>/agents/openai.yaml` with `policy.allow_implicit_invocation: false`. For every row with `commandsDir`, also write `<commandsDir>/<prefix><name>.md` from `.seh/references/host-command.md` (same wrapper as the install-owned setup command). On generate, delete leftover `seh-feature` from each `skillsDir` if it exists, and remove host commands made with an earlier prefix. |
+| Work skills (`/<prefix>planit`, `/<prefix>designit`, `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>runit`, `/<prefix>shipit`, `/<prefix>grillit`) | From `.seh/skills/` into every `skillsDir`. Do not overwrite install-owned `/<prefix>setit-se`. Cursor and OpenCode copies also get `disable-model-invocation: true` (OpenCode: not advertised to the model, still loadable by id, so the host command still works). Codex has no such frontmatter: where the row has `skillHide: "openai-yaml"`, each work skill gets `<skill>/agents/openai.yaml` with `policy.allow_implicit_invocation: false`. For every row with `commandsDir`, also write `<commandsDir>/<prefix><name>.md` from `.seh/references/host-command.md` (same wrapper as the install-owned setup command). On generate, delete leftover `seh-feature` from each `skillsDir` if it exists, and remove host commands made with an earlier prefix. |
 | Designer config | `agents.roles.designer.model` (map by host `id`, same as other roles; the Designer agent file is generated like the others) and `agents.designer.enabled` (boolean) in `harness.config.json`. The `ux-a11y` pack is generated only when a UI stack is detected. |
 | Rule packs | From `.seh/packs/`, filtered by detection and `packsIgnored`, into every `rulesDir` using that host’s `rulesExt` (`.md` + `paths:` vs `.mdc` + `description` / `globs` / `alwaysApply: false`). For OpenCode, also merge the glob `.opencode/rules/*.md` into `.opencode/opencode.json` `instructions` (create the file if missing; do not edit project-root `opencode.json`). Codex reads only `AGENTS.md` for instructions, so its packs go to `.codex/rules/*.md` (with `paths:`; scope is soft, instruction only) and `/<prefix>setit-se` maintains one seh-managed section in project-root `AGENTS.md` that points at that directory; content outside that section is never touched. |
 | `seh.generatedFrom` in `harness.config.json` | Equal to `.seh/VERSION` after a generation that used that tree. |
@@ -543,15 +569,16 @@ These scripts do not cover LLM procedure (phases, Consultant, review checklist, 
 
 Single-stage skills do not chain. Only `/<prefix>runit` runs the full path.
 
-Work skills (`/<prefix>planit`, `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>runit`, `/<prefix>shipit`, `/<prefix>grillit`) stop before doing work when `harness.config.json` is missing **or** `.seh/VERSION` does not match `seh.generatedFrom`. The message is to run `/<prefix>setit-se` (and `seh install` first if `.seh/` or `.seh/VERSION` is missing).
+Work skills (`/<prefix>planit`, `/<prefix>designit`, `/<prefix>doit`, `/<prefix>checkit`, `/<prefix>runit`, `/<prefix>shipit`, `/<prefix>grillit`) stop before doing work when `harness.config.json` is missing **or** `.seh/VERSION` does not match `seh.generatedFrom`. The message is to run `/<prefix>setit-se` (and `seh install` first if `.seh/` or `.seh/VERSION` is missing).
 
 | Skill | Does |
 |-------|------|
 | `/<prefix>setit-se` | Project-local, written by `seh install`. **First run** (no `harness.config.json`): finish setup. Infers what it can from the repo; one question at a time otherwise. Ensures a project PRD exists (`docs/prd.md` if it had to create one). Detects a git repo; asks for `agents.baseBranch` (suggested default `dev`) only when there is one, otherwise leaves it empty (git disabled). Writes config (including `seh.generatedFrom` = `.seh/VERSION`), generates agents/skills/rules from `.seh/` without baking runtime config into agent bodies. Merges existing `AGENTS.md` and/or `CLAUDE.md` with the seh template, shows the proposed body, writes `AGENTS.md` only after acceptance (even if the project had only `CLAUDE.md`). Writes `CLAUDE.md` when `.claude/` was present and/or `CLAUDE.md` already existed (symlink, or independent file if the link cannot be created). Offers Jira once. Does not commit. **Later run** (config already there): if `.seh/VERSION` ≠ `seh.generatedFrom`, regenerate live agents, work skills, and rules first. Then change one parameter at a time, including the base branch and add/change/remove Jira. Does not rewrite the project PRD or remake `AGENTS.md`. Rewrites that live agent’s `model:` in **that host’s** `agentsDir` when one role `model` cell changes; regenerates rules when packs change. Ensures `CLAUDE.md` if `.claude/` is present and the file is still missing (symlink first, independent file if the link fails). |
-| `/<prefix>planit` | Architect once; then the Designer when the spec has `ui: true` and `agents.designer.enabled` is `true`. Offer next step; do not start it. |
+| `/<prefix>planit` | Architect once; then the Designer when the spec has `ui: true` and `agents.designer.enabled` is `true`. Offer next step; do not start it. Optional input: a design file (path or slug the user names; see Design), passed to the Architect as `Design: <path>`. With a design file the Designer stage is skipped (the UX section already exists). |
+| `/<prefix>designit` | Designer once, UX/UI only, before the spec. Input: a sentence, or an existing `docs/designs/<slug>.design.md` (iteration). Output: that design file (see Design). One call = one design file; no fan-out, no brainstorm, no `ux-a11y`. Does not read or write the tracker, create a spec, prompt or log, or use git. Mode from intent. Needs `agents.designer.enabled` = `true`; otherwise `BLOCKED: the Designer is disabled — enable it in /<prefix>setit-se`. Ends by offering `/<prefix>planit … <path>` (written with the host's `invokePrefix`); does not start it. |
 | `/<prefix>doit` | Implementer, including the Consultant loop. Feature or bug: same agent. One task or a list. Parent runs `start-task` and applies the Implementer procedure inline per task with `Worktree:`. Several tasks in one session run sequentially, in dependency order from `fanout-plan` (never the order given); parallel only via session fan-out (git enabled only) (`references/session-fanout.md`). |
 | `/<prefix>checkit` | One Reviewer round per named task. Variants: review, update (one variant for the whole invocation). Same worktree / parallel rules as `/<prefix>doit`. |
-| `/<prefix>runit` | Architect → (Designer) → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session. Starts at the first missing stage. Stops if already `done`; with no local spec and git enabled (files / read-only tracker) it checks `pr-state` first, so an open or merged PR is reported instead of re-running Architect. Several keys: session fan-out (below); a key without a spec is not blocked, its child starts at Architect. Implementer and Reviewer still use a worktree. Does not merge the PR (unless it is a `/<prefix>shipit` child). |
+| `/<prefix>runit` | Architect → (Designer) → Implementer (Consultant inside) → Reviewer → fix rounds. Optional design file as for `/<prefix>planit` (Designer stage skipped). One task per session. Starts at the first missing stage. Stops if already `done`; with no local spec and git enabled (files / read-only tracker) it checks `pr-state` first, so an open or merged PR is reported instead of re-running Architect. Several keys: session fan-out (below); a key without a spec is not blocked, its child starts at Architect. Implementer and Reviewer still use a worktree. Does not merge the PR (unless it is a `/<prefix>shipit` child). |
 | `/<prefix>shipit` | Many specced tasks (named keys, or every `todo` task with spec and prompt in a files / read-only tracker). One session per task running `/<prefix>runit <KEY>` with `Auto-merge: yes`; a task with `depends` starts after its dependency is merged into `agents.baseBranch`. Needs git. Never specs (missing spec: `/<prefix>planit`). Parent plans, starts sessions, writes one run report to `docs/run-reports/`; never merges or does child work. Detail: `### /<prefix>shipit` below. |
 | `/<prefix>grillit` | Project-local. Members CRUD, app context, run a consult: personae → facilitator (collect only) → Architect (PART A). |
 
@@ -628,8 +655,8 @@ If the user names another config key (model, base branch, …), do that key firs
 
 One task. A list of keys is a stop: spec with `/<prefix>planit`, then `/<prefix>doit` with the list.
 
-1. No spec or prompt → Architect (launch checkout; no git, no worktree).
-1b. Spec has `ui: true`, `agents.designer.enabled` is `true`, and the spec has no **UX/UI decisions** section → Designer (launch checkout; no git, no worktree), before step 2. Interactive: stop on its questions like the Architect's.
+1. No spec or prompt → Architect (launch checkout; no git, no worktree). With a design file the user named, the Architect gets `Design: <path>` (see Architect).
+1b. Spec has `ui: true`, `agents.designer.enabled` is `true`, and the spec has no **UX/UI decisions** section → Designer (launch checkout; no git, no worktree), before step 2. Interactive: stop on its questions like the Architect's. A spec built from a design file already has that section, so the step is skipped.
 2. Spec+prompt (and the UX section when step 1b applies), no implementation → Implementer in the task worktree, Consultant inside each phase.
 3. Implementation exists → Reviewer in that worktree.
 4. Open ❌ → Implementer with those items only, then Reviewer again (max 3).
@@ -776,6 +803,7 @@ Examples: `seh install` missing, `/<prefix>setit-se` not run yet, `.seh/VERSION`
 21. **Session update check is GitHub tags, notify only.** Available version is the highest semver tag on `meehow-halas/se-harness`, not npm. Host session-start hooks run `.seh/scripts/check-update`. Fail-open. No `seh check` CLI and no silent install. Install or update of a new version only with the user's explicit yes, never without it. Do not treat default-branch `package.json` or untagged commits as a new version.
 22. **Codex is the fourth host: a row plus adapters.** (a) Skills go to `.agents/skills` (`.codex/skills` is not a documented scan path). Uninstall removes only seh-owned entries there, since other tools read that directory. (b) Skills are invoked as `$<prefix><name>` or via `/skills`; no `commandsDir`, nothing under `~/.codex/`. (c) Agents use `agentFormat: "codex-toml"` into `.codex/agents`. (d) The update check is a `.codex/hooks.json` `SessionStart` hook (matcher `startup|resume`), active only in a trusted project after review in `/hooks`. (e) `modelSuggest`: architect `gpt-6-sol`; implementer, reviewer and brainstorm `gpt-6.1-sol`; consultant `gpt-6-luna` (tier match to Claude Code opus / sonnet / haiku). Availability per account is unverified; the user may change a suggestion or choose "no change", which omits `model` so the session model is inherited. Reasoning effort is not configured. (f) Rule packs go to `.codex/rules/*.md` plus a seh-managed section in `AGENTS.md`; path scoping is soft.
 23. **Designer is conditional and splits UX duty three ways.** The Architect marks `ui: true` in the spec; the launching skill runs the Designer only for `ui: true` with `agents.designer.enabled: true` (tasks without UI keep the old flow). Designer = UX goal in the spec (decisions + `UX:` criteria, log `D<n>`); Consultant = measurable `ux-a11y` rules in the code (must-fix); Reviewer = spec compliance, including `UX:` criteria, unchanged. Default model equals the Implementer's on every host (`modelSuggest.designer`). A config without the Designer keys behaves as disabled; `/<prefix>setit-se` offers to fill them.
+24. **`/<prefix>designit` = UX design before the spec; the file lives in the repo and the Architect carries it over.** The Designer (same agent, no sixth role) writes `docs/designs/<slug>.design.md` and touches no tracker. The user names that file in `/<prefix>planit` / `/<prefix>runit`; the Architect writes the spec with the UX section and `UX:` criteria from it and logs `design: <path>`, so the Designer stage is skipped. One writer per file; `status: draft` signals work in progress. Re-running the Architect on such a spec takes the UX again from the same file.
 
 ## Deferred
 

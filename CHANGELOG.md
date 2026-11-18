@@ -2,6 +2,20 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-11-18
+
+### Added
+
+- `/<prefix>designit`: the Designer designs UX/UI only, before the spec, and writes `docs/designs/<slug>.design.md` in the repo. Reads and writes no tracker, creates no spec, prompt or log, uses no git. Needs `agents.designer.enabled`; otherwise `BLOCKED`. Offers `/<prefix>planit … <path>`.
+- `references/design.design.md`: template of the design file (`id`, `title`, `status` `draft` | `ready`; UX/UI sections, `D<n>` decisions, `UX:` criteria).
+
+### Changed
+
+- Designer (`agents/designer.md`): second contract, `Design file: <path>` (writes only that file, `D<n>` inside it, `ready` after acceptance or write).
+- Architect (`agents/architect.md`): input `Design: <path>`. Writes `ui: true`, the UX/UI decisions section and `UX:` criteria from the file; conflict is a `Q<n>`; `draft` asks (interactive), `BLOCKED` (critical) or `Q<n>` (autonomous); logs `design: <path>`; never edits the file.
+- `/<prefix>planit`, `/<prefix>runit`: accept a design file the user names and pass `Design:`; the Designer stage is skipped when the spec has a UX section.
+- `/<prefix>setit-se`, `src/cli.js`, `references/AGENTS.md`: `designit` in generation, prefix cleanup, host commands, `invokePrefix` and the consumer skill list.
+
 ## [1.4.1] - 2026-11-18
 
 ### Fixed

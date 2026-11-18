@@ -213,7 +213,7 @@ function renderTokens(tree, prefix) {
   }
 }
 
-const INVOKE_SKILLS = ["setit-se", "planit", "doit", "checkit", "runit", "shipit", "grillit"];
+const INVOKE_SKILLS = ["setit-se", "planit", "designit", "doit", "checkit", "runit", "shipit", "grillit"];
 
 // Skills and messages name what the user types as `/<prefix><skill>`. A host
 // whose row has another `invokePrefix` (Codex: `$`) gets that character instead.

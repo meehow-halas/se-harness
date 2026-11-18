@@ -5,7 +5,7 @@ description: Run the Architect once for a request. Use when the user runs /{{pre
 
 # /{{prefix}}planit
 
-Spec only. Launch the Architect once; then, when the spec has `ui: true` and `agents.designer.enabled` is `true`, the Designer once. When that finishes, offer `/{{prefix}}doit` or `/{{prefix}}runit`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill.
+Spec only. Launch the Architect once; then, when the spec has `ui: true` and `agents.designer.enabled` is `true`, the Designer once. When that finishes, offer `/{{prefix}}doit` or `/{{prefix}}runit`. Do not start implementation or review. Do not launch Implementer, Consultant, or Reviewer. There is no user-facing Consultant skill. The user may name a design file from `/{{prefix}}designit` (see *Resolve the request*); then the Designer stage is skipped.
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, `fetchFields`, content language, or the product line. Do not invent CLI commands. Do not merge a PR.
 
@@ -57,7 +57,7 @@ If the prompt has the line `Fan-out child: yes`, this session is a child: run th
 
 ## Resolve the request
 
-The user may give a sentence, an existing basename, a Jira key, or an ADO work item id. Pass that to the Architect. Do not write spec, prompt, or log yourself. The Architect uses the **active tracker only** (files if `agents.tracker` is absent; the connected tracker (`agents.tracker.kind`: Jira or ADO) if it is present). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: the Architect reads it with `get` and writes spec, prompt, and log to repo files only; no skill step writes the tracker.
+The user may give a sentence, an existing basename, a Jira key, or an ADO work item id. Pass that to the Architect. Do not write spec, prompt, or log yourself. **Design file.** The user may also name a UX design file (`docs/designs/<slug>.design.md`, written by `/{{prefix}}designit`) by path or slug; a slug resolves to `docs/designs/<slug>.design.md`. Only a file the user names is used; never search `docs/designs/`. Pass it to the Architect as `Design: <path>` (see *Launch Architect once*). The Architect uses the **active tracker only** (files if `agents.tracker` is absent; the connected tracker (`agents.tracker.kind`: Jira or ADO) if it is present). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: the Architect reads it with `get` and writes spec, prompt, and log to repo files only; no skill step writes the tracker.
 
 ## Launch Architect once
 
@@ -67,6 +67,7 @@ Pass at least:
 
 - `Mode: <mode>`
 - The user request (and task key if they named one)
+- `Design: <path>` when the user named a design file
 - For an existing spec: say in the launch that the Architect owns the existing-spec rules (overwrite in `autonomous`, proposal in `interactive`, see the Architect file). Do not summarize or rewrite the spec in the parent. When the user has approved a proposed change in this session, pass `User approval: <the user's own words, verbatim>` in the launch. Never paraphrase or infer approval.
 - `Conversation language: <name>` always: the language of the user's message in this session (a Polish message gives `Polish`). Never omit it.
 
@@ -76,7 +77,7 @@ If the Architect stops with a `BLOCKED:` line or a question (`Q<n>`), report tha
 
 ## Launch Designer (conditional)
 
-After the Architect finishes without `BLOCKED:` or a question, read the spec it wrote. Run the Designer once only when **both** hold: the spec frontmatter has `ui: true`, and `agents.designer.enabled` is `true` in `harness.config.json`. Otherwise skip this section; a spec with `ui: false` or no `ui`, or a disabled Designer, never runs it.
+After the Architect finishes without `BLOCKED:` or a question, read the spec it wrote. Run the Designer once only when **all** hold: the spec frontmatter has `ui: true`, `agents.designer.enabled` is `true` in `harness.config.json`, and the spec has no **UX/UI decisions** section (a spec built from a design file already has it, so the stage is skipped). Otherwise skip this section; a spec with `ui: false` or no `ui`, or a disabled Designer, never runs it.
 
 Follow the live Designer file for this host (`<agentsDir>/designer.md`). Do not duplicate it. Pass at least `Mode: <the same mode as the Architect>`, the task key, `Conversation language: <name>` always, and, when the user approved the UX section the Designer showed (new or a change to an existing one) in this session, `User approval: <the user's own words, verbatim>`. The Designer works in the launch checkout, with no git and no worktree, and does not change status.
 
@@ -84,7 +85,7 @@ The Designer is launched by this skill, not by the Architect (a subagent cannot 
 
 ## After Architect finishes
 
-Report the task key, title, type, tracker, whether the Designer ran (and its number of `D<n>` decisions and `UX:` criteria), and that status stays at the configured `todo` string.
+Report the task key, title, type, tracker, whether a design file was used (its path), whether the Designer ran (and its number of `D<n>` decisions and `UX:` criteria), and that status stays at the configured `todo` string.
 
 Offer the next step. Do **not** start it:
 

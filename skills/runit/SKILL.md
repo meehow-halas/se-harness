@@ -87,7 +87,7 @@ Start at the first missing stage. Skip stages that are already done.
 
 Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.seh/references/hosts.json`). Do not duplicate it.
 
-Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a Polish message gives `Polish`).
+Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a Polish message gives `Polish`). When the user named a design file from `/{{prefix}}designit` (path or slug; a slug resolves to `docs/designs/<slug>.design.md`; never search `docs/designs/`), also pass `Design: <path>`.
 
 If Architect asks `/{{prefix}}grillit`: stop and ask that skill; do not run the round here; do not continue the pipeline.
 
@@ -105,7 +105,7 @@ The spec stays `todo` in the launch checkout; the rerun starts at the first miss
 
 ### 1b. Spec with `ui: true`, Designer enabled, no UX section → Designer
 
-Applies only when all three hold: the spec frontmatter has `ui: true`; `agents.designer.enabled` is `true` in `harness.config.json`; the spec has no **UX/UI decisions** section. Otherwise skip to stage 2 (a spec with `ui: false` or no `ui`, or a disabled Designer, never runs it). Also run it when the Architect just ran in this run and wrote `ui: true`.
+Applies only when all three hold: the spec frontmatter has `ui: true`; `agents.designer.enabled` is `true` in `harness.config.json`; the spec has no **UX/UI decisions** section. Otherwise skip to stage 2 (a spec with `ui: false` or no `ui`, or a disabled Designer, never runs it). Also run it when the Architect just ran in this run and wrote `ui: true`. A spec the Architect built from a design file (`Design: <path>`) already has the UX section, so this stage is skipped.
 
 Follow the live Designer file for this host (`<agentsDir>/designer.md`). Launch it as a subagent in the launch checkout: no git, no worktree, no `Worktree:` line. Pass `Mode:` (the same mode as the Architect), the task key, `Conversation language: <name>` always, and, if the user approved the UX section the Designer showed (new or a change to an existing one), `User approval: <the user's own words, verbatim>`.
 
