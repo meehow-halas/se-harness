@@ -49,7 +49,7 @@ Do not overwrite keys the user did not confirm. Do not regenerate generated file
 
 `agents.roles.<role>.model` must be an object whose keys are every `id` in `.seh/references/hosts.json`. Each value is a non-empty string, except on a row with `agentFormat` `codex-toml`, where `""` is valid and means **no change**: the live agent has no `model` and Codex uses the session model. A JSON string is not a map. Do not copy another host’s model onto a live file.
 
-Interview defaults come from that host row’s `modelSuggest` (`architect` / `implementer` / `consultant` / `reviewer`). If that field is missing, ask without a suggestion. Do not translate one host’s model id into another’s. Do not `if (id === "claude-code")` for suggestion text.
+Interview defaults come from that host row’s `modelSuggest` (`architect` / `designer` / `implementer` / `consultant` / `reviewer`). If that field is missing, ask without a suggestion. Do not translate one host’s model id into another’s. Do not `if (id === "claude-code")` for suggestion text.
 
 If generation needs a model and `agents.roles.<key>.model[<host.id>]` is missing (or empty on a row that is not `codex-toml`):
 
@@ -59,7 +59,7 @@ BLOCKED: role model missing for host <id> — run /{{prefix}}setit-se
 
 On a `codex-toml` row the helper text adds: a model name is passed through as given and its availability depends on the account; reply `none` (or `no change`) for a role to omit `model` and inherit the session model. Store `""` for it. Tell the user once that the suggested ids come from the docs and are unverified for their account.
 
-**Per-host confirm (first run, legacy, missing host).** For each host in `.seh/references/hosts.json` (table order), prefill all four roles for that host’s `id`, show a table (architect / implementer / consultant / reviewer → model), then **one question per host**: whether to change any of those models. Skip / no = accept the table. Yes = the user may reply once with overrides (e.g. `architect: opus`); apply only named roles; leave the rest from prefill. If parsing is unclear, one follow-up question only. Do not stamp live `model:` until every host is confirmed.
+**Per-host confirm (first run, legacy, missing host).** For each host in `.seh/references/hosts.json` (table order), prefill all five roles for that host’s `id`, show a table (architect / designer / implementer / consultant / reviewer → model), then **one question per host**: whether to change any of those models. Skip / no = accept the table. Yes = the user may reply once with overrides (e.g. `architect: opus`); apply only named roles; leave the rest from prefill. If parsing is unclear, one follow-up question only. Do not stamp live `model:` until every host is confirmed.
 
 **Show each table once.** The table and its question appear once, in the question itself. Do not repeat the same table or the same question in a message before it, after it, or in the closing summary. The same rule applies to every confirmation in this skill (project name, tracker, language, tracker offer): one message per question, no re-printed copies.
 
@@ -71,9 +71,13 @@ Change any role models for <host label>? Reply skip or no to keep the table as s
 
 **Reply mapping.** Accept the table: `skip`, `no`, `nie`, empty / Enter, or clear “keep / ok / leave as shown” intent (including Polish *zostaw*, *git*). Apply overrides: `yes`, `tak`, `change`, or a `role: model` list without yes. If you asked a keep-framed question by mistake and the user answered as if keeping (e.g. **tak** with no override list), accept the table; do not ask again for overrides.
 
+**Missing role (config from before the Designer).** `agents.roles.designer` is absent while the other roles have complete maps. Treat it like a missing host key for that one role: for each host in `hosts.json` (table order), prefill `designer` from that row’s `modelSuggest.designer` (when absent, from `modelSuggest.implementer`; when also absent, ask without a suggestion), show the table of that role, and ask one **change** question per host in the shape above. Skip / no = accept the table. Write the map when every host is confirmed. Then ask the **Designer switch** question below if `agents.designer.enabled` is missing.
+
+**Designer switch.** `agents.designer.enabled` (boolean). One question: enable the Designer stage (it adds UX/UI decisions to specs that have `ui: true`; `/{{prefix}}designit` needs it too)? Recommendation: yes when a UI stack was detected (see **Rule packs**), otherwise no. Write the answer. A config without the key behaves as `false`; do not write it silently on a later run, ask.
+
 **Legacy string.** If `model` is a string, the map is incomplete. Prefill every role on every host `id` with that string. Then use **per-host confirm** on each host (mention `modelSuggest` for that host in helper text when a role’s suggest differs from the prefill). Write the map when all hosts are confirmed.
 
-**Missing host key.** Same **per-host confirm** when the table has an `id` the map does not (for example a new row after upgrade). Prefill that host’s four roles from that row’s `modelSuggest` when present; if `modelSuggest` is missing for a role, ask for that role in the follow-up for that host only.
+**Missing host key.** Same **per-host confirm** when the table has an `id` the map does not (for example a new row after upgrade). Prefill that host’s five roles from that row’s `modelSuggest` when present; if `modelSuggest` is missing for a role, ask for that role in the follow-up for that host only.
 
 ---
 
@@ -100,7 +104,9 @@ Config stores a one-line `product` plus doc paths, **not** the PRD body.
 
 Do not write `harness.config.json` or generate live files until these are confirmed.
 
-**Roles.** Only architect, implementer, consultant, reviewer. No other roles. No brainstorm-facilitator model question. For **each** host in `.seh/references/hosts.json` (table order), use **per-host confirm** from **Role model maps** (including **Question wording** and **Reply mapping**): prefill each role from that row’s `modelSuggest.<role>` when present; one question per host with the four-role table and optional overrides. Write `agents.roles.<role>.model` as a map keyed by host `id`. Each value must be a non-empty string. Do not translate one host’s model id into another’s.
+**Roles.** Only architect, designer, implementer, consultant, reviewer. No other roles. No brainstorm-facilitator model question. For **each** host in `.seh/references/hosts.json` (table order), use **per-host confirm** from **Role model maps** (including **Question wording** and **Reply mapping**): prefill each role from that row’s `modelSuggest.<role>` when present; one question per host with the five-role table and optional overrides. Write `agents.roles.<role>.model` as a map keyed by host `id`. Each value must be a non-empty string. Do not translate one host’s model id into another’s.
+
+**`agents.designer.enabled`.** Ask the **Designer switch** question from **Role model maps** once, after the role models. Skeleton default is `false`; recommend `true` when a UI stack was detected.
 
 **`agents.contentLanguage`.** Language of files and tracker text. Ask once. Suggest the conversation language.
 
@@ -165,15 +171,15 @@ If `.seh/VERSION` is missing:
 BLOCKED: seh install has not been run here — run seh install (npx -p se-harness seh install or npx -p github:meehow-halas/se-harness seh install), then /{{prefix}}setit-se again
 ```
 
-If any role `model` is still a string, or a map is missing a `hosts.json` `id`, finish **Role model maps** first. Do not regenerate live agents until every role has a complete map.
+If any role `model` is still a string, a map is missing a `hosts.json` `id`, or `agents.roles.designer` is missing, finish **Role model maps** first (a missing `designer` role and `agents.designer.enabled` use **Missing role** and **Designer switch**). Do not regenerate live agents until every role has a complete map.
 
 If `.seh/VERSION` (trimmed) does not equal `seh.generatedFrom`: regenerate live agents, work skills, and rule packs from `.seh/` (same copy rules as first run), set `seh.generatedFrom` to `.seh/VERSION`, and tell the user the installed package templates changed. That message must name the work-skill renames: `/seh-feature` and `/seh-shipit` are now `/{{prefix}}runit`; `/seh-setup` is `/{{prefix}}setit-se`, `/seh-planit` is `/{{prefix}}planit`, `/seh-doit` is `/{{prefix}}doit`, `/seh-checkit` is `/{{prefix}}checkit`, `/seh-brainstorm` is `/{{prefix}}grillit`; leftover live `seh-*` skill directories were removed from every `skillsDir`. Do not rewrite `AGENTS.md` or `CLAUDE.md`; mention they may still contain the old name. Then continue below.
 
 **Missing generated files (repair).** VERSION and prefix may be equal while a host tree is still incomplete, for example after a package added a host row or `commandsDir` without a version change, or after someone deleted a file. Check every row in `.seh/references/hosts.json`:
 
-- the four agents in its `agentsDir`, each in this host's format from **Live agents** (for example an OpenCode copy that still has `name:` or `tools:`, or lacks `mode: subagent`, counts as missing);
+- the five agents in its `agentsDir`, each in this host's format from **Live agents** (for example an OpenCode copy that still has `name:` or `tools:`, or lacks `mode: subagent`, counts as missing);
 - `<skillsDir>/<prefix><name>/SKILL.md` for every work-skill template present in `.seh/skills/`, with `disable-model-invocation: true` where **Work skills** requires it for this host;
-- on a `codex-toml` row, the four `<role>.toml` files instead of `.md`, and `agents/openai.yaml` for every work skill when `skillHide` is `openai-yaml`;
+- on a `codex-toml` row, the five `<role>.toml` files instead of `.md`, and `agents/openai.yaml` for every work skill when `skillHide` is `openai-yaml`;
 - when `commandsDir` is set, `<commandsDir>/<prefix><name>.md` for those same skills, matching what the current `.seh/references/host-command.md` renders (a command without the `Host:` line counts as missing).
 
 If any of these is missing, regenerate live agents, work skills, and host commands for **every** row, with the same copy rules as first run. Tell the user in one line which paths were missing. Do not show the rename message and do not regenerate rule packs for this reason. Then continue below.
@@ -263,15 +269,16 @@ Copy `.seh/agents/` files into **each** `agentsDir`. **Copies, not symlinks.**
 | Source | Live file | Role key |
 |--------|-----------|----------|
 | `.seh/agents/architect.md` | `<agentsDir>/architect.md` | `architect` |
+| `.seh/agents/designer.md` | `<agentsDir>/designer.md` | `designer` |
 | `.seh/agents/implementer.md` | `<agentsDir>/implementer.md` | `implementer` |
 | `.seh/agents/consultant.md` | `<agentsDir>/consultant.md` | `consultant` |
 | `.seh/agents/reviewer.md` | `<agentsDir>/reviewer.md` | `reviewer` |
 
 Set frontmatter `model:` from `agents.roles.<key>.model[<host.id>]`. If that entry is missing or empty, stop with `BLOCKED: role model missing for host <id> — run /{{prefix}}setit-se`. Do not copy another host’s model. Leave `name`, `description`, and `tools` as in the template, except on OpenCode (below). Claude Code and Cursor keep `tools:`.
 
-When the host `id` is `cursor` and the role is `consultant`, also set `readonly: true`. Do not set `readonly` on architect, implementer, or reviewer.
+When the host `id` is `cursor` and the role is `consultant`, also set `readonly: true`. Do not set `readonly` on architect, designer, implementer, or reviewer.
 
-When the host `id` is `opencode`, remove the `name:` and `tools:` lines from each of the four copies and set `mode: subagent`. OpenCode takes the agent name from the file name. It skips an agent file whose `tools:` is a comma list ("agent file skipped"), so the copy must not carry it. Keep `description` and `model`. When the host `id` is `opencode` and the role is `consultant`, also set:
+When the host `id` is `opencode`, remove the `name:` and `tools:` lines from each of the five copies and set `mode: subagent`. OpenCode takes the agent name from the file name. It skips an agent file whose `tools:` is a comma list ("agent file skipped"), so the copy must not carry it. Keep `description` and `model`. When the host `id` is `opencode` and the role is `consultant`, also set:
 
 ```yaml
 permissions:
@@ -280,19 +287,19 @@ permissions:
     effect: deny
 ```
 
-Do not set those `permissions` on architect, implementer, or reviewer.
+Do not set those `permissions` on architect, designer, implementer, or reviewer.
 
-**`agentFormat` `codex-toml`** (today Codex). Do not copy the markdown. For each of the four roles run, from the project root:
+**`agentFormat` `codex-toml`** (today Codex). Do not copy the markdown. For each of the five roles run, from the project root:
 
 ```text
 node .seh/references/codex-adapters.cjs agent .seh/agents/<role>.md [--model <value>] [--read-only]
 ```
 
-and write its stdout to `<agentsDir>/<role>.toml` (`.codex/agents/`). Pass `--model` only when `agents.roles.<role>.model[<host.id>]` is a non-empty string; otherwise omit it and the file has no `model`. Pass `--read-only` for `consultant` (a read-only sentence is prepended to the instructions). A Codex subagent inherits the parent sandbox, so the file cannot enforce read-only: tell the user once that Consultant read-only is instruction text only. Do not set `model_reasoning_effort` or any other field. The helper prints `BLOCKED:` and exits non-zero on a template it cannot convert: relay that line and stop. A row with `agentFormat` `codex-toml` never gets the `.md` copy, Cursor `readonly`, or the OpenCode edits above. Remove a stale `<agentsDir>/<role>.md` that seh wrote earlier only if it is one of the four role names.
+and write its stdout to `<agentsDir>/<role>.toml` (`.codex/agents/`). Pass `--model` only when `agents.roles.<role>.model[<host.id>]` is a non-empty string; otherwise omit it and the file has no `model`. Pass `--read-only` for `consultant` (a read-only sentence is prepended to the instructions). A Codex subagent inherits the parent sandbox, so the file cannot enforce read-only: tell the user once that Consultant read-only is instruction text only. Do not set `model_reasoning_effort` or any other field. The helper prints `BLOCKED:` and exits non-zero on a template it cannot convert: relay that line and stop. A row with `agentFormat` `codex-toml` never gets the `.md` copy, Cursor `readonly`, or the OpenCode edits above. Remove a stale `<agentsDir>/<role>.md` that seh wrote earlier only if it is one of the five role names.
 
-Do not add a fifth agent. Do not copy brainstorm templates from `.seh/brainstorm/` into any `agentsDir`.
+Do not add a sixth agent. Do not copy brainstorm templates from `.seh/brainstorm/` into any `agentsDir`.
 
-On VERSION mismatch regeneration: replace those four live files in **every** `agentsDir` from `.seh/agents/` and re-apply `model:` from `agents.roles.<key>.model[<host.id>]` (and Cursor `readonly` on consultant, OpenCode without `name` / `tools` plus `mode: subagent` and consultant `permissions`) from **current** config.
+On VERSION mismatch regeneration: replace those five live files in **every** `agentsDir` from `.seh/agents/` and re-apply `model:` from `agents.roles.<key>.model[<host.id>]` (and Cursor `readonly` on consultant, OpenCode without `name` / `tools` plus `mode: subagent` and consultant `permissions`) from **current** config.
 
 On a confirmed role `model` cell change only: rewrite that one file’s `model:` line in **that** host’s `agentsDir`. On a `codex-toml` row, regenerate that one role’s `.toml` with the helper instead (set to `""` = file without `model`).
 
@@ -303,6 +310,7 @@ Install writes **only** `/{{prefix}}setit-se` live (already in every `skillsDir`
 Read the prefix from `.seh/PREFIX` (first line, may be empty). Copy these directories from `.seh/skills/` to **each** `skillsDir`, if they exist in `.seh/skills/`. The live directory is `<prefix><name>`, and its `SKILL.md` frontmatter `name:` is rewritten to the bare `<prefix><name>` (for example `_doit`). No leading `/` in `name:`: the host adds the slash, so `/` in it gives `//_doit`:
 
 - `planit`
+- `designit`
 - `doit`
 - `checkit`
 - `runit`
@@ -311,11 +319,11 @@ Read the prefix from `.seh/PREFIX` (first line, may be empty). Copy these direct
 
 Do **not** overwrite the install-owned `/{{prefix}}setit-se` skill from this copy step. If a listed template is missing, still copy the others; the copied stub (when present) stops with `BLOCKED:` until a later package fills the body.
 
-Cleanup in **each** `skillsDir`: delete a leftover `seh-feature` directory and the pre-prefix names `seh-setup`, `seh-planit`, `seh-doit`, `seh-checkit`, `seh-shipit`, `seh-brainstorm`. If `seh.generatedPrefix` in `harness.config.json` is set and differs from `.seh/PREFIX`, also delete the live directories made with that old prefix (only `setit-se`, `planit`, `doit`, `checkit`, `runit`, `shipit`, `grillit` with that prefix). Never delete a directory whose name is not on these lists. Do not leave aliases. After generating, set `seh.generatedPrefix` to the `.seh/PREFIX` value (empty string allowed). A prefix change alone (VERSION equal, `seh.generatedPrefix` different) also triggers this regeneration.
+Cleanup in **each** `skillsDir`: delete a leftover `seh-feature` directory and the pre-prefix names `seh-setup`, `seh-planit`, `seh-doit`, `seh-checkit`, `seh-shipit`, `seh-brainstorm`. If `seh.generatedPrefix` in `harness.config.json` is set and differs from `.seh/PREFIX`, also delete the live directories made with that old prefix (only `setit-se`, `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `grillit` with that prefix). Never delete a directory whose name is not on these lists. Do not leave aliases. After generating, set `seh.generatedPrefix` to the `.seh/PREFIX` value (empty string allowed). A prefix change alone (VERSION equal, `seh.generatedPrefix` different) also triggers this regeneration.
 
 When the host `id` is `cursor` or `opencode`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/{{prefix}}setit-se`). The package templates may omit that field.
 
-**`invokePrefix`.** Templates in `.seh/` name what the user types as slash plus prefix plus name. On a row whose `invokePrefix` is set and is not `/` (today Codex: `$`), in every copied work-skill file and every generated agent file for that host, replace each such slash form (names: `setit-se`, `planit`, `doit`, `checkit`, `runit`, `shipit`, `grillit`) with `<invokePrefix><prefix><name>`. Do not touch paths such as `.seh/scripts/…`. Rows without `invokePrefix`, or with `/`, get the text as is. In your own messages to the user use the same prefix for this session’s host. The `BLOCKED:` strings printed by `.seh/scripts/` keep `/`: when you relay one on such a host, say it with that host’s prefix.
+**`invokePrefix`.** Templates in `.seh/` name what the user types as slash plus prefix plus name. On a row whose `invokePrefix` is set and is not `/` (today Codex: `$`), in every copied work-skill file and every generated agent file for that host, replace each such slash form (names: `setit-se`, `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `grillit`) with `<invokePrefix><prefix><name>`. Do not touch paths such as `.seh/scripts/…`. Rows without `invokePrefix`, or with `/`, get the text as is. In your own messages to the user use the same prefix for this session’s host. The `BLOCKED:` strings printed by `.seh/scripts/` keep `/`: when you relay one on such a host, say it with that host’s prefix.
 
 **`skillHide` `openai-yaml`** (today Codex, which has no frontmatter switch). For each copied work skill write `<skillsDir>/<prefix><name>/agents/openai.yaml` with the stdout of `node .seh/references/codex-adapters.cjs openai-yaml` (`policy.allow_implicit_invocation: false`; `$<prefix><name>` still works). Not for `<prefix>setit-se`. Rows without `skillHide` get nothing.
 
@@ -327,7 +335,7 @@ When the host `id` is `cursor` or `opencode`, add frontmatter `disable-model-inv
 - Write nothing else into the command. The skill holds the procedure.
 - Rows with `commandsDir` `null` or missing get no command files.
 - Do not write or overwrite `<prefix>setit-se.md`. Install owns it.
-- Cleanup in **each** `commandsDir` follows the skill cleanup above. When `seh.generatedPrefix` differs from `.seh/PREFIX`, delete `<oldprefix><name>.md` for `planit`, `doit`, `checkit`, `runit`, `shipit`, `grillit`. Never delete another file.
+- Cleanup in **each** `commandsDir` follows the skill cleanup above. When `seh.generatedPrefix` differs from `.seh/PREFIX`, delete `<oldprefix><name>.md` for `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `grillit`. Never delete another file.
 
 ### Rule packs
 
@@ -343,6 +351,9 @@ Detect frameworks from the repo. Generate from `.seh/packs/`. Monorepo: pack onl
 | `python` | `pyproject.toml`, `requirements.txt`, `Pipfile`, or `.py` |
 | `django` | Django manifest / `manage.py` / Django settings |
 | `fastapi` | `fastapi` in the Python manifest or imports |
+| `ux-a11y` | UI stack detected: `react-native`, `angular`, or `nextjs` matched; React, Vue, or Svelte in the manifest; or Django templates (`templates/` with `.html`). It is generated together with the stack packs and is the only pack scoped to UI files (`**/*.tsx`, `**/*.jsx`, `**/*.vue`, `**/*.svelte`, `**/*.html`) |
+
+**UI stack detected** (the condition of the `ux-a11y` row, also the Designer switch recommendation): `react-native`, `angular`, or `nextjs` matched; React, Vue, or Svelte in the manifest; or Django templates (`templates/` with `.html`). State the result so the user can object.
 
 A tree may match more than one pack (e.g. TypeScript + Next.js). State the set so the user can object.
 

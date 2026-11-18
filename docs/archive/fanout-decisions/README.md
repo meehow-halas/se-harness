@@ -16,7 +16,7 @@ None.
 
 | NN | name | status | verification |
 |----|------|--------|--------------|
-| 01 | [decisions](01-decisions.md) | done | manual test in [manual-tests/session-fanout.md](../manual-tests/session-fanout.md) |
+| 01 | [decisions](01-decisions.md) | done | manual test in [manual-test.md](manual-test.md) |
 
 ## Open items (from the original)
 

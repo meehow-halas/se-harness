@@ -2,7 +2,7 @@
 
 End-to-end check of session fan-out in the Claude Code desktop app (Code tab). Other hosts use `sessionSpawn: manual` and only print commands (step 5). Last run: 2026-11-14, on Claude Code desktop, Cursor and OpenCode; fan-out worked as specified (per-step outputs not stored). Not covered: `/<prefix>shipit` (parallel run with auto-merge) and `/<prefix>runit` with several keys.
 
-Decisions behind fan-out: [../fanout-decisions/README.md](../fanout-decisions/README.md).
+Decisions behind fan-out: [README.md](README.md).
 
 ## Steps
 

@@ -56,7 +56,7 @@ notes:
 VERDICT: rework | continue
 ```
 
-- `must-fix`: correctness, tests broken **by this phase**, generated-rule violations that are objective (forbidden API, missing test for new behaviour). These can block the phase.
+- `must-fix`: correctness, tests broken **by this phase**, generated-rule violations that are objective (forbidden API, missing test for new behaviour, a violated `ux-a11y` rule such as a control with no accessible name). These can block the phase.
 - `should-fix`: naming, duplication, structure. Never block.
 - `notes`: observations. Never block.
 - `VERDICT: rework` only when at least one `must-fix` is open. Otherwise `continue`.

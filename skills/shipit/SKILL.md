@@ -7,7 +7,7 @@ description: Run many specced tasks in parallel, one session per task, each /{{p
 
 Fan-out run for **specced** tasks. For each task the parent starts one session that runs `/{{prefix}}runit <KEY>` with auto-merge into `agents.baseBranch`. A task that `depends` on another starts only after that one is **merged**. The parent plans, starts sessions, waits, and reports. It never specs, never implements, never reviews, and never merges (the child's Reviewer merges through `merge-pr`).
 
-Missing spec or prompt: `shipit` never runs Architect. Use `/{{prefix}}planit <KEY>`.
+Missing spec or prompt: `shipit` never runs Architect. Use `/{{prefix}}planit <KEY>`. A specced task with `ui: true`, the Designer enabled, and no **UX/UI decisions** section is not blocked here: its `/{{prefix}}runit` child starts at the first missing stage, the Designer (the parent never runs it).
 
 Read `harness.config.json` at run time. Do not guess `agents.baseBranch`, status strings, tracker maps, content language, or the product line. Do not invent CLI commands.
 
@@ -113,7 +113,7 @@ Fan-out child: yes
 Auto-merge: yes
 ```
 
-- No `Worktree:` line. The parent does not run `start-task`: the child's Architect (if ever) uses the launch checkout and the Implementer / Reviewer create the worktree.
+- No `Worktree:` line. The parent does not run `start-task`: the child's Architect and Designer (if ever) use the launch checkout and the Implementer / Reviewer create the worktree.
 - Context goes in `background` (at least 80 characters: the run goal, the sibling keys, the `depends` edges, that done means merged into the base branch).
 - `wake_when_done: true`. Record each session's start time and link.
 - Do not start `waiting`, `blocked` or `queued` keys.
