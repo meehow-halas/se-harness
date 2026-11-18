@@ -2,6 +2,12 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.3.3] - 2026-11-18
+
+### Fixed
+
+- `/<prefix>setit-se` work skills: the frontmatter `name:` is the bare `<prefix><name>` (for example `_doit`), no leading `/`. The step said "(the slash command)", so a generated copy could read `name: /_doit`, and the host then invoked `//_doit`.
+
 ## [1.3.2] - 2026-11-17
 
 ### Changed
