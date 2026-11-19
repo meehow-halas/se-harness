@@ -314,7 +314,7 @@ describe("seh install", () => {
       assert.equal(result.status, 0, result.stderr);
       const dir = path.join(project, ".seh", "packs", "ux-a11y");
       const files = fs.readdirSync(dir).sort();
-      assert.deepEqual(files, ["a11y.md", "states.md", "touch-i18n.md"]);
+      assert.deepEqual(files, ["a11y.md", "react-native.md", "states.md", "touch-i18n.md"]);
       for (const f of files) {
         const body = read(path.join(dir, f));
         assert.match(body, /^---\npaths:\n(  - ".+"\n)+---\n/, f);
