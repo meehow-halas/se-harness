@@ -1,12 +1,18 @@
 # docs/
 
-Four kinds of things live here. Only the PRD is normative.
+Five kinds of things live here. Only the PRD is normative.
 
 ## Normative
 
 | Path | What |
 |------|------|
 | [prd.md](prd.md) | Product requirements. Wins over every other doc here. |
+
+## User guide
+
+| Path | What |
+|------|------|
+| [guide/](guide/) | Reference split out of the root `README.md`: setup, skills and agents, trackers, brainstorm, hosts, example runs. Describes the PRD; the PRD wins. |
 
 ## Active work
 
