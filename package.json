@@ -1,6 +1,6 @@
 {
   "name": "se-harness",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "SE harness layer",
   "bin": {
     "seh": "./src/cli.js"

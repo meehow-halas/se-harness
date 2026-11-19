@@ -2,6 +2,16 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] - 2026-11-19
+
+### Added
+
+- `packs/ux-a11y/react-native.md`: WCAG 2.2 AA rules for React Native files (`.tsx` / `.jsx` importing `react-native`): accessible names and `accessibilityRole` on pressables, `accessibilityState`, labelled `TextInput`, `Image` labels, no `allowFontScaling={false}` in new code, announced async messages, `Modal` with `accessibilityViewIsModal`. The pack is installed with the other ux-a11y rule files.
+
+### Changed
+
+- `packs/ux-a11y/a11y.md`: marked as web DOM rules; React Native files follow `react-native.md`.
+
 ## [1.6.0] - 2026-11-18
 
 ### Added
