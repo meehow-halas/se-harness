@@ -351,9 +351,12 @@ Detect frameworks from the repo. Generate from `.seh/packs/`. Monorepo: pack onl
 | `python` | `pyproject.toml`, `requirements.txt`, `Pipfile`, or `.py` |
 | `django` | Django manifest / `manage.py` / Django settings |
 | `fastapi` | `fastapi` in the Python manifest or imports |
-| `ux-a11y` | UI stack detected: `react-native`, `angular`, or `nextjs` matched; React, Vue, or Svelte in the manifest; or Django templates (`templates/` with `.html`). It is generated together with the stack packs and is the only pack scoped to UI files (`**/*.tsx`, `**/*.jsx`, `**/*.vue`, `**/*.svelte`, `**/*.html`) |
+| `csharp` | `*.csproj`, `*.sln` / `*.slnx`, `global.json`, `Directory.Build.props`, or `.cs` sources |
+| `aspnetcore` | a `.csproj` with `Sdk="Microsoft.NET.Sdk.Web"` / `Microsoft.NET.Sdk.Razor` / `Microsoft.NET.Sdk.BlazorWebAssembly`, a `FrameworkReference` to `Microsoft.AspNetCore.App`, or a `Microsoft.AspNetCore.*` package reference (also via `Directory.Packages.props`) |
+| `efcore` | a `Microsoft.EntityFrameworkCore*` package reference (in a `.csproj` or `Directory.Packages.props`) |
+| `ux-a11y` | UI stack detected: `react-native`, `angular`, or `nextjs` matched; React, Vue, or Svelte in the manifest; Django templates (`templates/` with `.html`); or Razor or Blazor in an ASP.NET Core tree (`.razor` or `.cshtml` files). It is generated together with the stack packs and is the only pack scoped to UI files (`**/*.tsx`, `**/*.jsx`, `**/*.vue`, `**/*.svelte`, `**/*.html`, `**/*.razor`, `**/*.cshtml`) |
 
-**UI stack detected** (the condition of the `ux-a11y` row, also the Designer switch recommendation): `react-native`, `angular`, or `nextjs` matched; React, Vue, or Svelte in the manifest; or Django templates (`templates/` with `.html`). State the result so the user can object.
+**UI stack detected** (the condition of the `ux-a11y` row, also the Designer switch recommendation): `react-native`, `angular`, or `nextjs` matched; React, Vue, or Svelte in the manifest; Django templates (`templates/` with `.html`); or Razor or Blazor in an ASP.NET Core tree (`.razor` or `.cshtml` files). State the result so the user can object.
 
 A tree may match more than one pack (e.g. TypeScript + Next.js). State the set so the user can object.
 
