@@ -5,6 +5,8 @@ paths:
   - "**/*.vue"
   - "**/*.svelte"
   - "**/*.html"
+  - "**/*.razor"
+  - "**/*.cshtml"
 ---
 
 # States and feedback

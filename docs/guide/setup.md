@@ -131,7 +131,10 @@ Removes `.seh/` and the install-owned `/_setit-se` skill from every `skillsDir`.
 | `python` | Python project files |
 | `django` | Django |
 | `fastapi` | FastAPI |
-| `ux-a11y` | UI stack (React Native, Angular, Next.js; React, Vue or Svelte; Django templates). Accessibility, UI states, touch and i18n; scoped to UI files. A rule listed under **Deviations from ux-a11y** in a `ready` `docs/designs/ux-conventions.md` is not a Consultant finding |
+| `csharp` | `.csproj` / `.sln` / `.slnx`, `global.json`, `Directory.Build.props`, or `.cs` sources |
+| `aspnetcore` | ASP.NET Core (Web / Razor / Blazor SDK, `Microsoft.AspNetCore.*` reference) |
+| `efcore` | `Microsoft.EntityFrameworkCore*` package reference |
+| `ux-a11y` | UI stack (React Native, Angular, Next.js; React, Vue or Svelte; Django templates; Razor or Blazor). Accessibility, UI states, touch and i18n; scoped to UI files. A rule listed under **Deviations from ux-a11y** in a `ready` `docs/designs/ux-conventions.md` is not a Consultant finding |
 
 ## Git and language
 
