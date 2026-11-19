@@ -6,10 +6,13 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 ### Added
 
+- Rule packs `csharp` (`language.md`, `project.md`, `tests.md`), `aspnetcore` (`web.md`, `blazor.md`, `tests.md`) and `efcore` (`data.md`) for C# 14 / .NET 10 / ASP.NET Core 10 / EF Core 10. Version-specific rules start with a `net10.0` condition; `csharp/language.md` forbids features above the project's `LangVersion`.
+- `/<prefix>setit-se` detects the three packs (`.csproj`, `.sln` / `.slnx`, SDK and package references, including `Directory.Packages.props`).
 - `packs/ux-a11y/react-native.md`: WCAG 2.2 AA rules for React Native files (`.tsx` / `.jsx` importing `react-native`): accessible names and `accessibilityRole` on pressables, `accessibilityState`, labelled `TextInput`, `Image` labels, no `allowFontScaling={false}` in new code, announced async messages, `Modal` with `accessibilityViewIsModal`. The pack is installed with the other ux-a11y rule files.
 
 ### Changed
 
+- UI stack now includes Razor or Blazor in an ASP.NET Core tree. `ux-a11y/a11y.md`, `states.md` and `touch-i18n.md` also match `**/*.razor` and `**/*.cshtml`. PRD and setup guide list the new packs.
 - `packs/ux-a11y/a11y.md`: marked as web DOM rules; React Native files follow `react-native.md`.
 
 ## [1.6.0] - 2026-11-18

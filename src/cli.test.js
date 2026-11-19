@@ -323,6 +323,32 @@ describe("seh install", () => {
     });
   });
 
+  test("installs the dotnet packs: every rule file scoped by paths, no test files", () => {
+    const expected = {
+      csharp: ["language.md", "project.md", "tests.md"],
+      aspnetcore: ["blazor.md", "tests.md", "web.md"],
+      efcore: ["data.md"],
+    };
+    withTempDir((project) => {
+      const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
+      assert.equal(result.status, 0, result.stderr);
+      for (const [pack, list] of Object.entries(expected)) {
+        const dir = path.join(project, ".seh", "packs", pack);
+        const files = fs.readdirSync(dir).sort();
+        assert.deepEqual(files, list, pack);
+        for (const f of files) {
+          const body = read(path.join(dir, f));
+          assert.match(body, /^---\npaths:\n(  - ".+"\n)+---\n\n# .+\n/, `${pack}/${f}`);
+          assert.equal(body, read(path.join(REPO_ROOT, "packs", pack, f)), `${pack}/${f}`);
+        }
+      }
+      for (const f of ["a11y.md", "states.md", "touch-i18n.md"]) {
+        const body = read(path.join(project, ".seh", "packs", "ux-a11y", f));
+        assert.match(body, /  - "\*\*\/\*\.razor"\n  - "\*\*\/\*\.cshtml"\n/, f);
+      }
+    });
+  });
+
   test("install prints a confirmation naming the project folder and the next step", () => {
     withTempDir((project) => {
       const result = runCli(["install"], { cwd: project, packageRoot: REPO_ROOT });
