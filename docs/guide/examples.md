@@ -2,7 +2,7 @@
 
 What you can ask seh to do, and what happens then. Simple runs come first. Each example gives the command, the steps in order, and why seh does it that way.
 
-Contracts in full: [`docs/prd.md`](docs/prd.md). Setup and reference: [`README.md`](README.md).
+Contracts in full: [`docs/prd.md`](../prd.md). Setup and reference: [`README.md`](../../README.md).
 
 ## Before you read
 
