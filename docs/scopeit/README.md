@@ -6,7 +6,8 @@ Planning: complete
 ## Etapy
 | NN | Etap | Wykonawca | Status | Weryfikacja |
 |----|------|-----------|--------|-------------|
-| 01 | [Skill `scopeit` i integracja z `setit-se`](01-scopeit.md) | agent | planned | `node --test src/cli.test.js`, `npm test` + przegląd agenta |
+| 01 | [Skill `scopeit` i integracja z `setit-se`](01-scopeit.md) | agent | done | `node --test src/cli.test.js`, `npm test` + przegląd agenta |
+| 02 | [Domknięcie wzmianek o `scopeit`](02-mentions.md) | agent | planned | `npm test` + przegląd agenta |
 
 ## Decyzje
 - Q1: nazwa `scopeit` (źródło `skills/scopeit/`, live `<prefix>scopeit`). Dopisana do wszystkich list nazw: `INVOKE_SKILLS` (`src/cli.js:216`), lista work skills, listy cleanup, `invokePrefix` i host commands w `skills/setit-se/SKILL.md`, `docs/prd.md`. (Konwencja czasownik + `it`; PRD to głównie zakres i non-goals.)
@@ -19,6 +20,9 @@ Planning: complete
 - Q8: wersja bez bumpa: dopisać do nieotagowanego `[1.7.0]` w `CHANGELOG.md` (Added / Changed). (1.7.0 niewydane; AGENTS.md: jeden bump na nieotagowany zestaw zmian.)
 - Q9: linia o `TBD` tylko u Architekta, nie u Designera. (Architekt decyduje o zakresie; mniej powtórzeń.)
 - Q10: jeden etap, wykonawca agent, bez testu manualnego. (Wybór użytkownika; dialog `SKILL.md` niesprawdzony automatycznie.)
+- Q11: etap 02 po przeglądzie etapu 01: luki we wzmiankach o `scopeit` (`docs/guide/setup.md:27`, `references/AGENTS.md:15,49` — szablon wdrażany do projektów, root `README.md`). (Pliki, które mają znać skill, a go nie wymieniają.)
+- Q12: root `README.md` — dodać jeden wiersz `/_scopeit` do tabeli intencji; wyraźna prośba użytkownika (2026-11-20), wyjątek od reguły „README tylko na prośbę”. Tylko ten wiersz, bez synchronizacji reszty.
+- Q13: `references/AGENTS.md` jest w `references/` (katalog shipowany) → wpis do `[1.7.0]` w CHANGELOG, bez bumpa (jak Q8).
 
 ## Założenia
 - Przepływ `setit-se` i `scopeit` to instrukcje w `SKILL.md` (bez kodu), więc testy automatyczne obejmują tylko install / listy nazw / kopiowanie szablonów, nie dialog.

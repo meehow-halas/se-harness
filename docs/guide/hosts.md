@@ -4,7 +4,7 @@
 
 A **host** is the coding assistant (harness) you run seh in. This version: **Claude Code**, **Cursor Agent**, **OpenCode**, and **Codex**. A later host is a row in `hosts.json` plus a format adapter, not a second product.
 
-`seh install` and `/_setit-se` always write **every** row in `.seh/references/hosts.json`. They do not ask which hosts to use. Live skills, agents, rules, and brainstorm files are **copies** (not symlinks to `.seh/agents/`) under `.claude/`, `.cursor/`, `.opencode/`, `.agents/`, and `.codex/` (rules as `.md` vs `.mdc`). In a session, use the copy that host loaded. Skill bodies match; live agent `model:` is that host’s string only.
+`seh install` and `/_setit-se` always write **every** row in `.seh/references/hosts.json`. They do not ask which hosts to use. Live skills, agents, rules, and brainstorm files are **copies** (not symlinks to `.seh/agents/`) under `.claude/`, `.cursor/`, `.opencode/`, `.agents/`, and `.codex/` (rules as `.md` vs `.mdc`). In a session, use the copy that host loaded. Work skills (`/_planit`, `/_scopeit`, …) are written by `/_setit-se`, and `/_scopeit` is also invoked as `$_scopeit` on Codex and gets an OpenCode host command like the others. Skill bodies match; live agent `model:` is that host’s string only.
 
 OpenCode differences:
 
