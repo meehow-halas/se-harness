@@ -80,15 +80,15 @@ Q1–Q10 z [README](README.md).
 - Changed: `/<prefix>setit-se` nie zadaje pytań o produkt w kroku 2; tworzy PRD przez `scopeit` na końcu pierwszego uruchomienia.
 
 ## Kryteria akceptacji
-- [ ] `skills/scopeit/SKILL.md` istnieje, `name: scopeit`, zawiera guard, oba tryby, regułę propozycji (oznaczona, zapis po akceptacji), non-goals bez propozycji, skip → `TBD`, plik zawsze zapisany, pytanie o pogłębienie, pytanie o `planit` tylko przy pierwszym tworzeniu, brak zapisu configu, `BLOCKED` przy braku pliku PRD.
-- [ ] `references/prd-template.md` istnieje z sekcjami rdzenia i pogłębienia oraz regułą `TBD`.
-- [ ] `setit-se` krok 2 nie zawiera pytań o produkt; nowy krok końcowy czyta `.seh/skills/scopeit/SKILL.md`, rejestruje `docs/prd.md` w `agents.docs` i `product`; `scopeit` na listach kopiowania, cleanup, `invokePrefix`, host commands.
-- [ ] `agents/architect.md` zawiera regułę `TBD` i warunkową linię sygnału.
-- [ ] Test: `seh install --prefix q_` kopiuje `.seh/skills/scopeit/SKILL.md` i `.seh/references/prd-template.md`, bez `{{prefix}}` (rozszerzenie testu `src/cli.test.js:1240`), `/q_planit` wyrenderowane w `scopeit`.
-- [ ] Test: na hoście z `invokePrefix` `$` (Codex) tekst `/<prefix>scopeit` jest przepisany na `$<prefix>scopeit` (tam, gdzie istniejące testy sprawdzają `INVOKE_SKILLS`); test failuje bez wpisu w `INVOKE_SKILLS`.
-- [ ] Install nadal zapisuje live tylko `setit-se` (żaden `scopeit` w `skillsDir` po samym install).
-- [ ] `docs/prd.md`, `docs/guide/*` i `CHANGELOG.md [1.7.0]` zaktualizowane; root `README.md` niezmieniony; `package.json` `version` = `1.7.0`.
-- [ ] `npm test` zielone.
+- [x] `skills/scopeit/SKILL.md` istnieje, `name: scopeit`, zawiera guard, oba tryby, regułę propozycji (oznaczona, zapis po akceptacji), non-goals bez propozycji, skip → `TBD`, plik zawsze zapisany, pytanie o pogłębienie, pytanie o `planit` tylko przy pierwszym tworzeniu, brak zapisu configu, `BLOCKED` przy braku pliku PRD.
+- [x] `references/prd-template.md` istnieje z sekcjami rdzenia i pogłębienia oraz regułą `TBD`.
+- [x] `setit-se` krok 2 nie zawiera pytań o produkt; nowy krok końcowy czyta `.seh/skills/scopeit/SKILL.md`, rejestruje `docs/prd.md` w `agents.docs` i `product`; `scopeit` na listach kopiowania, cleanup, `invokePrefix`, host commands.
+- [x] `agents/architect.md` zawiera regułę `TBD` i warunkową linię sygnału.
+- [x] Test: `seh install --prefix q_` kopiuje `.seh/skills/scopeit/SKILL.md` i `.seh/references/prd-template.md`, bez `{{prefix}}` (rozszerzenie testu `src/cli.test.js:1240`), `/q_planit` wyrenderowane w `scopeit`.
+- [x] Test: na hoście z `invokePrefix` `$` (Codex) tekst `/<prefix>scopeit` jest przepisany na `$<prefix>scopeit` (tam, gdzie istniejące testy sprawdzają `INVOKE_SKILLS`); test failuje bez wpisu w `INVOKE_SKILLS`.
+- [x] Install nadal zapisuje live tylko `setit-se` (żaden `scopeit` w `skillsDir` po samym install).
+- [x] `docs/prd.md`, `docs/guide/*` i `CHANGELOG.md [1.7.0]` zaktualizowane; root `README.md` niezmieniony; `package.json` `version` = `1.7.0`.
+- [x] `npm test` zielone.
 
 ## Weryfikacja
 - `node --test src/cli.test.js`
