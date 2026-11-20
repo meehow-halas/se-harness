@@ -6,7 +6,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 ### Added
 
-- `/<prefix>scopeit`: work skill that creates or updates the project PRD (create: purpose, users, scope, non-goals, one question at a time with repo proposals the user accepts; `skip` leaves `TBD — not stated by the user`; the file is always written; optional deepening and a `/<prefix>planit` offer on first create. Update: one before/after change at a time, written after acceptance). It never writes `harness.config.json`.
+- `/<prefix>scopeit`: work skill that creates or updates the project PRD (create: purpose, users, scope, non-goals, one question at a time with repo proposals the user accepts; `skip` leaves `TBD — not stated by the user`; the file is always written; optional deepening and a `/<prefix>planit` offer on first create. Update: one before/after change at a time, written after acceptance). It never writes `harness.config.json`. `skip` ends the whole dialog; the `TBD` / `None stated` markers stay in English; the PRD title name comes from the README heading, manifest or directory.
 - `references/prd-template.md`: fixed PRD headings and the `TBD` rule.
 - Architect: one reply line when a decision depended on a `TBD` PRD section; `TBD` is no constraint.
 - Rule packs `csharp` (`language.md`, `project.md`, `tests.md`), `aspnetcore` (`web.md`, `blazor.md`, `tests.md`) and `efcore` (`data.md`) for C# 14 / .NET 10 / ASP.NET Core 10 / EF Core 10. Version-specific rules start with a `net10.0` condition; `csharp/language.md` forbids features above the project's `LangVersion`.

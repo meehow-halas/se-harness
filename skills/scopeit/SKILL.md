@@ -21,7 +21,7 @@ Shape: `.seh/references/BLOCKED.md`.
 
 ## Guard
 
-Before any work. Compare `.seh/VERSION` and `seh.generatedFrom` after trimming whitespace.
+Before any work. Check in the order below; the first failing check stops the run. Compare `.seh/VERSION` and `seh.generatedFrom` after trimming whitespace.
 
 1. If `.seh/` or `.seh/VERSION` is missing:
 
@@ -62,10 +62,10 @@ A section that reads `TBD — not stated by the user` is no constraint. Agents t
 ## Create
 
 1. Read the repo (README, manifests, docs). Use it only to form proposals.
-2. Ask, one question per message, in this order: **purpose**, **users**, **scope**. Each carries a proposal from the repo, labelled as such (for example `Proposal from README: …`), and this helper: `Enter or ok = accept, otherwise type a correction.` When the repo gives no sensible inference, ask without a proposal. Only accepted or typed text becomes a stated fact in the PRD. Do not invent facts the repo does not show.
+2. Ask, one question per message, in this order: **purpose**, **users**, **scope**. Each carries a proposal from the repo, labelled as such (for example `Proposal from README: …`), and this helper: `Enter or ok = accept, otherwise type a correction.` Propose only what the README, a manifest or the docs state about it; otherwise ask without a proposal. Only accepted or typed text becomes a stated fact in the PRD. Do not invent facts the repo does not show.
 3. **Non-goals**: ask directly, what must not be built. Never propose one. No answer, or `none` → `None stated`.
-4. `skip`, `enough`, `wystarczy`, or the same intent at any question → go to the write. Unanswered sections are `TBD — not stated by the user`. Do not write non-goals the user did not state.
-5. Write the PRD from `.seh/references/prd-template.md` into the PRD path (`docs/prd.md`), content in `agents.contentLanguage`. The file is **always** written, also when every section is `TBD`.
+4. `skip`, `enough`, `wystarczy`, or the same intent at any question → stop the interview and go to the write. Unanswered sections are `TBD — not stated by the user`. Do not write non-goals the user did not state. After the write, skip steps 6 and 7 (no deepening and no `/{{prefix}}planit` question); finish with one line that `/{{prefix}}scopeit` fills the PRD in.
+5. Write the PRD from `.seh/references/prd-template.md` into the PRD path (`docs/prd.md`), content in `agents.contentLanguage`. The title is `# <project name> — PRD`, the name from the README's first heading, else `name` in the manifest, else the directory name. The markers `TBD — not stated by the user` and `None stated` stay in English exactly as in the template, because agents match them literally. The file is **always** written, also when every section is `TBD`.
 6. One question: deepen the PRD now or later (success metrics, constraints, key flows, glossary, open questions). Now → one question per section; `skip` leaves that section `TBD`; write the file after each answer. Later → one line: `/{{prefix}}scopeit` fills the PRD in.
 7. Only when the file did not exist before this run: one question — start `/{{prefix}}planit` for the first spec? Yes → hand over to `/{{prefix}}planit` (this skill does not do the Architect's work). No → one line that `/{{prefix}}planit` can be run later.
 
