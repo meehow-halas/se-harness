@@ -28,7 +28,7 @@ npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 
 ## Skill names and `--prefix`
 
-Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. These docs show the default `_` names.
+Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the skills are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. These docs show the default `_` names.
 
 ```text
 npx -p se-harness seh install --prefix my-
@@ -40,7 +40,7 @@ Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag, an
 
 The only way to configure this project. The CLI does not write config. Questions are **one at a time**. The skill does not commit.
 
-If `harness.config.json` is missing, that is a **first run**. If the file is already there, that is a **later run** — the same skill, not a second command.
+If `harness.config.json` is missing, that is a **first run**. If the file is already there, that is a **later run** — the same skill, not a second skill.
 
 ```text
 "change the architect model" · "change the architect model on Cursor" · "connect Jira" · "connect Azure DevOps" · "change the base branch"
@@ -87,13 +87,13 @@ It does **not** touch `agents.brainstorm` (that is `/_grillit`), create or rewri
 
 ## After a package update
 
-Run install again from the same source, then `/_setit-se`, so generated files match the installed templates (`.seh/VERSION` vs `seh.generatedFrom`). That regeneration copies the work skills and deletes leftover live `seh-feature` and the old `seh-*` skills. It does not rewrite project `AGENTS.md`.
+Run install again from the same source, then ask for setup (`/_setit-se`), so generated files match the installed templates (`.seh/VERSION` vs `seh.generatedFrom`). That regeneration copies the work skills and deletes leftover live `seh-feature` and the old `seh-*` skills. It does not rewrite project `AGENTS.md`.
 
 ```text
 npx -p se-harness@latest seh install
 ```
 
-Then run `/_setit-se` in the project.
+Then ask the assistant, in the project, to set it up (`/_setit-se`). This one skill has to be named explicitly, because the other skills do not exist until setup has run.
 
 - **Pin the version you want.** `npx` may reuse a cached copy of an unpinned package. Use `se-harness@latest` or `se-harness@<version>` for npm, and `github:meehow-halas/se-harness#<tag>` for GitHub. Check the printed `seh install: OK <version>` line.
 - **No need to repeat `--prefix`.** A reinstall without the flag keeps the prefix from `.seh/PREFIX`. Pass `--prefix` only to change it.
@@ -105,7 +105,7 @@ Then run `/_setit-se` in the project.
 
 1. Run `seh install` as above.
 2. In `harness.config.json`, set `seh.generatedFrom` to `""`.
-3. Run `/_setit-se`. It sees the mismatch and regenerates live agents, work skills, and rule packs in every host tree. Your config values, including role models, are kept.
+3. Ask for setup again (`/_setit-se`). It sees the mismatch and regenerates live agents, work skills, and rule packs in every host tree. Your config values, including role models, are kept.
 
 ## Uninstall
 

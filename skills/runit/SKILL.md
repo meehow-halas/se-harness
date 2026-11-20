@@ -51,7 +51,7 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 
 ## Mode
 
-From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous` for the whole run, including every Reviewer round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Designer, Implementer, and Reviewer.
+From **intent**. A launch may name the mode so **every** agent in this run shares it. If the user asked, in any language, for the work to be done on its own without questions (for example "don't ask me", "autonomous"), use `autonomous` for the whole run, including every Reviewer round; never fall back to `interactive` then. Otherwise default `interactive`. Pass the same `Mode:` to Architect, Designer, Implementer, and Reviewer.
 
 | Mode | Ask the user |
 |------|----------------|
@@ -63,7 +63,7 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-This skill runs one task. Two or more keys together with a design file: stop before any fan-out with `BLOCKED: a design file goes with one key — run /{{prefix}}runit <KEY> <design path> per key`. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). A key without a spec is not blocked: its child starts at the first missing stage, Architect, without user intervention in `autonomous` mode. No dependency ordering: a key whose spec `depends` on a sibling key is not started, and Architect's `depends` on a sibling key stops that child at the *Dependency gate* after the Architect stage; both are `BLOCKED` and the user reruns the key after the dependency is merged (`session-fanout.md`, section 2 and Rules). Full automation with dependencies: `/{{prefix}}shipit` with specs written beforehand; a key that exists nowhere follows *Task source* in the Architect file. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `session-fanout.md` section 2), never in the order given (see stage 2). Two or more keys, git enabled, and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key, with the user's mode words (for example `samodzielnie`), and stop. One key: continue below.
+This skill runs one task. Two or more keys together with a design file: stop before any fan-out with `BLOCKED: a design file goes with one key — run /{{prefix}}runit <KEY> <design path> per key`. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). A key without a spec is not blocked: its child starts at the first missing stage, Architect, without user intervention in `autonomous` mode. No dependency ordering: a key whose spec `depends` on a sibling key is not started, and Architect's `depends` on a sibling key stops that child at the *Dependency gate* after the Architect stage; both are `BLOCKED` and the user reruns the key after the dependency is merged (`session-fanout.md`, section 2 and Rules). Full automation with dependencies: `/{{prefix}}shipit` with specs written beforehand; a key that exists nowhere follows *Task source* in the Architect file. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `session-fanout.md` section 2), never in the order given (see stage 2). Two or more keys, git enabled, and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
 
 ## Resolve the task
 
@@ -93,7 +93,7 @@ BLOCKED: <KEY> already has a spec — run /{{prefix}}planit <KEY> <design path> 
 
 Follow the live Architect file for this host (`<agentsDir>/architect.md` from `.seh/references/hosts.json`). Do not duplicate it.
 
-Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a Polish message gives `Polish`). When the user named a design file from `/{{prefix}}designit` (path or slug; a slug resolves to `docs/designs/<slug>.design.md`; never search `docs/designs/`), also pass `Design: <path>`.
+Pass `Mode:`, the request, and `Conversation language: <name>` always (the language of the user's message; a German message gives `German`). When the user named a design file from `/{{prefix}}designit` (path or slug; a slug resolves to `docs/designs/<slug>.design.md`; never search `docs/designs/`), also pass `Design: <path>`.
 
 If Architect asks `/{{prefix}}grillit`: stop and ask that skill; do not run the round here; do not continue the pipeline.
 
@@ -171,7 +171,7 @@ The launch line `Auto-merge: yes` is honoured only together with `Fan-out child:
 - Task key when it exists
 - `Worktree: <abs>` for Implementer and Reviewer (not Architect, not Designer)
 - User request
-- `Conversation language: <name>` always (a Polish message gives `Polish`)
+- `Conversation language: <name>` always (a German message gives `German`)
 - Stage 4: the ❌ list only
 
 Live files are copies from `/{{prefix}}setit-se` under every `agentsDir` in `.seh/references/hosts.json`, not symlinks to `.seh/agents/`. In this session use the copy this host loaded.

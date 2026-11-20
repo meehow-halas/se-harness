@@ -35,8 +35,8 @@ Only when `sessionSpawn` is `start_session`. For each key in `ready`, one `mcp__
 - `use_worktree`: `false`
 - `cwd`: not passed. The app refuses a worktree path as `cwd` (observed: `cwd` under `.git/seh-worktrees/` is not in `list_start_targets`). The child starts in the launch checkout and works in the worktree named by the `Worktree:` line.
 - `title`: `<skill> <KEY>` (under 60 chars)
-- `prompt`: exactly these lines, in this order, and nothing else: the skill invocation for one key, for example `/{{prefix}}doit MT-01`; `Mode: <mode>`; `Conversation language: <language of the user's messages in this session, e.g. Polish>` (required: without it the child answers in a language of its own choice); `Fan-out child: yes` (marker, required); for a `doit` or `checkit` key only, `Worktree: <abs>`; for a `shipit` key, `/{{prefix}}runit <KEY>` as the invocation and a final `Auto-merge: yes` line (no `Worktree:`). Do not add folders, notes files, shared paths, or extra instructions to the prompt. Context for the child goes in `background` only.
-- `Mode:` comes from the user's words, not a default. If the user asked for independent work (for example `samodzielnie`, `autonomous`, `bez pytań`), `autonomous`: no questions, a clean Reviewer run is acceptance and the feature ends with the PR. Otherwise `interactive`.
+- `prompt`: exactly these lines, in this order, and nothing else: the skill invocation for one key, for example `/{{prefix}}doit MT-01`; `Mode: <mode>`; `Conversation language: <language of the user's messages in this session, e.g. German>` (required: without it the child answers in a language of its own choice); `Fan-out child: yes` (marker, required); for a `doit` or `checkit` key only, `Worktree: <abs>`; for a `shipit` key, `/{{prefix}}runit <KEY>` as the invocation and a final `Auto-merge: yes` line (no `Worktree:`). Do not add folders, notes files, shared paths, or extra instructions to the prompt. Context for the child goes in `background` only.
+- `Mode:` comes from the user's words, not a default. If the user asked for independent work (in any language, for example "don't ask me", `autonomous`), `autonomous`: no questions, a clean Reviewer run is acceptance and the feature ends with the PR. Otherwise `interactive`.
 - `background`: at least 80 characters: the parent's goal, that this session is one of N parallel keys, the sibling keys, and what done looks like for this key.
 - `model`: optional. The role model for this skill's main role from `harness.config.json` → `agents.roles.<role>.model["<host id>"]` (`architect` for planit, `implementer` for doit and runit, `reviewer` for checkit). Pass it only when the app accepts it; if the app ignores it, the child runs on the session's model.
 - `wake_when_done`: `true`
@@ -45,7 +45,7 @@ Only when `sessionSpawn` is `start_session`. For each key in `ready`, one `mcp__
 
 Do not start sessions for keys in `waiting`, `blocked`, or `queued`.
 
-For `manual` (other hosts, Codex included: it has no host API to start a session): print one block per ready key with the exact command to run in a new session, and stop. Each command carries the user's mode words from this request (for example `/{{prefix}}runit MT-01 samodzielnie`), so the new session runs in the same mode. Do not guess a host API.
+For `manual` (other hosts, Codex included: it has no host API to start a session): print one block per ready key with the exact command to run in a new session, and stop. Each command carries the user's mode words from this request (for example `/{{prefix}}runit MT-01 don't ask me`), so the new session runs in the same mode. Do not guess a host API.
 
 ## 4. Per-skill placement
 

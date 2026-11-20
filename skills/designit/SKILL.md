@@ -53,13 +53,13 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 
 ## Mode
 
-From **intent**, not a required slash flag. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Designer. Definitions: PRD Modes (also in the Designer file).
+From **intent**, not a required slash flag. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked, in any language, for the work to be done on its own without questions (for example "don't ask me", "autonomous"), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Designer. Definitions: PRD Modes (also in the Designer file).
 
 Reply in the language of the user’s latest message, whatever that language is, every message (progress messages too), including the final report and any end-of-turn summary the host shows. If the launch names `Conversation language: <name>`, that name decides. Never switch to another language. The design file is written in `agents.contentLanguage` (the Designer’s job).
 
 ## Learn conventions
 
-If the user asks to learn the project's UX conventions (`naucz się konwencji`, `learn conventions`, `ux-conventions`), this is the conventions mode, not a design. Launch the Designer once with `Conventions file: docs/designs/ux-conventions.md` instead of `Design file:`, plus `Mode`, `Conversation language`, and `User approval:` as below. Iterating on an existing file is allowed. No slug, no sentence-to-design. Report the path, `status`, the number of rules, and the deviations from `ux-a11y` (written / proposed); state that no tracker was touched. Do **not** offer `/{{prefix}}planit` or `/{{prefix}}runit` in this mode. Skip **Resolve the input** and the design-file steps below.
+If the user asks to learn the project's UX conventions (in any language, for example "learn conventions"; the file is `ux-conventions`), this is the conventions mode, not a design. Launch the Designer once with `Conventions file: docs/designs/ux-conventions.md` instead of `Design file:`, plus `Mode`, `Conversation language`, and `User approval:` as below. Iterating on an existing file is allowed. No slug, no sentence-to-design. Report the path, `status`, the number of rules, and the deviations from `ux-a11y` (written / proposed); state that no tracker was touched. Do **not** offer `/{{prefix}}planit` or `/{{prefix}}runit` in this mode. Skip **Resolve the input** and the design-file steps below.
 
 ## Resolve the input
 

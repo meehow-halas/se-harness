@@ -21,9 +21,9 @@ Codex differences:
 - Rules go to `.codex/rules/*.md`; `$_setit-se` keeps one seh-managed section in `AGENTS.md` that points at them. Path scoping is soft (instruction only).
 - The session-start update check is a `.codex/hooks.json` `SessionStart` hook. Codex loads it only in a **trusted project**.
 - **Approve the hook:** after `seh install`, opening the project in Codex shows a notification that hooks need review. Open `/hooks` and accept the seh `SessionStart` hook, otherwise the update check never runs.
-- Sessions per key are not started automatically; one command is printed per key.
+- Sessions per key are not started automatically; one ready-to-paste request is printed per key.
 
-One session per key (multi-key `/_planit`, `/_doit`, `/_checkit`, `/_runit`, and every `/_shipit`) starts automatically only in the Claude Code desktop app, with git enabled. Cursor, OpenCode, and Codex print one command per key, keeping your mode words (for example `samodzielnie`). With git disabled, several keys run one after another in the current session on every host.
+One session per key (multi-key `/_planit`, `/_doit`, `/_checkit`, `/_runit`, and every `/_shipit`) starts automatically only in the Claude Code desktop app, with git enabled. Cursor, OpenCode, and Codex print one ready-to-paste request per key, keeping your wording about not asking questions (for example "don't ask me"). With git disabled, several keys run one after another in the current session on every host.
 
 ## Models per host
 

@@ -63,13 +63,13 @@ On a `codex-toml` row the helper text adds: a model name is passed through as gi
 
 **Show each table once.** The table and its question appear once, in the question itself. Do not repeat the same table or the same question in a message before it, after it, or in the closing summary. The same rule applies to every confirmation in this skill (project name, tracker, language, tracker offer): one message per question, no re-printed copies.
 
-**Question wording.** Frame the question as **change**, not **keep**. Do not ask “Keep these models?”, “Czy zostawić te modele?”, or similar — **yes** on a keep-framed question means accept, but this flow treats **yes** as “I want overrides”. After the table, use a **change** question plus helper text in this shape (replace `<host label>` with a readable name from the host row’s `id`, e.g. `claude-code` → Claude Code):
+**Question wording.** Frame the question as **change**, not **keep**. Do not ask “Keep these models?”, the same question in the user's language, or similar — **yes** on a keep-framed question means accept, but this flow treats **yes** as “I want overrides”. After the table, use a **change** question plus helper text in this shape (replace `<host label>` with a readable name from the host row’s `id`, e.g. `claude-code` → Claude Code):
 
 ```text
 Change any role models for <host label>? Reply skip or no to keep the table as shown. Reply yes and list overrides in one message (e.g. architect: opus).
 ```
 
-**Reply mapping.** Accept the table: `skip`, `no`, `nie`, empty / Enter, or clear “keep / ok / leave as shown” intent (including Polish *zostaw*, *git*). Apply overrides: `yes`, `tak`, `change`, or a `role: model` list without yes. If you asked a keep-framed question by mistake and the user answered as if keeping (e.g. **tak** with no override list), accept the table; do not ask again for overrides.
+**Reply mapping.** Accept the table: `skip`, `no`, empty / Enter, or clear “keep / ok / leave as shown” intent in the user's language. Apply overrides: `yes`, `change`, an affirmative in the user's language, or a `role: model` list without yes. If you asked a keep-framed question by mistake and the user answered as if keeping (e.g. an affirmative with no override list), accept the table; do not ask again for overrides.
 
 **Missing role (config from before the Designer).** `agents.roles.designer` is absent while the other roles have complete maps. Treat it like a missing host key for that one role: for each host in `hosts.json` (table order), prefill `designer` from that row’s `modelSuggest.designer` (when absent, from `modelSuggest.implementer`; when also absent, ask without a suggestion), show the table of that role, and ask one **change** question per host in the shape above. Skip / no = accept the table. Write the map when every host is confirmed. Then ask the **Designer switch** question below if `agents.designer.enabled` is missing.
 
