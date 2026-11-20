@@ -36,12 +36,12 @@ Exactly one of:
 
 ```text
 # npm
-npx -p se-harness seh install
+npx se-harness install
 
 # GitHub (the seh repo; #ref is an optional tag, branch, or commit)
-npx -p github:meehow-halas/se-harness seh install
-npx -p github:meehow-halas/se-harness#<ref> seh install
-npx -p https://github.com/meehow-halas/se-harness seh install
+npx github:meehow-halas/se-harness install
+npx github:meehow-halas/se-harness#<ref> install
+npx https://github.com/meehow-halas/se-harness install
 ```
 
 **Skill-name prefix.** `seh install --prefix P` (default `_`; allowed characters letters, digits, `_`, `-`; `--prefix ""` for none) sets a prefix for every skill name. Source names in `skills/` have no prefix (`setit-se`, `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `scopeit`, `grillit`); the live directory and the frontmatter `name:` (the slash command) are `<prefix><name>`, so the default commands are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit`, `/_grillit`. Install writes the prefix to `.seh/PREFIX` and replaces the token `{{prefix}}` with it in every text file it copies into `.seh/`. `seh uninstall` reads `.seh/PREFIX` and takes no `--prefix`. Installing again without `--prefix` keeps the prefix in `.seh/PREFIX` (default `_` only when that file is missing or holds a disallowed value). Installing again with another prefix removes the old install-owned setup skill (and its host command). `/<prefix>setit-se` generates the work skills as `<prefix><name>`, records `seh.generatedPrefix`, and removes live skills made with an earlier prefix (every work skill, `designit` included) or the pre-prefix `seh-*` names.
@@ -82,8 +82,8 @@ After an accepted review the Reviewer commits, opens the PR and sets `done` (git
 Same source as step 1:
 
 ```text
-npx -p se-harness seh uninstall
-npx -p github:meehow-halas/se-harness seh uninstall
+npx se-harness uninstall
+npx github:meehow-halas/se-harness uninstall
 ```
 
 Removes `.seh/` and the install-owned `/<prefix>setit-se` skill. Leaves `harness.config.json` and files `/<prefix>setit-se` generated.
@@ -589,7 +589,7 @@ There is no user-facing Consultant skill.
 
 ### `/<prefix>setit-se` (detail)
 
-**Entry.** If `seh install` has not been run in this project (`.seh/` is missing, or `/<prefix>setit-se` is absent from **every** `skillsDir` in `.seh/references/hosts.json`), stop and tell the user to run `seh install` here from npm (`npx -p se-harness seh install`) or from GitHub (`npx -p github:meehow-halas/se-harness seh install`), then `/<prefix>setit-se` again. Present in **any** listed `skillsDir` is enough.
+**Entry.** If `seh install` has not been run in this project (`.seh/` is missing, or `/<prefix>setit-se` is absent from **every** `skillsDir` in `.seh/references/hosts.json`), stop and tell the user to run `seh install` here from npm (`npx se-harness install`) or from GitHub (`npx github:meehow-halas/se-harness install`), then `/<prefix>setit-se` again. Present in **any** listed `skillsDir` is enough.
 
 If `harness.config.json` is missing: first-run path below. If it is present: later-run path below. Do not overwrite keys the user did not confirm. Do not regenerate generated files as a silent first-run repeat. A later-run template mismatch (`.seh/VERSION` ≠ `seh.generatedFrom`) is not a first-run repeat: regenerate live agents, work skills, and rules, then continue the later-run path.
 
@@ -774,7 +774,7 @@ Quality during implementation is **Consultant + the project’s own test command
 
 | Command | Purpose |
 |---------|---------|
-| `seh install` | This project: `.seh/` (including `scripts/` and `.seh/VERSION`) plus the `/<prefix>setit-se` skill in every `skillsDir` from `references/hosts.json`. From npm (`npx -p se-harness seh install`) or GitHub (`npx -p github:meehow-halas/se-harness seh install`). Does not generate live agents, work skills, or rule packs. |
+| `seh install` | This project: `.seh/` (including `scripts/` and `.seh/VERSION`) plus the `/<prefix>setit-se` skill in every `skillsDir` from `references/hosts.json`. From npm (`npx se-harness install`) or GitHub (`npx github:meehow-halas/se-harness install`). Does not generate live agents, work skills, or rule packs. |
 | `seh uninstall` | Reverse of install in this project. Same source as install. |
 
 Everything else is a skill, a `.seh/scripts/` helper, or a normal project command (including the project’s own test/lint). Git/`gh` on the allowlist is invoked by those scripts, not by a `seh` subcommand.

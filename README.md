@@ -22,10 +22,20 @@ The product and CLI binary are **`seh`**. The npm package is **`se-harness`**. C
 From the project directory:
 
 ```bash
-npx -p se-harness seh install
+npx se-harness install
 ```
 
-This writes `.seh/` and the `/_setit-se` skill. Other sources (GitHub, a tag or commit) and a custom skill prefix (`--prefix`): [Install and setup](docs/guide/setup.md#install).
+Or straight from GitHub (same result; `#<ref>` is an optional tag, branch, or commit):
+
+```bash
+npx github:meehow-halas/se-harness install
+```
+
+```bash
+npx github:meehow-halas/se-harness#<ref> install
+```
+
+This writes `.seh/` and the `/_setit-se` skill. A custom skill prefix (`--prefix`) and more sources: [Install and setup](docs/guide/setup.md#install).
 
 ### 2. Setup
 
@@ -85,13 +95,13 @@ Whole runs step by step, from a single `/_doit` to an overnight `/_shipit`: [Exa
 After a package update, run install again from the same source, then ask for setup (`/_setit-se`):
 
 ```bash
-npx -p se-harness@latest seh install
+npx se-harness@latest install
 ```
 
 Uninstall (same source as install) removes `.seh/` and the `/_setit-se` skill, and leaves config and generated files:
 
 ```bash
-npx -p se-harness seh uninstall
+npx se-harness uninstall
 ```
 
 Pinning, forced regeneration, and what uninstall leaves behind: [Install and setup](docs/guide/setup.md#after-a-package-update).

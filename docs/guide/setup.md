@@ -7,19 +7,19 @@
 From the project directory, pick one source and reuse it later for uninstall:
 
 ```bash
-npx -p se-harness seh install
+npx se-harness install
 ```
 
 ```bash
-npx -p github:meehow-halas/se-harness seh install
+npx github:meehow-halas/se-harness install
 ```
 
 ```bash
-npx -p github:meehow-halas/se-harness#<ref> seh install
+npx github:meehow-halas/se-harness#<ref> install
 ```
 
 ```bash
-npx -p https://github.com/meehow-halas/se-harness seh install
+npx https://github.com/meehow-halas/se-harness install
 ```
 
 npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
@@ -31,7 +31,7 @@ npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the skills are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. These docs show the default `_` names.
 
 ```text
-npx -p se-harness seh install --prefix my-
+npx se-harness install --prefix my-
 ```
 
 Install stores the prefix in `.seh/PREFIX`, so `seh uninstall` needs no flag, and a later `seh install` without `--prefix` keeps it. Installing again with another prefix removes the old `/_setit-se` skill; the next `/_setit-se` run regenerates the work skills under the new prefix and removes the old ones.
@@ -90,7 +90,7 @@ It does **not** touch `agents.brainstorm` (that is `/_grillit`), create or rewri
 Run install again from the same source, then ask for setup (`/_setit-se`), so generated files match the installed templates (`.seh/VERSION` vs `seh.generatedFrom`). That regeneration copies the work skills and deletes leftover live `seh-feature` and the old `seh-*` skills. It does not rewrite project `AGENTS.md`.
 
 ```text
-npx -p se-harness@latest seh install
+npx se-harness@latest install
 ```
 
 Then ask the assistant, in the project, to set it up (`/_setit-se`). This one skill has to be named explicitly, because the other skills do not exist until setup has run.
@@ -112,8 +112,8 @@ Then ask the assistant, in the project, to set it up (`/_setit-se`). This one sk
 Same source as install:
 
 ```text
-npx -p se-harness seh uninstall
-npx -p github:meehow-halas/se-harness seh uninstall
+npx se-harness uninstall
+npx github:meehow-halas/se-harness uninstall
 ```
 
 Removes `.seh/` and the install-owned `/_setit-se` skill from every `skillsDir`. Leaves `harness.config.json` and files `/_setit-se` already generated (live agents, work skills, rules).
