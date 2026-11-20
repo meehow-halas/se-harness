@@ -55,9 +55,9 @@ BLOCKED: /{{prefix}}shipit needs git — set agents.baseBranch with /{{prefix}}s
 
 ## Mode
 
-From **intent**. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), `autonomous` for every child. Otherwise `interactive`. The same `Mode:` goes to every child. In any mode the merge happens after acceptance (interactive: after the user accepts in that child's session; `critical` / `autonomous`: a clean Reviewer run is acceptance).
+From **intent**. If the user asked, in any language, for the work to be done on its own without questions (for example "don't ask me", "autonomous"), `autonomous` for every child. Otherwise `interactive`. The same `Mode:` goes to every child. In any mode the merge happens after acceptance (interactive: after the user accepts in that child's session; `critical` / `autonomous`: a clean Reviewer run is acceptance).
 
-Reply in the language of the user's latest message, every message. Pass that language to children as `Conversation language: <name>` (a Polish message gives `Polish`).
+Reply in the language of the user's latest message, every message. Pass that language to children as `Conversation language: <name>` (a German message gives `German`).
 
 ## Key selection
 

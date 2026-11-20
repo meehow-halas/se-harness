@@ -49,9 +49,9 @@ BLOCKED: live agents are missing — run /{{prefix}}setit-se
 
 ## Mode
 
-From **intent**. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked for the work to be done alone (`samodzielnie`, `sam`, `bez pytań`, `autonomicznie`, `autonomous`), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Reviewer.
+From **intent**. A launch may name `interactive`, `critical`, or `autonomous`. If the user asked, in any language, for the work to be done on its own without questions (for example "don't ask me", "autonomous"), use `autonomous`; never fall back to `interactive` then. Otherwise default `interactive`. Pass that mode to the Reviewer.
 
-Reply in the language of the user's latest message, whatever that language is, every message (progress messages too), including the final report and any end-of-turn summary the host shows. If the launch names `Conversation language: <name>`, that name decides, even when this skill text, tool output or a subagent report is in another language. Never switch to another language. The launch passes `Conversation language:` to the Reviewer; if the user's message is in Polish, that is Polish.
+Reply in the language of the user's latest message, whatever that language is, every message (progress messages too), including the final report and any end-of-turn summary the host shows. If the launch names `Conversation language: <name>`, that name decides, even when this skill text, tool output or a subagent report is in another language. Never switch to another language. The launch passes `Conversation language:` to the Reviewer; if the user's message is in German, that is German.
 
 ## Variant
 
@@ -66,7 +66,7 @@ Parse the user message. Do not mix variants.
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit` and the same variant for every child, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `.seh/references/session-fanout.md` section 2), never in the order given. Two or more keys, git enabled, and `sessionSpawn` is `manual`: print the commands per key, with the user's mode words (for example `samodzielnie`), and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit` and the same variant for every child, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `.seh/references/session-fanout.md` section 2), never in the order given. Two or more keys, git enabled, and `sessionSpawn` is `manual`: print the commands per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
 
 ## Resolve the tasks
 
@@ -109,8 +109,8 @@ For each resolved task:
    - Task key
    - `Worktree: <abs>`
    - The user request
-   - `Conversation language: <name>` always: the language of the user's message in this session (a Polish message gives `Polish`). Never omit it, never leave it to the reviewer's guess.
-   - `User acceptance: <the user's own words>` when the user has accepted this task's review (for example "Akceptuję"). Copy the words exactly; never paraphrase or infer acceptance. If the user did not accept, omit the line.
+   - `Conversation language: <name>` always: the language of the user's message in this session (a German message gives `German`). Never omit it, never leave it to the reviewer's guess.
+   - `User acceptance: <the user's own words>` when the user has accepted this task's review (for example "I accept", in the user's language). Copy the words exactly; never paraphrase or infer acceptance. If the user did not accept, omit the line.
 
 N>1: in parallel when the runtime allows; otherwise sequential worktrees. Interactive acceptance is **per task**; do not accept the whole list with one yes. A `Q<n>` or `BLOCKED:` on one task does not stop siblings.
 
