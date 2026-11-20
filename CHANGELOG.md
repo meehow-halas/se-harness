@@ -6,12 +6,17 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 ### Added
 
+- `/<prefix>scopeit`: work skill that creates or updates the project PRD (create: purpose, users, scope, non-goals, one question at a time with repo proposals the user accepts; `skip` leaves `TBD — not stated by the user`; the file is always written; optional deepening and a `/<prefix>planit` offer on first create. Update: one before/after change at a time, written after acceptance). It never writes `harness.config.json`. `skip` ends the whole dialog; the `TBD` / `None stated` markers stay in English; the PRD title name comes from the README heading, manifest or directory.
+- `references/prd-template.md`: fixed PRD headings and the `TBD` rule.
+- Architect: one reply line when a decision depended on a `TBD` PRD section; `TBD` is no constraint.
 - Rule packs `csharp` (`language.md`, `project.md`, `tests.md`), `aspnetcore` (`web.md`, `blazor.md`, `tests.md`) and `efcore` (`data.md`) for C# 14 / .NET 10 / ASP.NET Core 10 / EF Core 10. Version-specific rules start with a `net10.0` condition; `csharp/language.md` forbids features above the project's `LangVersion`.
 - `/<prefix>setit-se` detects the three packs (`.csproj`, `.sln` / `.slnx`, SDK and package references, including `Directory.Packages.props`).
 - `packs/ux-a11y/react-native.md`: WCAG 2.2 AA rules for React Native files (`.tsx` / `.jsx` importing `react-native`): accessible names and `accessibilityRole` on pressables, `accessibilityState`, labelled `TextInput`, `Image` labels, no `allowFontScaling={false}` in new code, announced async messages, `Modal` with `accessibilityViewIsModal`. The pack is installed with the other ux-a11y rule files.
 
 ### Changed
 
+- `/<prefix>setit-se` no longer asks product questions in step 2 (it only detects the PRD). With no PRD, its new last step runs the `scopeit` create procedure and registers `docs/prd.md` in `agents.docs` and the `product` line.
+- `references/AGENTS.md` (the project `AGENTS.md` template) lists `/<prefix>scopeit`; setup guide lists all work skills.
 - UI stack now includes Razor or Blazor in an ASP.NET Core tree. `ux-a11y/a11y.md`, `states.md` and `touch-i18n.md` also match `**/*.razor` and `**/*.cshtml`. PRD and setup guide list the new packs.
 - `packs/ux-a11y/a11y.md`: marked as web DOM rules; React Native files follow `react-native.md`.
 

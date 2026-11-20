@@ -880,6 +880,24 @@ describe("seh uninstall", () => {
       });
     });
 
+    test("scopeit is an invoke skill: its slash form gets the row's invokePrefix", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        fs.writeFileSync(
+          path.join(pkg, "skills", "setit-se", "SKILL.md"),
+          "---\nname: setit-se\ndescription: x\n---\nRun /{{prefix}}scopeit; not /{{prefix}}scopeitx.\n"
+        );
+        const hostsFile = path.join(pkg, "references", "hosts.json");
+        const table = JSON.parse(read(hostsFile));
+        for (const h of table.hosts) if (h.id === "codex") h.invokePrefix = "$";
+        fs.writeFileSync(hostsFile, JSON.stringify(table));
+        const result = runCli(["install", "--prefix", "q_"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(read(path.join(project, ".agents", "skills", "q_setit-se", "SKILL.md")), /Run \$q_scopeit; not \/q_scopeitx\./);
+        assert.match(read(path.join(project, ".claude", "skills", "q_setit-se", "SKILL.md")), /Run \/q_scopeit;/);
+      });
+    });
+
     test("hook matcher comes from the row, not a hardcoded value", () => {
       withTempDir((root) => {
         const { pkg, project } = setup(root);
@@ -1249,8 +1267,17 @@ describe("seh install --prefix", () => {
       for (const f of walk(path.join(project, ".seh"))) {
         assert.equal(read(f).includes("{{prefix}}"), false, f);
       }
-      for (const name of ["planit", "designit", "doit", "checkit", "runit", "shipit", "grillit", "setit-se"]) {
+      for (const name of ["planit", "designit", "doit", "checkit", "runit", "shipit", "scopeit", "grillit", "setit-se"]) {
         assert.equal(exists(path.join(project, ".seh", "skills", name, "SKILL.md")), true, name);
+      }
+      const scopeit = read(path.join(project, ".seh", "skills", "scopeit", "SKILL.md"));
+      assert.match(scopeit, /^---\nname: scopeit\n/);
+      assert.match(scopeit, /\/q_planit/);
+      assert.equal(exists(path.join(project, ".seh", "references", "prd-template.md")), true);
+      assert.match(read(path.join(project, ".seh", "references", "prd-template.md")), /## Non-goals/);
+      for (const skillsDir of [".claude/skills", ".cursor/skills", ".opencode/skills", ".agents/skills"]) {
+        assert.equal(exists(path.join(project, skillsDir, "q_scopeit")), false, skillsDir);
+        assert.equal(exists(path.join(project, skillsDir, "q_setit-se", "SKILL.md")), true, skillsDir);
       }
       assert.match(read(path.join(project, ".claude", "skills", "q_setit-se", "SKILL.md")), /^---\nname: q_setit-se\n/);
       const runit = read(path.join(project, ".seh", "skills", "runit", "SKILL.md"));

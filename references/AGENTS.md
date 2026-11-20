@@ -12,7 +12,7 @@ The only supported adoption path:
 
 1. **Bootstrap** — `npx -p se-harness seh install` (npm or GitHub). Result: `.seh/` plus the install-owned `/{{prefix}}setit-se` skill in every `skillsDir`, and `.seh/` and `harness.credentials.local.json` entries in the project-root `.gitignore`. Setup is not done. Do not offer work skills yet.
 2. **Finish setup** — `/{{prefix}}setit-se` only. The CLI does not configure the project.
-3. **Work** — `/{{prefix}}runit`, `/{{prefix}}shipit`, `/{{prefix}}planit`, `/{{prefix}}designit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}grillit`, or later `/{{prefix}}setit-se`.
+3. **Work** — `/{{prefix}}runit`, `/{{prefix}}shipit`, `/{{prefix}}planit`, `/{{prefix}}designit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}scopeit`, `/{{prefix}}grillit`, or later `/{{prefix}}setit-se`.
 4. **Remove bootstrap (optional)** — `seh uninstall` with the **same source** as install. Removes `.seh/`, the install-owned `/{{prefix}}setit-se` skill from every `skillsDir`, and the install-owned session-start hook command. Leaves `harness.config.json` and files `/{{prefix}}setit-se` generated.
 
 CLI in v1: `seh install` and `seh uninstall` only.
@@ -46,6 +46,7 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | `/{{prefix}}checkit` | One Reviewer round per named task: review or update from base. An accepted review ends with commit, PR and `done`. |
 | `/{{prefix}}runit` | Architect → (Designer) → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session; several keys fan out (`.seh/references/session-fanout.md`), with no dependency ordering; git disabled: run in this session in dependency order. |
 | `/{{prefix}}shipit` | Many specced tasks: one `/{{prefix}}runit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. |
+| `/{{prefix}}scopeit` | Creates or updates the project PRD (purpose, users, scope, non-goals). Never writes config. |
 | `/{{prefix}}grillit` | Members, app context, and a consult round. |
 
 ## Tracker
