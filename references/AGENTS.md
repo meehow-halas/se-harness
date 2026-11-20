@@ -10,14 +10,14 @@ Supported hosts are the rows in `.seh/references/hosts.json`. Live skills, agent
 
 The only supported adoption path:
 
-1. **Bootstrap** — `npx -p se-harness seh install` (npm or GitHub). Result: `.seh/` plus the install-owned `/{{prefix}}setit-se` skill in every `skillsDir`, and `.seh/` and `harness.credentials.local.json` entries in the project-root `.gitignore`. Setup is not done. Do not offer work skills yet.
+1. **Bootstrap** — `npx se-harness install` (npm or GitHub). Result: `.seh/` plus the install-owned `/{{prefix}}setit-se` skill in every `skillsDir`, and `.seh/` and `harness.credentials.local.json` entries in the project-root `.gitignore`. Setup is not done. Do not offer work skills yet.
 2. **Finish setup** — `/{{prefix}}setit-se` only. The CLI does not configure the project.
 3. **Work** — `/{{prefix}}runit`, `/{{prefix}}shipit`, `/{{prefix}}planit`, `/{{prefix}}designit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}scopeit`, `/{{prefix}}grillit`, or later `/{{prefix}}setit-se`.
 4. **Remove bootstrap (optional)** — `seh uninstall` with the **same source** as install. Removes `.seh/`, the install-owned `/{{prefix}}setit-se` skill from every `skillsDir`, and the install-owned session-start hook command. Leaves `harness.config.json` and files `/{{prefix}}setit-se` generated.
 
 CLI in v1: `seh install` and `seh uninstall` only.
 
-If this session’s context says a newer seh GitHub tag exists than `.seh/VERSION`, tell the user on the first reply and give both install commands (`npx -p se-harness seh install` and `npx -p github:meehow-halas/se-harness seh install`) plus `/{{prefix}}setit-se`. Do not query npm or GitHub yourself. Do not install unless they ask.
+If this session’s context says a newer seh GitHub tag exists than `.seh/VERSION`, tell the user on the first reply and give both install commands (`npx se-harness install` and `npx github:meehow-halas/se-harness install`) plus `/{{prefix}}setit-se`. Do not query npm or GitHub yourself. Do not install unless they ask.
 
 Work skills stop before doing work when `harness.config.json` is missing **or** `.seh/VERSION` does not match `seh.generatedFrom`. Tell the user to run `/{{prefix}}setit-se` (and `seh install` first if `.seh/` or `.seh/VERSION` is missing).
 

@@ -189,7 +189,7 @@ fi
 
 msg=$(
   printf \
-    'seh %s is installed; %s is available (GitHub tag). Run npx -p se-harness seh install or npx -p github:meehow-halas/se-harness seh install, then /{{prefix}}setit-se.' \
+    'seh %s is installed; %s is available (GitHub tag). Run npx se-harness install or npx github:meehow-halas/se-harness install, then /{{prefix}}setit-se.' \
     "$INSTALLED" "$LATEST"
 )
 
