@@ -18,7 +18,7 @@ Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in
 `runit` with `mode: sequential` (git disabled) follows dependencies, never the order the keys were given: pass `--depends` as above and run the keys as the `sequential` bullet below says. When the *Dependency gate* in `runit` stops a key on a sibling key that is not `done` yet, that stop is not dropped: add `--depends KEY:DEP` and the key goes to `waiting` and runs again later in this session from the written spec.
 
 ```text
-.seh/scripts/fanout-plan --skill <name> --keys <K1,K2,...> [--variant review|update] [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
+.seh/scripts/fanout-plan --skill <name> --keys <K1,K2,...> [--variant review] [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
 ```
 
 Output: `OK`, then `mode`, `max`, `ready` (comma list, may be empty), and optional `waiting`, `blocked`, `queued`, `stuck` lines. `BLOCKED: ...` means fix the arguments and retry.

@@ -43,7 +43,7 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | `/{{prefix}}planit` | Architect once, then the Designer when the spec has `ui: true` and `agents.designer.enabled` is `true`. Offer the next step; do not start it. Optional input: a design file from `/{{prefix}}designit` (then no Designer stage). |
 | `/{{prefix}}designit` | Designer once, UX/UI only, before the spec: writes `docs/designs/<slug>.design.md`. No tracker, no spec, no git. Needs the Designer enabled. Offers `/{{prefix}}planit` with the file. Intent "learn conventions": writes `docs/designs/ux-conventions.md` (the project's UX rules, read by the Designer on later runs) and offers nothing after it. |
 | `/{{prefix}}doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
-| `/{{prefix}}checkit` | One Reviewer round per named task: review or update from base. An accepted review ends with commit, PR and `done`. |
+| `/{{prefix}}checkit` | One Reviewer round per named task: review against the spec. An accepted review ends with commit, PR and `done`. |
 | `/{{prefix}}runit` | Architect → (Designer) → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session; several keys fan out (`.seh/references/session-fanout.md`), with no dependency ordering; git disabled: run in this session in dependency order. |
 | `/{{prefix}}shipit` | Many specced tasks: one `/{{prefix}}runit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. |
 | `/{{prefix}}scopeit` | Creates or updates the project PRD (purpose, users, scope, non-goals). Never writes config. |
@@ -79,14 +79,14 @@ Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/script
 | `commit-task` | Reviewer, after acceptance, or after resolving an update merge (from the worktree) |
 | `push-task` | Reviewer |
 | `open-pr` | Reviewer, after acceptance |
-| `update-from-base` | Reviewer, when the user asks to update, or on a merge conflict with `Auto-merge: yes` |
+| `update-from-base` | Reviewer, only on a merge conflict with `Auto-merge: yes` |
 | `return-to-base` | Reviewer, after PR opened (removes the seh worktree) |
 | `jira` | `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 | `ado` | Same who-calls-what as `jira`, when `agents.tracker.kind` is `ado`: `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress` / `codeReview`, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 
 With `agents.tracker.readOnly` `true`, only `meta` and `get` apply to `jira` / `ado`; every other verb in the rows above is `BLOCKED:` and agents do not call it.
 
-**Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR, `update`), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with the change record and status written to files. The scripts also answer `UNCHANGED` + `git: disabled`.
+**Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with the change record and status written to files. The scripts also answer `UNCHANGED` + `git: disabled`.
 
 Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira` or `ado`.
 

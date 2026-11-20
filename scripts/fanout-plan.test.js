@@ -57,10 +57,9 @@ describe("fanout-plan", () => {
     assert.deepEqual(out.ready, ["RV-5", "RW-6"]);
   });
 
-  test("checkit update stays parallel", () => {
-    const out = fields(plan(["--skill", "checkit", "--variant", "update", "--keys", "UP-5,UQ-6"]));
-    assert.equal(out.mode, "parallel");
-    assert.deepEqual(out.ready, ["UP-5", "UQ-6"]);
+  test("checkit update is no longer a variant", () => {
+    const out = blockedResult(["--skill", "checkit", "--variant", "update", "--keys", "UP-5,UQ-6"]);
+    assert.match(out, /unknown variant update/);
   });
 
   test("checkit close is no longer a variant", () => {
