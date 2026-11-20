@@ -168,7 +168,7 @@ Sections, in this order:
 8. **Open warnings**: ⚠️ items the Reviewer left (not blocking, not fixed).
 9. **Dependency graph and actual order**: edges from `depends` and the waves as they ran.
 10. **What is left**: tasks still `todo` / `in progress` / with an open PR, with their status.
-11. **Next actions for the user**: concrete commands or steps (answer `Q<n>` in session X, `/{{prefix}}checkit update <KEY>`, merge PR Y by hand, `/{{prefix}}planit <KEY>`, rerun `/{{prefix}}shipit <keys>` for the rest, commit the report), most important first.
+11. **Next actions for the user**: concrete commands or steps (answer `Q<n>` in session X, merge PR Y by hand (resolve its conflict first if it has one), `/{{prefix}}planit <KEY>`, rerun `/{{prefix}}shipit <keys>` for the rest, commit the report), most important first.
 
 ## End report (chat)
 

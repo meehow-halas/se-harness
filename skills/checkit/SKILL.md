@@ -1,11 +1,11 @@
 ---
 name: checkit
-description: One Reviewer round per named task (review or update from base). An accepted review ends with commit, PR and status done. Use when the user runs /{{prefix}}checkit.
+description: One Reviewer round per named task (review against the spec). An accepted review ends with commit, PR and status done. Use when the user runs /{{prefix}}checkit.
 ---
 
 # /{{prefix}}checkit
 
-One Reviewer round per named task. Parse intent: **review** (default) or **update** from base. One variant for the whole invocation. Do not chain stages. Do not launch Architect. Do not merge the GitHub PR. An accepted review is the end of the feature: the Reviewer commits, opens the PR and sets `done`.
+One Reviewer round per named task: review the code against the spec. Do not chain stages. Do not launch Architect. Do not merge the GitHub PR. An accepted review is the end of the feature: the Reviewer commits, opens the PR and sets `done`.
 
 Prefer reporting ❌ and offering `/{{prefix}}doit`. Do not chain into Implementer unless this invocation is a review ❌ handoff the user **asked to fix here**. `/{{prefix}}runit` owns the fix-round loop.
 
@@ -53,20 +53,11 @@ From **intent**. A launch may name `interactive`, `critical`, or `autonomous`. I
 
 Reply in the language of the user's latest message, whatever that language is, every message (progress messages too), including the final report and any end-of-turn summary the host shows. If the launch names `Conversation language: <name>`, that name decides, even when this skill text, tool output or a subagent report is in another language. Never switch to another language. The launch passes `Conversation language:` to the Reviewer; if the user's message is in German, that is German.
 
-## Variant
-
-Parse the user message. Do not mix variants.
-
-| Intent | Variant | When |
-|--------|---------|------|
-| review (default) | `review` | Anything that is not update |
-| update from base | `update` | User asks to update, rebase is not used: merge base into the task branch via the script |
-
-**Update** rules live in the Reviewer file (`update-from-base`). This skill names the variant; it does not compose `git` or `gh`.
+This skill does not update a task branch from base. Merging the base into a task branch is a tool the Reviewer uses only to resolve a conflict while auto-merging (`/{{prefix}}shipit`). A user who asks for it alone gets `BLOCKED: updating a branch from base is not a seh step — merge the base into <branch> yourself, or resolve the conflict in the PR`. This skill does not compose `git` or `gh`.
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit` and the same variant for every child, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `.seh/references/session-fanout.md` section 2), never in the order given. Two or more keys, git enabled, and `sessionSpawn` is `manual`: print the commands per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit`, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `.seh/references/session-fanout.md` section 2), never in the order given. Two or more keys, git enabled, and `sessionSpawn` is `manual`: print the commands per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
 
 ## Resolve the tasks
 
@@ -92,7 +83,7 @@ Do not launch the Designer from this skill.
 
 ## Status gate (before Reviewer)
 
-Read `status:` in the task's spec (worktree copy when a worktree exists, else the tracker). For `review`, the status must be the configured `implemented` or `in review` string. For `update`, it must be `in progress`, `implemented`, `in review`, or `done` (the PR may already be open). Any other value stops that task: `BLOCKED: status <value> does not allow <variant> — set the status the Implementer should have left, or run /{{prefix}}doit <task>`. Do not launch Reviewer on a task that fails this gate.
+Read `status:` in the task's spec (worktree copy when a worktree exists, else the tracker). The status must be the configured `implemented` or `in review` string. Any other value stops that task: `BLOCKED: status <value> does not allow review — set the status the Implementer should have left, or run /{{prefix}}doit <task>`. Do not launch Reviewer on a task that fails this gate.
 
 ## Launch Reviewer
 
@@ -100,12 +91,11 @@ This skill is the parent. Follow the live Reviewer file for this host (`<agentsD
 
 For each resolved task:
 
-**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout, in dependency order (*Several keys*). Variant `update` needs git: stop with `BLOCKED: update needs git`.
+**Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout, in dependency order (*Several keys*).
 
 1. Run `.seh/scripts/start-task <task>` from the launch checkout if a worktree is not already printed for it. Copy `worktree:`. Do not compose `git`.
 2. Launch Reviewer with at least:
    - `Mode: <mode>`
-   - `Variant: review` or `Variant: update` (same variant for every task)
    - Task key
    - `Worktree: <abs>`
    - The user request
@@ -120,7 +110,7 @@ Do not merge. After a clean accepted review, the Reviewer may open a PR; this sk
 
 ## After Reviewer finishes
 
-Report the variant, each task key, ✅/⚠️/❌, status, `worktree:` (git enabled only), and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
+Report each task key, ✅/⚠️/❌, status, `worktree:` (git enabled only), and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
 
 - Open ❌ → offer `/{{prefix}}doit` (those items only, same list) or `/{{prefix}}runit` for a single task. Do not start them unless the user already asked to fix in this invocation.
 - Clean review accepted → the Reviewer committed, opened the PR and set `done` (git disabled: no commit or PR, only the change record and `done`). Report the PR URL when there is one. Nothing left for this skill; the user merges on GitHub, and that does not reopen the task.

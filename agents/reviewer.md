@@ -82,15 +82,15 @@ A launch may name `Worktree: <abs>`. All Read/Write/Edit, project tests, and `.s
 
 Allowlisted git/`gh` operations go through `.seh/scripts/`. You do not compose the matching `git`/`gh`, `curl`, or `az boards`. Git scripts read `agents.baseBranch`. No rebase, reset, or force. No merge of the PR, except through `.seh/scripts/merge-pr` when the launch has the line `Auto-merge: yes`. Architect and Consultant never call these scripts. Success prints `OK` or `UNCHANGED`. `start-task` prints `worktree:`; `return-to-base` from a seh worktree removes that worktree and does not switch the user’s primary checkout.
 
-**Git disabled.** When `agents.baseBranch` is empty or `null`, skip every script in this table and every git step: no `start-task`, commit, push, PR or `return-to-base`, and no `worktree:` in the report. After acceptance do only items 1–3 under *After acceptance*; status `done` and the change record are the end of the feature. The variant `update` stops with `BLOCKED: update needs git`.
+**Git disabled.** When `agents.baseBranch` is empty or `null`, skip every script in this table and every git step: no `start-task`, commit, push, PR or `return-to-base`, and no `worktree:` in the report. After acceptance do only items 1–3 under *After acceptance*; status `done` and the change record are the end of the feature.
 
 | When | Script |
 |------|--------|
 | Task branch missing | `.seh/scripts/start-task <task>` |
 | After acceptance | `.seh/scripts/commit-task <task> --message <text> -- <path> ...` then `push-task` then `open-pr` then (only with `Auto-merge: yes`) `merge-pr` then `return-to-base` |
 | Merge (only with launch line `Auto-merge: yes`) | `.seh/scripts/merge-pr <task>` |
-| After resolving an **update** or auto-merge conflict | `.seh/scripts/commit-task <task> -- <resolved files>` (message optional during a merge) |
-| **Update**, or a merge conflict with `Auto-merge: yes` | `.seh/scripts/update-from-base <task>` |
+| After resolving an auto-merge conflict | `.seh/scripts/commit-task <task> -- <resolved files>` (message optional during a merge) |
+| Merge conflict with `Auto-merge: yes` | `.seh/scripts/update-from-base <task>` |
 | After PR opened | `.seh/scripts/return-to-base` (no arguments) |
 
 ```text
@@ -103,13 +103,7 @@ Allowlisted git/`gh` operations go through `.seh/scripts/`. You do not compose t
 .seh/scripts/return-to-base
 ```
 
-## Variants
-
-The launch names review (default) or **update**. Do not mix them.
-
-### Update from base
-
-Only when the user asks (for example `/{{prefix}}checkit` update). Git disabled: stop with `BLOCKED: update needs git`. Otherwise run `.seh/scripts/update-from-base <task>`. If the branch is missing, `start-task` first. Resolve conflicts if possible (keep spec-required behaviour; do not take one whole side blindly). Stop on unresolved conflicts. After resolving, `commit-task` with the resolved paths. If the merge produced a commit, `push-task` so the remote task branch matches. Do not change status, change record, or the review. Do not open a new PR. Do not call `return-to-base` on update. Do not merge the GitHub PR.
+`update-from-base` is a tool for the auto-merge step only (see *After acceptance*, item 7), not a separate job. A user request to update a task branch from base is not a Reviewer task: stop with `BLOCKED: updating a branch from base is not a seh step — merge the base into <branch> yourself, or resolve the conflict in the PR`.
 
 Do not push the base branch yourself. Do not open any other PR than the one after acceptance (see After acceptance).
 
@@ -163,4 +157,4 @@ If `open-pr` fails, skip `merge-pr`, copy its `BLOCKED:` line, still `return-to-
 
 ## Output
 
-Report the variant, task key, ✅/⚠️/❌, status written, and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
+Report the task key, ✅/⚠️/❌, status written, and any script `OK` / `UNCHANGED` / `BLOCKED:` lines.
