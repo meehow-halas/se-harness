@@ -18,11 +18,11 @@ Out: `skills/`, `references/` (stage 02), `docs/prd.md`, archived plans, version
 4. Do not touch README sections beyond these edits (project rule: README changes only on explicit user request; this plan is that request, limited to points 1-2).
 
 ## Acceptance criteria
-- [ ] No Polish word or diacritic in `README.md` and `docs/guide/*.md` (grep result shown).
-- [ ] No `samodzielnie`/`bez pytań` in those files.
-- [ ] No sentence tells the user to "run"/"rerun"/"type" a slash command as the way to get work done, except where the host genuinely needs an explicit invocation (OpenCode/Codex facts, manual fan-out output, setup block) and those are phrased as host facts.
-- [ ] Links and anchors in README/guide still resolve (e.g. `setup.md#_setit-se`).
-- [ ] No file outside the scope list changed (`git status`).
+- [x] No Polish word or diacritic in `README.md` and `docs/guide/*.md` (grep result shown).
+- [x] No `samodzielnie`/`bez pytań` in those files.
+- [x] No sentence tells the user to "run"/"rerun"/"type" a slash command as the way to get work done, except where the host genuinely needs an explicit invocation (OpenCode/Codex facts, manual fan-out output, setup block) and those are phrased as host facts.
+- [x] Links and anchors in README/guide still resolve (e.g. `setup.md#_setit-se`).
+- [x] No file outside the scope list changed (`git status`).
 
 ## Verification
 - `grep -nP '[^\x00-\x7F]' README.md docs/guide/*.md` reviewed (allowed: arrows, ✓/❌, typographic quotes).

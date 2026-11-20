@@ -6,8 +6,8 @@ Source: user request in conversation
 ## Stages
 | NN | Stage | Executor | Status | Verification |
 |----|-------|----------|--------|--------------|
-| 01 | README + guide: English, intent wording | agent | planned | grep for non-English words/diacritics; manual read of changed lines |
-| 02 | skills/ + references/: language-neutral mode detection | agent | planned | `npm test`; grep for Polish words in shipped dirs |
+| 01 | README + guide: English, intent wording | agent | done | grep for non-English words/diacritics; manual read of changed lines |
+| 02 | skills/ + references/: language-neutral mode detection | agent | done | `npm test`; grep for Polish words in shipped dirs |
 
 ## Decisions
 - Q1: scope of point 2 includes skills (user: hardcoded Polish words in skills are a bug; skills converse in the user's language and react to intent in that language).

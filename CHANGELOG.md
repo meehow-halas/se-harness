@@ -2,6 +2,12 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [1.7.1] - 2026-11-20
+
+### Fixed
+
+- Skills detect the `autonomous` mode (and the `/<prefix>designit` conventions mode) from the user's intent in any language. The hardcoded Polish trigger words (`samodzielnie`, `bez pytań`, `autonomicznie`, `naucz się konwencji`) and Polish examples in `planit`, `doit`, `checkit`, `runit`, `shipit`, `designit`, `setit-se` and `references/session-fanout.md` are gone. The PRD fan-out line matches. Printed per-key commands for `manual` hosts still carry the user's own mode wording.
+
 ## [1.7.0] - 2026-11-19
 
 ### Added

@@ -22,11 +22,11 @@ Out: `references/codex-adapters.test.js` (a unicode fixture, not Polish wording;
 8. Patch bump in `package.json` (+ `package-lock.json` if it carries the version), CHANGELOG entry under the new version (Changed/Fixed). If an untagged entry for the current version already exists, extend it instead.
 
 ## Acceptance criteria
-- [ ] `grep -rnE '[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]|samodzielnie|bez pyta|autonomicznie' skills agents packs references brainstorm scripts src` returns only the unicode fixture in `references/codex-adapters.test.js`.
-- [ ] Each of the six mode-detection sentences describes intent in any language and still names `autonomous`.
-- [ ] `npm test` passes (actual output quoted); no test deleted or weakened.
-- [ ] Version bumped (patch) or existing untagged entry extended; CHANGELOG line present.
-- [ ] `seh install` still does not copy `*.test.js` (covered by existing tests).
+- [x] `grep -rnE '[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]|samodzielnie|bez pyta|autonomicznie' skills agents packs references brainstorm scripts src` returns only the unicode fixture in `references/codex-adapters.test.js`.
+- [x] Each of the six mode-detection sentences describes intent in any language and still names `autonomous`.
+- [x] `npm test` passes (actual output quoted); no test deleted or weakened.
+- [x] Version bumped (patch) or existing untagged entry extended; CHANGELOG line present.
+- [x] `seh install` still does not copy `*.test.js` (covered by existing tests).
 
 ## Verification
 - Run the grep above.

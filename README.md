@@ -29,9 +29,9 @@ This writes `.seh/` and the `/_setit-se` skill. Other sources (GitHub, a tag or 
 
 ### 2. Setup
 
-In the assistant, run **`/_setit-se`**. It asks one question at a time (role models per host, content language, base git branch, optional project rule, Jira or Azure DevOps), then writes `harness.config.json`, a project PRD, live agents, work skills, and rule packs in every host tree, plus `AGENTS.md`. It does not commit. The CLI does not configure the project.
+In the assistant, ask for setup (**`/_setit-se`**). It asks one question at a time (role models per host, content language, base git branch, optional project rule, Jira or Azure DevOps), then writes `harness.config.json`, a project PRD, live agents, work skills, and rule packs in every host tree, plus `AGENTS.md`. It does not commit. The CLI does not configure the project.
 
-Work skills stop and tell you to run `/_setit-se` until setup is done, and again after a package update. Details: [`/_setit-se`](docs/guide/setup.md#_setit-se).
+Work skills stop and ask you to set up first (`/_setit-se`) until setup is done, and again after a package update. Details: [`/_setit-se`](docs/guide/setup.md#_setit-se).
 
 ### 3. Work
 
@@ -82,7 +82,7 @@ Whole runs step by step, from a single `/_doit` to an overnight `/_shipit`: [Exa
 
 ## Update and uninstall
 
-After a package update, run install again from the same source, then `/_setit-se`:
+After a package update, run install again from the same source, then ask for setup (`/_setit-se`):
 
 ```bash
 npx -p se-harness@latest seh install
