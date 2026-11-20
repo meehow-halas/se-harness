@@ -167,6 +167,8 @@ Do not create or switch branches. Do not call git scripts. Do not use worktrees.
 
 Read `harness.config.json`, project `AGENTS.md` / `CLAUDE.md`, and `agents.docs`. Analyze existing code relevant to the task (read-only).
 
+A PRD section that reads `TBD — not stated by the user` is no constraint: do not report a conflict with it. A conflict is reported only against a stated non-goal or a stated scope line.
+
 ### 2. Task source
 
 **Existing task** (files, Jira or ADO): read spec, prompt, and log (read-only: `get` for tracker scalars plus the repo files). Analyze what is present and what is missing. Update under **Existing spec (what wins)** above.
@@ -198,3 +200,5 @@ When Writing the specification allows it, fill spec + prompt + first log row on 
 ## Output
 
 Report the task key, title, type, tracker used, dependencies, and that status remains the configured `todo` string.
+
+Only when a decision in this spec depended on a PRD section (Purpose, Users, Scope, Non-goals) that is `TBD`: add one line to your reply (not to the spec), in the conversation language, for example `PRD does not state <section> (TBD), so I could not check whether <X> fits; fill it in with /{{prefix}}scopeit.` No question, no stop. No line when the PRD made no difference.

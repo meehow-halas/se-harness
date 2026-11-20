@@ -24,11 +24,11 @@ npx -p https://github.com/meehow-halas/se-harness seh install
 
 npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 
-**Result:** `.seh/` and the project skill `/_setit-se` in every host `skillsDir` (today `.claude/skills/_setit-se`, `.cursor/skills/_setit-se`, `.opencode/skills/_setit-se`, and `.agents/skills/_setit-se` for Codex), plus the OpenCode command `.opencode/commands/_setit-se.md`. Setup is **not** done. Work skills (`/_planit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_grillit`) do not exist yet.
+**Result:** `.seh/` and the project skill `/_setit-se` in every host `skillsDir` (today `.claude/skills/_setit-se`, `.cursor/skills/_setit-se`, `.opencode/skills/_setit-se`, and `.agents/skills/_setit-se` for Codex), plus the OpenCode command `.opencode/commands/_setit-se.md`. Setup is **not** done. Work skills (`/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit`, `/_grillit`) do not exist yet.
 
 ## Skill names and `--prefix`
 
-Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. These docs show the default `_` names.
+Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the commands are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. These docs show the default `_` names.
 
 ```text
 npx -p se-harness seh install --prefix my-
@@ -49,11 +49,12 @@ If `harness.config.json` is missing, that is a **first run**. If the file is alr
 ### First run
 
 1. Reads the repo and states inferred choices so you can object.
-2. **Project PRD.** Uses an existing one and does not rewrite it. If none exists, gathers from the repo, asks only for facts the repo does not contain, then writes `docs/prd.md`. Config stores a one-line product plus `agents.docs`, not the PRD body.
+2. **Project PRD.** Detects only. Uses an existing one and does not rewrite it. If none exists, it asks nothing here: the last step (7) creates it through `/_scopeit`. Config stores a one-line product plus `agents.docs`, not the PRD body.
 3. **Questions** (before it writes config): for each host, then for each of the five roles, one model (suggest that host’s `modelSuggest`; see [Models per host](hosts.md#models-per-host)); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
 4. Writes `harness.config.json` (`seh.generatedFrom` = `.seh/VERSION`) and generates live agents, work skills, and rule packs from `.seh/` into **every** host tree. Each live agent’s `model:` is `agents.roles.<role>.model[<host.id>]` only.
 5. Merges project-root `AGENTS.md` and/or `CLAUDE.md` with the seh template, shows the full proposed markdown, and waits for acceptance. The result is always `AGENTS.md`. It writes `CLAUDE.md` only when `.claude/` was present and/or `CLAUDE.md` already existed (prefer a symlink to `AGENTS.md`; if the link fails, an independent file with the same body).
 6. Offers an external tracker (Jira or Azure DevOps) **once**. A decline is stored; add, change, or remove later is this same skill.
+7. **Project PRD (create)**, only when there was no PRD. Runs the `/_scopeit` create procedure (read from `.seh/skills/scopeit/SKILL.md`): purpose, users, scope and non-goals, one question at a time, each with a proposal from the repo you accept or correct (non-goals are never proposed). `skip` writes what exists; the rest is `TBD — not stated by the user`. `docs/prd.md` is always written. Then it adds `docs/prd.md` to `agents.docs` and sets the one-line `product`.
 
 ### Later run
 
@@ -63,7 +64,7 @@ If a role `model` is still a string, or the map is missing a host `id`, it finis
 
 Then **one change at a time**: show current and new value, wait for confirmation, then write. It does not overwrite keys you did not confirm. A role `model` change is one cell `(role, host)` and rewrites `model:` in **that** host’s `agentsDir` only.
 
-It does **not** touch `agents.brainstorm` (that is `/_grillit`), rewrite the project PRD, remake or re-merge `AGENTS.md`, or commit. If `.claude/` is present and `CLAUDE.md` is still missing, it creates the symlink the same way as on first run.
+It does **not** touch `agents.brainstorm` (that is `/_grillit`), create or rewrite the project PRD (that is `/_scopeit`), remake or re-merge `AGENTS.md`, or commit. If `.claude/` is present and `CLAUDE.md` is still missing, it creates the symlink the same way as on first run.
 
 ### What you can set or change
 

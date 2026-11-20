@@ -46,6 +46,7 @@ Say what you want in ordinary language. The assistant matches **intent** to a sk
 | Implementation only | `/_doit` (one task or a list) |
 | One review or update from base | `/_checkit` (one task or a list; one variant) |
 | Change parameters or tracker (Jira / Azure DevOps) | `/_setit-se` |
+| Project PRD (create or update) | `/_scopeit` |
 | Personae | `/_grillit` |
 
 After you accept a clean review, the Reviewer commits, opens the PR and sets `done`. That ends the feature. You merge the PR on GitHub; nothing else is needed from seh. The one exception is `/_shipit`: its sessions merge their own PRs.
