@@ -8,6 +8,10 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 - Skills detect the `autonomous` mode (and the `/<prefix>designit` conventions mode) from the user's intent in any language. The hardcoded Polish trigger words (`samodzielnie`, `bez pytań`, `autonomicznie`, `naucz się konwencji`) and Polish examples in `planit`, `doit`, `checkit`, `runit`, `shipit`, `designit`, `setit-se` and `references/session-fanout.md` are gone. The PRD fan-out line matches. Printed per-key commands for `manual` hosts still carry the user's own mode wording.
 
+### Removed
+
+- `/<prefix>checkit` variant `update` (merge the base branch into a task branch on request). A skill offers a user goal; `update-from-base` is only the Reviewer's tool for a merge conflict during auto-merge (`/<prefix>shipit`). A request to update a task branch alone now stops with `BLOCKED: updating a branch from base is not a seh step — merge the base into <branch> yourself, or resolve the conflict in the PR`. Without auto-merge a conflict in the open PR is the user's to resolve. `fanout-plan --variant update` is `BLOCKED: unknown variant update`; `/<prefix>runit` on a `done` task and the `/<prefix>shipit` report no longer suggest `/<prefix>checkit update`. PRD, guide and README match.
+
 ## [1.7.0] - 2026-11-19
 
 ### Added

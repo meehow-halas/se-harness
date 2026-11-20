@@ -130,16 +130,6 @@ review MT-01
 
 Why: the PR is opened only after you accept, so nothing reaches GitHub that you did not approve.
 
-### Bring a branch up to date
-
-```text
-bring MT-01 up to date with the base branch
-```
-
-*Answered by `/_checkit`.*
-
-The Reviewer merges the base branch into `MT-01` and resolves conflicts, keeping what the spec requires. It does not review, change the status, or open a new PR.
-
 ## 2. One task from start to PR
 
 `/_runit` runs the whole path in one go: Architect → Implementer (with Consultant) → Reviewer, up to three review rounds. It starts at the first missing stage. For a task that already has a spec it starts at the Implementer; for one already `implemented` it goes straight to the Reviewer.
@@ -306,7 +296,7 @@ An empty `agents.baseBranch` in `harness.config.json` turns git off. The flow an
 - no worktree: work happens in your checkout;
 - no commit, push or PR: `done` is set after acceptance, with a `CHANGELOG.md` line;
 - no parallel sessions: several tasks always run one after another, here, on every host;
-- `/_shipit` and `/_checkit update` are not available: there is nothing to merge.
+- `/_shipit` is not available: there is nothing to merge.
 
 ```text
 take MT-01 and MT-02 from start to PR, don't ask me
@@ -330,7 +320,7 @@ Every stop is one line, `BLOCKED: <what> — <what to do>`. Common ones:
 |---|---|---|
 | `run /_planit MT-01 first` | `/_doit`, `/_checkit` or `/_shipit` needs a spec | Write the spec |
 | `depends on MT-02 — rerun … after MT-02 is merged` | This task needs code that is not in the base branch yet | Merge `MT-02`'s PR, then ask again |
-| `task is already done — the PR is opened` | Nothing left to do for this task | Merge the PR, or ask to bring the branch up to date if it needs it |
+| `task is already done — the PR is opened` | Nothing left to do for this task | Merge the PR (resolve its conflict first if it has one) |
 | `MT-01 is done but its PR is not merged` (`/_shipit`) | `/_shipit` does not merge PRs it did not open in this run | Merge it, then ask to ship again |
 | `project checks fail after merging …` | Auto-merge found red tests after a conflict | Fix the branch in its worktree, merge the PR |
 | `the Designer is disabled — enable it in /_setit-se` | `/_designit` needs the Designer | Turn the Designer on in setup (`/_setit-se`) |

@@ -76,7 +76,7 @@ Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.t
 If status is already the configured **`done`** string, stop. Do not re-run Architect, Designer, Implementer, or Reviewer:
 
 ```text
-BLOCKED: task is already done — the PR is opened; use /{{prefix}}checkit update only if the branch needs it
+BLOCKED: task is already done — the PR is opened; merge it
 ```
 
 ## Pipeline
@@ -135,7 +135,7 @@ On success, status is `implemented`. Continue to stage 3 without pausing.
 
 Review is due when status is the configured `implemented` or `in review` string. If it is `in progress`, a fix round is open after a ❌: run stage 2 again.
 
-Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round: `Variant: review`.
+Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round.
 
 Pass the same `Mode:`, the task key, and `Worktree: <abs>` (when stage 2 did not run in this session, run `.seh/scripts/start-task <task>` first: it is idempotent and prints the existing `worktree:`; git disabled: no `Worktree:`). Add `Auto-merge: yes` only under the rule in *Auto-merge*; otherwise do not merge.
 
@@ -149,7 +149,7 @@ If Reviewer stops on `BLOCKED:` or `Q<n>` (including interactive acceptance), st
 
 Max **three** Reviewer rounds total for this task (count Reviewer reports in the log plus this run). The same ❌ with no code change ends the loop: report and stop.
 
-Apply the Implementer procedure inline in this session with **only** the open ❌ items. Consultant runs again only on phases those fixes belong to (Implementer’s caps). Then Reviewer again (`Variant: review`).
+Apply the Implementer procedure inline in this session with **only** the open ❌ items. Consultant runs again only on phases those fixes belong to (Implementer’s caps). Then Reviewer again.
 
 Do not start a fourth Reviewer round.
 

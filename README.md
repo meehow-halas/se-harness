@@ -44,7 +44,7 @@ Say what you want in ordinary language. The assistant matches **intent** to a sk
 | Spec only | `/_planit` |
 | UX/UI design only, before the spec | `/_designit` |
 | Implementation only | `/_doit` (one task or a list) |
-| One review or update from base | `/_checkit` (one task or a list; one variant) |
+| One review | `/_checkit` (one task or a list) |
 | Change parameters or tracker (Jira / Azure DevOps) | `/_setit-se` |
 | Project PRD (create or update) | `/_scopeit` |
 | Personae | `/_grillit` |

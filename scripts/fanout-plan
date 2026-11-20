@@ -1,5 +1,5 @@
 #!/bin/sh
-# fanout-plan --skill <planit|doit|checkit|runit|shipit> --keys <k,...> [--variant review|update]
+# fanout-plan --skill <planit|doit|checkit|runit|shipit> --keys <k,...> [--variant review]
 #   [--depends <key:dep,...>] [--done <k,...>] [--running <k,...>] [--max <n>]
 # Stateless planner for multi-key fan-out. Prints which keys may start a session now.
 # Does not start sessions, read the tracker, or touch git. When agents.baseBranch
@@ -78,8 +78,8 @@ case ",$keys," in
 esac
 
 case $variant in
-  review|update) ;;
-  *) blocked "unknown variant $variant" "use review or update" ;;
+  review) ;;
+  *) blocked "unknown variant $variant" "use review" ;;
 esac
 
 case $max in
