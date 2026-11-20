@@ -16,6 +16,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 ### Changed
 
 - `/<prefix>setit-se` no longer asks product questions in step 2 (it only detects the PRD). With no PRD, its new last step runs the `scopeit` create procedure and registers `docs/prd.md` in `agents.docs` and the `product` line.
+- `references/AGENTS.md` (the project `AGENTS.md` template) lists `/<prefix>scopeit`; setup guide lists all work skills.
 - UI stack now includes Razor or Blazor in an ASP.NET Core tree. `ux-a11y/a11y.md`, `states.md` and `touch-i18n.md` also match `**/*.razor` and `**/*.cshtml`. PRD and setup guide list the new packs.
 - `packs/ux-a11y/a11y.md`: marked as web DOM rules; React Native files follow `react-native.md`.
 

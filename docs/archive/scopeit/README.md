@@ -7,7 +7,7 @@ Planning: complete
 | NN | Etap | Wykonawca | Status | Weryfikacja |
 |----|------|-----------|--------|-------------|
 | 01 | [Skill `scopeit` i integracja z `setit-se`](01-scopeit.md) | agent | done | `node --test src/cli.test.js`, `npm test` + przegląd agenta |
-| 02 | [Domknięcie wzmianek o `scopeit`](02-mentions.md) | agent | planned | `npm test` + przegląd agenta |
+| 02 | [Domknięcie wzmianek o `scopeit`](02-mentions.md) | agent | done | `npm test` + przegląd agenta |
 
 ## Decyzje
 - Q1: nazwa `scopeit` (źródło `skills/scopeit/`, live `<prefix>scopeit`). Dopisana do wszystkich list nazw: `INVOKE_SKILLS` (`src/cli.js:216`), lista work skills, listy cleanup, `invokePrefix` i host commands w `skills/setit-se/SKILL.md`, `docs/prd.md`. (Konwencja czasownik + `it`; PRD to głównie zakres i non-goals.)

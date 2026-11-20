@@ -18,12 +18,12 @@ Pliki, które wymieniają work skille, mają wymieniać też `scopeit`. Luki wyk
 Q11–Q13 z [README](README.md).
 
 ## Kryteria akceptacji
-- [ ] `docs/guide/setup.md` wymienia `scopeit` (i `designit`) na liście work skilli.
-- [ ] `references/AGENTS.md` zawiera `scopeit` na liście „Work” i w tabeli skilli.
-- [ ] Root `README.md` ma wiersz `/_scopeit`; poza nim `git diff README.md` pusty.
-- [ ] `CHANGELOG.md [1.7.0]` wspomina zmianę `references/AGENTS.md`; `package.json` `version` = `1.7.0`.
-- [ ] Grep po nazwach work skilli nie wskazuje innego pliku z listą bez `scopeit` (wyjątki opisane w raporcie).
-- [ ] `npm test` zielone.
+- [x] `docs/guide/setup.md` wymienia `scopeit` (i `designit`) na liście work skilli.
+- [x] `references/AGENTS.md` zawiera `scopeit` na liście „Work” i w tabeli skilli.
+- [x] Root `README.md` ma wiersz `/_scopeit`; poza nim `git diff README.md` pusty.
+- [x] `CHANGELOG.md [1.7.0]` wspomina zmianę `references/AGENTS.md`; `package.json` `version` = `1.7.0`.
+- [x] Grep po nazwach work skilli nie wskazuje innego pliku z listą bez `scopeit` (wyjątki opisane w raporcie).
+- [x] `npm test` zielone.
 
 ## Weryfikacja
 - `node --test src/cli.test.js`, potem `npm test`.
