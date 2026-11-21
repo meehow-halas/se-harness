@@ -1,0 +1,5 @@
+# GitHub language stats: product is Markdown (skills/agents/packs), not the JS installer.
+*.js linguist-vendored
+scripts/** linguist-vendored
+*.md linguist-detectable
+*.md linguist-documentation=false
