@@ -141,7 +141,7 @@ Removes `.seh/` and the install-owned `/_setit-se` skill from every `skillsDir`.
 
 Base branch is `agents.baseBranch` (first setup; suggested default `dev`). Scripts do not guess `main`, `master`, or the current checkout.
 
-With git enabled, Implementer and Reviewer always work in a git worktree: `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/seh-worktrees/001-login`). `start-task` does not switch the caller’s checkout. `return-to-base` from a seh worktree removes it.
+With git enabled, Implementer and Reviewer always work in a git worktree: `$(git rev-parse --git-common-dir)/seh-worktrees/<task>` (for `~/projects/my-app` that is `~/projects/my-app/.git/seh-worktrees/001-login`). `start-task` does not switch the caller’s checkout. `return-to-base` from a seh worktree removes it. Lifecycle, when a worktree stays, and manual cleanup: [Git worktrees](worktrees.md).
 
 Allowlisted git/`gh` goes through `.seh/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`, plus `pr-state` (read-only) and `merge-pr` (used only by `/_shipit` sessions). Jira Cloud REST goes through `.seh/scripts/jira`; Azure DevOps REST through `.seh/scripts/ado`. No rebase, reset, or force. seh merges a PR only in `/_shipit`.
 
