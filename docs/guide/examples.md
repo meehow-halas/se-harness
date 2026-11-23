@@ -1,6 +1,6 @@
 # Example runs
 
-What you can ask seh to do, and what happens then. Simple runs come first. Each example gives the request, the steps in order, and why seh does it that way.
+What you can ask SE Harness to do, and what happens then. Simple runs come first. Each example gives the request, the steps in order, and why SE Harness does it that way.
 
 Contracts in full: [`docs/prd.md`](../prd.md). Setup and reference: [`README.md`](../../README.md).
 
@@ -13,13 +13,13 @@ A few words used below:
 - **Status**: where the task is: `todo` → `in progress` → `implemented` → `in review` → `done`. Every agent checks it before working, so a task is never implemented twice or reviewed before it is built.
 - **Worktree**: a separate folder with its own git branch for one task. Your own checkout is never switched, and several tasks can be worked on at once without touching each other.
 - **PR**: the pull request the Reviewer opens at the end. You merge it on GitHub, except in `/_shipit`, which merges by itself.
-- **Mode**: how much seh asks you.
+- **Mode**: how much SE Harness asks you.
   - `interactive` (default): one question at a time, and the Reviewer waits for your "accept".
   - `autonomous`: nothing is asked. Say so in the request, for example "don't ask me" or "autonomous", in any language. Agents decide, record each decision in the log, and a clean review counts as your acceptance.
 - **`BLOCKED:`**: a one-line stop. It says what stopped and what to do next. One task's stop never stops the other tasks of the same run.
 - **`Q<n>`**: a numbered question with a recommended answer (interactive mode).
-- **Skill names**: the examples use the default prefix `_` (`/_runit`). A slash name labels the skill that answers; you describe what you want and seh picks the skill. On Codex a skill is called with `$` (`$_runit`).
-- **Session**: one conversation with the assistant. In the Claude Code desktop app seh can start one session per task by itself. On other hosts it prints one ready-to-paste request per task.
+- **Skill names**: the examples use the default prefix `_` (`/_runit`). A slash name labels the skill that answers; you describe what you want and the assistant picks the skill. On Codex a skill is called with `$` (`$_runit`).
+- **Session**: one conversation with the assistant. In the Claude Code desktop app SE Harness can start one session per task by itself. On other hosts it prints one ready-to-paste request per task.
 
 ## 1. One step at a time
 
@@ -90,12 +90,12 @@ implement MT-01
 
 *Answered by `/_doit`.*
 
-1. seh checks that `MT-01` has a spec and a prompt. If not: `BLOCKED: run /_planit MT-01 first`.
+1. `/_doit` checks that `MT-01` has a spec and a prompt. If not: `BLOCKED: run /_planit MT-01 first`.
 2. It checks `depends`: every task this one depends on must already be `done`. Otherwise `MT-01` stops, because building on missing code would fail later.
 3. `start-task` creates the worktree and branch `MT-01` from the base branch. Your checkout stays as it is.
 4. The Implementer sets `in progress`, splits the work into 2–6 phases and builds them one by one.
 5. After each phase the **Consultant** checks code quality on that phase only. Serious findings (`must-fix`) are fixed before the next phase; smaller ones may be skipped with a log line.
-6. At the end the status is `implemented`. No review, no commit, no PR yet. seh suggests the review as the next step.
+6. At the end the status is `implemented`. No review, no commit, no PR yet. `/_doit` suggests the review as the next step.
 
 Why: implementation and review are different jobs. The Consultant judges *how* the code is written; the Reviewer later judges *whether it matches the spec*.
 
@@ -108,7 +108,7 @@ implement MT-01 and MT-02
 *Answered by `/_doit`.*
 
 - **Claude Code desktop app**: one new session per task, working at the same time. Each one runs exactly as "Implement one task" above. This session shows a table with a link to each one.
-- **Cursor, OpenCode, Codex**: seh prints one request per task. You paste each one into a new session.
+- **Cursor, OpenCode, Codex**: this session prints one request per task. You paste each one into a new session.
 - **Git disabled**: both run here, one after another (see section 5).
 
 If `MT-02` depends on `MT-01`, `MT-02` waits until `MT-01` is `done`, which means reviewed and accepted. So with `/_doit` alone a dependent task ends `BLOCKED`: review the first one with `/_checkit` before you implement the second.
@@ -126,7 +126,7 @@ review MT-01
 3. It reports ✅ (matches), ⚠️ (note, nothing to fix) and ❌ (misses the spec).
 4. With ❌, the status goes back to `in progress`; ask for `MT-01` to be implemented again to fix those items only.
 5. With no ❌, interactive mode waits for your "accept". Then the Reviewer writes the final review to the log, sets `done`, adds a `CHANGELOG.md` line, commits, pushes and opens the PR, and removes the worktree.
-6. You merge the PR on GitHub. The task is already `done` and needs nothing more from seh.
+6. You merge the PR on GitHub. The task is already `done` and needs nothing more from SE Harness.
 
 Why: the PR is opened only after you accept, so nothing reaches GitHub that you did not approve.
 
@@ -167,7 +167,7 @@ If the Architect finds that `MT-01` needs another task that is not `done` yet, t
 
 ## 3. Several tasks at once, you merge
 
-`/_runit` with several keys starts one session per task. Each session does what section 2 describes. seh does **not** order the tasks by dependencies here: when something needs another task first, that task stops with `BLOCKED` and you rerun it later. For automatic ordering use `/_shipit` (section 4).
+`/_runit` with several keys starts one session per task. Each session does what section 2 describes. `/_runit` does **not** order the tasks by dependencies here: when something needs another task first, that task stops with `BLOCKED` and you rerun it later. For automatic ordering use `/_shipit` (section 4).
 
 ### Three tasks, no questions
 
@@ -207,7 +207,7 @@ take MT-01 and MT-02 from start to PR, don't ask me
 
 *Answered by `/_runit`.*
 
-These hosts cannot start sessions. seh prints one ready-to-paste request per task, each keeping your wording about not asking questions; paste each one into a new session. The new sessions then also run without questions.
+These hosts cannot start sessions. `/_runit` prints one ready-to-paste request per task, each keeping your wording about not asking questions; paste each one into a new session. The new sessions then also run without questions.
 
 ## 4. Many tasks to merged, unattended
 
@@ -236,7 +236,7 @@ ship MT-01, MT-02 and MT-03, don't ask me
 
 *Answered by `/_shipit`.*
 
-1. seh checks every key: spec and prompt present, PR state (`pr-state`), dependencies.
+1. `/_shipit` checks every key: spec and prompt present, PR state (`pr-state`), dependencies.
 2. It shows the plan and asks once for a go-ahead. This is its only question. Plan:
    - first wave `MT-01`, `MT-03`;
    - `MT-02` waiting for `MT-01`;
@@ -246,7 +246,7 @@ ship MT-01, MT-02 and MT-03, don't ask me
    - If the base branch moved and the PR conflicts (often just `CHANGELOG.md`), it merges the base in, resolves the conflict, runs the project's tests, and tries again, up to 3 times.
    - Red tests after resolving stop that task with `BLOCKED`: nothing broken is merged.
 5. When `MT-01` is merged, `MT-02` starts. Its worktree is cut from the updated base, so it already contains `MT-01`'s code.
-6. At the end seh writes a run report to `docs/run-reports/<date>-shipit.md`. It holds what was merged, what stopped and why, the decisions agents took, open warnings, and the next steps for you. It shows a short table in chat and asks nothing.
+6. At the end `/_shipit` writes a run report to `docs/run-reports/<date>-shipit.md`. It holds what was merged, what stopped and why, the decisions agents took, open warnings, and the next steps for you. It shows a short table in chat and asks nothing.
 
 If `MT-01` stops with `BLOCKED`, `MT-02` is never started (`blocked` in the report). `MT-03` is not affected.
 
@@ -280,7 +280,7 @@ ship MT-01, MT-02 and MT-03, don't ask me
 
 *Answered by `/_shipit`.*
 
-seh keeps no state of its own. It reads the facts again and continues:
+`/_shipit` keeps no state of its own. It reads the facts again and continues:
 
 - already merged → skipped;
 - still running in a live session → left alone;
@@ -304,7 +304,7 @@ take MT-01 and MT-02 from start to PR, don't ask me
 
 *Answered by `/_runit`.*
 
-1. seh asks the planner (`fanout-plan`) which task goes first. The order you typed does not matter: if `MT-01` depends on `MT-02`, `MT-02` runs first.
+1. `/_runit` asks the planner (`fanout-plan`) which task goes first. The order you typed does not matter: if `MT-01` depends on `MT-02`, `MT-02` runs first.
 2. Each task runs the full path here. A task is finished at `done`, and the next one starts.
 3. If an Architect finds a new dependency on a task of this run, that task goes back in the queue and runs again after it, starting at the Implementer.
 4. A question (`Q<n>`) is asked here; after your answer the same task continues.
@@ -327,6 +327,6 @@ Every stop is one line, `BLOCKED: <what> — <what to do>`. Common ones:
 | `design … is draft — finish it in /_designit or rerun interactive` | Critical mode got a design file still in `draft` | Finish the design, or ask again in interactive mode |
 | `MT-01 already has a spec — run /_planit MT-01 <design path> …` | `/_runit` got a design file for a task whose spec was not built from it | Ask for the spec to be rebuilt from the design, then ask for the run again |
 | `conventions file write did not persist for docs/designs/ux-conventions.md` | `/_designit` "learn conventions" could not save the file (checked after a retry) | Check the folder is writable, ask again |
-| `generated files do not match the installed templates` | seh was updated but the project was not | Ask for setup again (`/_setit-se`) |
+| `generated files do not match the installed templates` | The SE Harness package was updated but the project was not | Ask for setup again (`/_setit-se`) |
 
 A question (`Q<n>`) is not a stop in interactive mode: answer it in that session and the run continues.

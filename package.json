@@ -1,7 +1,7 @@
 {
   "name": "se-harness",
   "version": "1.7.1",
-  "description": "SE harness layer",
+  "description": "SE Harness: a software engineering layer for AI coding assistants",
   "bin": {
     "seh": "./src/cli.js"
   },

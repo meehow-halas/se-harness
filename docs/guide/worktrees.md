@@ -1,6 +1,6 @@
 # Git worktrees
 
-With git enabled, each task is built and reviewed in its own git worktree: a separate folder on the task branch. Your own checkout is never switched, so you can keep working while seh runs, and several tasks can run at once.
+With git enabled, each task is built and reviewed in its own git worktree: a separate folder on the task branch. Your own checkout is never switched, so you can keep working while SE Harness builds and reviews the task, and several tasks can run at once.
 
 Git disabled (empty `agents.baseBranch`): no worktree, agents work in your checkout. See [Git and language](setup.md#git-and-language).
 
