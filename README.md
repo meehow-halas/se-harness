@@ -1,10 +1,10 @@
-# SE harness
+# SE Harness
 
-A layer for software engineering work in an AI coding assistant. Supported hosts in this version are **Claude Code**, **Cursor Agent**, **OpenCode**, and **Codex**. It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
+**SE Harness** is a software engineering (SE) layer for an AI coding assistant. Supported hosts in this version are **Claude Code**, **Cursor Agent**, **OpenCode**, and **Codex**. It ships **skills**, **agents**, **rule packs**, and a **small CLI** so a project can specify, implement (with a quality loop), and review work without each agent inventing its own process.
 
 One path: request → spec → implementation with quality feedback → review against the spec.
 
-The product and CLI binary are **`seh`**. The npm package is **`se-harness`**. Contracts in full: [`docs/prd.md`](docs/prd.md).
+The CLI binary is **`seh`**. The npm package is **`se-harness`**. Contracts in full: [`docs/prd.md`](docs/prd.md).
 
 ## Requirements
 
@@ -59,7 +59,7 @@ Say what you want in ordinary language. The assistant matches **intent** to a sk
 | Project PRD (create or update) | `/_scopeit` |
 | Personae | `/_grillit` |
 
-After you accept a clean review, the Reviewer commits, opens the PR and sets `done`. That ends the feature. You merge the PR on GitHub; nothing else is needed from seh. The one exception is `/_shipit`: its sessions merge their own PRs.
+After you accept a clean review, the Reviewer commits, opens the PR and sets `done`. That ends the feature. You merge the PR on GitHub; nothing else is needed from SE Harness. The one exception is `/_shipit`: its sessions merge their own PRs.
 
 ```mermaid
 flowchart LR
@@ -83,7 +83,7 @@ Whole runs step by step, from a single `/_doit` to an overnight `/_shipit`: [Exa
 
 ## Guide
 
-- **[Example runs](docs/guide/examples.md).** What you can ask seh to do and what happens then, simple runs first.
+- **[Example runs](docs/guide/examples.md).** What you can ask SE Harness to do and what happens then, simple runs first.
 - **[Install and setup](docs/guide/setup.md).** Install sources and `--prefix`, everything `/_setit-se` asks and changes, package updates, uninstall, rule packs, git worktrees and language.
 - **[Git worktrees](docs/guide/worktrees.md).** Where each task's worktree lives, when it is created and removed, when it stays, and manual cleanup.
 - **[Skills, agents, and modes](docs/guide/workflow.md).** What each skill does, the five agents (Architect, Designer, Implementer, Consultant, Reviewer), and the `interactive` / `critical` / `autonomous` modes.

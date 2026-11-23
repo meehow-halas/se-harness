@@ -10,8 +10,8 @@ Which tracker is active is in `harness.config.json`. If `agents.tracker` is pres
 
 Jira and Azure DevOps run in one of two modes, chosen in `/_setit-se` right after you pick the tracker (`agents.tracker.readOnly`):
 
-- **Full write** (default, `readOnly: false`): seh creates items, writes spec, prompt, and log on them, and moves statuses. No repo files for tasks.
-- **Read-only** (`readOnly: true`): seh only reads the tracker, e.g. so you can point the Architect at an existing item. It never creates, edits, comments, transitions, or links. Spec, prompt, log, and status live in repo files, as with the files tracker, named by the item key when the task exists on the tracker.
+- **Full write** (default, `readOnly: false`): SE Harness creates items, writes spec, prompt, and log on them, and moves statuses. No repo files for tasks.
+- **Read-only** (`readOnly: true`): SE Harness only reads the tracker, e.g. so you can point the Architect at an existing item. It never creates, edits, comments, transitions, or links. Spec, prompt, log, and status live in repo files, as with the files tracker, named by the item key when the task exists on the tracker.
 
 Switching does **not** migrate. Connect Jira or Azure DevOps → new work is tickets / work items only; leftover `docs/features` (etc.) are ignored. Remove the tracker → new work is files only; existing tickets are not copied into files.
 
@@ -73,7 +73,7 @@ Atlassian does not state whether all granular scopes are required or any one suf
 
 Project permissions the user also needs in the Jira project: Browse projects (without it the project looks missing even when the key is right); Create issues and Edit issues; Transition issues; Add comments; Link issues (full write only).
 
-**Add** (no tracker yet, or you accept the first-run offer). First: read-only mode, yes or no (see [One active tracker](#one-active-tracker)). Then, either way, one question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.seh/scripts/jira meta` lists that project’s statuses, issue types, and fields. Read-only: map only `blocker` (if you use `depends`) and `fetchFields`; status moves are writes, so nothing else is mapped. Full write: map each seh step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
+**Add** (no tracker yet, or you accept the first-run offer). First: read-only mode, yes or no (see [One active tracker](#one-active-tracker)). Then, either way, one question at a time: URL, user, project key. Put the token in `harness.credentials.local.json`. Setup writes those keys, then `.seh/scripts/jira meta` lists that project’s statuses, issue types, and fields. Read-only: map only `blocker` (if you use `depends`) and `fetchFields`; status moves are writes, so nothing else is mapped. Full write: map each workflow step `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a status from that list, or skip = `null`. Map `blocker` if you use `depends`. Map where spec and prompt live (two custom fields, description, or comments) and issue types for `feature` and `bug`. Agents transition only to those exact strings; they do not invent Jira status names.
 
 `null` means that step does not call a Jira transition. There is no file fallback. If a mapped status is missing from that issue type’s workflow, work stops — fix the mapping in `/_setit-se`.
 
@@ -132,7 +132,7 @@ Auth: PAT from `adoPat`, Basic with empty user, passed to curl through a temp co
 
 ## Statuses
 
-The five seh steps are the same on every tracker. On files, the labels are the strings in `agents.statuses`. On Jira and Azure DevOps, each step uses the mapped `agents.tracker.statuses` name (or is skipped when that key is `null`).
+The five workflow steps are the same on every tracker. On files, the labels are the strings in `agents.statuses`. On Jira and Azure DevOps, each step uses the mapped `agents.tracker.statuses` name (or is skipped when that key is `null`).
 
 ```text
 todo → in progress → implemented → in review → done

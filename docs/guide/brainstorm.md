@@ -2,7 +2,7 @@
 
 [← README](../../README.md) · Contracts in full: [`docs/prd.md`](../prd.md)
 
-Optional extra viewpoints while specifying. Members are markdown **personae**, not seh roles and not `@`-targets. The skill orchestrates; it does not role-play.
+Optional extra viewpoints while specifying. Members are markdown **personae**, not SE Harness roles and not `@`-targets. The skill orchestrates; it does not role-play.
 
 There is still a **facilitator**, but it is not a sixth product agent: no model in `agents.roles`, no `/_setit-se` question. It is an isolated collector. Implementer, Consultant, and Reviewer never run a round. `/_setit-se` does not edit members.
 
