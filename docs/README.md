@@ -12,7 +12,7 @@ Five kinds of things live here. Only the PRD is normative.
 
 | Path | What |
 |------|------|
-| [guide/](guide/) | Reference split out of the root `README.md`: setup, skills and agents, trackers, brainstorm, hosts, example runs. Describes the PRD; the PRD wins. |
+| [guide/](guide/) | Reference split out of the root `README.md`: setup, git worktrees, skills and agents, trackers, brainstorm, hosts, example runs. Describes the PRD; the PRD wins. |
 
 ## Active work
 
