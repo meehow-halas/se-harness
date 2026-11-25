@@ -11,6 +11,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 - `--user-request "<words>"` on the `jira` / `ado` write verbs and `get`: the user's explicit request runs a disabled tracker action for that call (`get` then reads every part from the tracker). Empty words are `BLOCKED:`. PRD and `references/` state the rule.
 - `jira get` / `ado get` accept the basename of a task whose spec has `tracker:`.
 - `--user-request "<words>"` on `start-task`, `commit-task`, `push-task` and `open-pr`: the user's explicit request runs a disabled git operation for that call. Empty words are `BLOCKED:`. It does not override git disabled, and `merge-pr` takes no flag. PRD and `references/` state the rule.
+- `/<prefix>setit-se` asks which git operations seh runs (`agents.git`) in one question, and whether to write change entries (`agents.reportChange`, proposal from project-root `CHANGELOG.md`); a later run asks each once when the key is missing.
 
 ### Changed
 
@@ -19,6 +20,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 - `agents.reportChange` is asked by `/<prefix>setit-se`. `done` means accepted and every enabled git operation finished; `/<prefix>shipit` needs all four.
 - `depends` gate: a tracker key that no local spec holds takes its status from the tracker even with `status` OFF. A disabled `worktree` operation means sequential runs, like git disabled.
 - **Breaking.** Git scripts honour `agents.git`: a disabled operation makes `start-task` (`worktree`; prints the launch checkout), `commit-task`, `push-task`, `open-pr` and `merge-pr` (`pr`) answer `UNCHANGED` + `git: <op> disabled` with no git or `gh` write. `fanout-plan` plans sequentially with `worktree` off. With `commit` off, `return-to-base` keeps a dirty worktree.
+- **Breaking.** `/<prefix>setit-se` replaces the tracker read-only question with one question for the five write actions (none preselected) after `meta` succeeds, asks grouped mappings only for enabled actions, and migrates `readOnly` once to `agents.tracker.write`.
 
 ### Removed
 

@@ -81,6 +81,40 @@ Change any role models for <host label>? Reply skip or no to keep the table as s
 
 ---
 
+## Setup permission questions
+
+First run and later run use the same two questions.
+
+### Changelog question
+
+`agents.reportChange` (boolean): whether agents write change entries to project-root `CHANGELOG.md`. One yes / no question. State the proposal and why: **yes** when project-root `CHANGELOG.md` exists, **no** when it does not. Check that file in this project; do not take it from another directory. The user answers; never write the proposal without an answer. Yes → `true`. No → `false`: agents write no change entries (the project may still keep a changelog by hand).
+
+### Git operations question
+
+`agents.git`: which git operations seh runs on its own. One question with this table, answered in one reply:
+
+| Op | seh does automatically | Needs | When off |
+|----|------------------------|-------|----------|
+| `worktree` | creates the task branch and worktree | — | work happens in the launch checkout, sequentially |
+| `commit` | commits accepted changes | `worktree` | changes stay uncommitted |
+| `push` | pushes the task branch | `commit` | the commit stays local |
+| `pr` | opens the pull request (and merges it where auto-merge applies) | `push` | the pushed branch has no PR |
+
+Explain in the question:
+
+- Chain: `pr` ⇒ `push` ⇒ `commit` ⇒ `worktree`. An operation runs only with every one before it.
+- Off means **not automatically**: seh still runs that operation when the user explicitly asks for it.
+- `/{{prefix}}shipit` needs all four on.
+- Reply with the operations to turn on, for example `all`, `none`, or `worktree, commit`.
+
+Nothing is preselected. An empty or unclear reply: ask once more for the unclear part only.
+
+A reply that breaks the chain (for example `worktree, push`): in the same turn, state the corrected set with the missing earlier operations added (`worktree, commit, push`) and ask the user to confirm it or to reply with another set. Do not write a set that breaks the chain.
+
+Write all four booleans: `agents.git` = `{ "worktree", "commit", "push", "pr" }`.
+
+---
+
 ## First run
 
 `harness.config.json` is missing.
@@ -110,11 +144,15 @@ Do not write `harness.config.json` or generate live files until these are confir
 
 **`agents.baseBranch`.** The git branch `.seh/scripts/` cut task branches from, open PRs against, merge into a task branch on an auto-merge conflict, and return to after the PR is opened. Ask once. Suggested default is `dev`. If the repo already names a default branch, state that inference so the user can object. **Detect git first.** Git counts as connected only when both hold: `git rev-parse --is-inside-work-tree` succeeds and `git remote get-url origin` succeeds. Not connected: do not ask; leave `agents.baseBranch` empty, say what is missing (no repo, or no `origin`) and that adding it and running `/{{prefix}}setit-se` again enables git. Never accept a branch name the user types while git is not detected. Connected: ask as above; the user may answer “no git” (or decline to name a branch), which leaves it empty. Empty is the only switch for git-disabled mode (git disabled: no worktrees, branches, commits, PRs; tasks run sequentially); the scripts do not guess a base. Do not write this value into generated agent markdown.
 
-**Project rule (optional).** One question, after models, content language, and base branch. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. Store it on the roles (`rules`; reviewer `checklist` when it is a review constraint). **Skip is the default:** empty is fine. Do not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
+**Git operations.** Right after the base branch, only when git is connected and `agents.baseBranch` is set: ask the **Git operations question**. Otherwise do not ask.
+
+**Changelog.** Ask the **Changelog question** once.
+
+**Project rule (optional).** One question, after models, content language, base branch, git operations, and changelog. Say what it is: a standing instruction for the agents on this project, beyond the generated framework packs — for example “never edit the legacy billing module”, “PRs always target `develop`”, “tests only through pytest”. Store it on the roles (`rules`; reviewer `checklist` when it is a review constraint). **Skip is the default:** empty is fine. Do not ask for a list or a second rule. If the user already stated such a rule earlier in this conversation, record it and do not ask again.
 
 **Packs.** After detection (below), state which packs you will generate. Honour `packsIgnored` if the user names packs to skip.
 
-Start the live config from `.seh/references/harness.config.json`. Fill answers. Leave `agents.statuses` at the skeleton defaults unless the user confirmed other strings. Leave `jiraOffer` `null` until the tracker offer. Omit `agents.tracker`. Set `seh.generatedFrom` to the trimmed contents of `.seh/VERSION`. Do not put credentials in config.
+Start the live config from `.seh/references/harness.config.json`. Fill answers, including `agents.reportChange` and, when asked, `agents.git`. When `agents.baseBranch` is empty, remove `agents.git` from the live config: it was not asked, and a later connect asks it. Leave `agents.statuses` at the skeleton defaults unless the user confirmed other strings. Leave `jiraOffer` `null` until the tracker offer. Omit `agents.tracker`. Set `seh.generatedFrom` to the trimmed contents of `.seh/VERSION`. Do not put credentials in config.
 
 ### 4. Generate from `.seh/`
 
@@ -188,13 +226,23 @@ If any of these is missing, regenerate live agents, work skills, and host comman
 
 **Status migration (once, on a later run).** If `agents.statuses` has the key `code review` and no `implemented` key, the flow changed. Rename it to `implemented` (key and value) in config and tell the user. Do not edit spec files. List every spec under `docs/features/` (or the mapped tracker) whose `status:` is `code review`, and tell the user to set it to `implemented`, or to `in review` if a review is running. `in review` stays valid.
 
+**Tracker write migration (once, on a later run).** If `agents.tracker` exists and has no `write`, the config predates 2.0. `readOnly: true` → all five actions (`create`, `spec`, `prompt`, `log`, `status`) `false`. `readOnly: false` or no `readOnly` → all five `true`. Write `agents.tracker.write`, delete `readOnly`, and show the user the resulting table. Do not ask which actions to enable here. An action turned on this way that still lacks a mapping asks for it as in **Tracker** → **Mappings**. A config that has `write` is already migrated: do not run this again; delete a leftover `readOnly` and keep `write`.
+
+**Missing keys (once each, on a later run).**
+
+- `agents.reportChange` missing → ask the **Changelog question** and write the answer. Until answered it counts as `true`.
+- `agents.baseBranch` set, git connected (see **`agents.baseBranch`** under **First run**), and `agents.git` missing → ask the **Git operations question** and write the answer. Until answered all four count as `true`.
+
 Then **one change at a time**. Show current and new value, wait for confirmation, then write. Do not overwrite keys the user did not confirm.
 
 | Change | Effect |
 |--------|--------|
 | Role `model` cell `(role, host)` | Rewrite that live agent’s **frontmatter** `model:` only, in **that** host’s `agentsDir`. If the user names a role without a host, ask which host. Do not regenerate the body. Do not rewrite other hosts. |
 | `packsIgnored` or detected frameworks | Regenerate rule packs. |
-| `agents.baseBranch` | `harness.config.json` only. **Connect** (empty → branch): only when git is detected (repo + `origin`); otherwise refuse and say what is missing. **Disconnect** (branch → empty): always allowed, including when git is no longer detected; confirm that worktrees, commits and PRs stop and runs become sequential. If the value is set but git is no longer detected, say so and offer to disconnect. When the value is empty and git is detected, offer to connect only if the user names git or the base branch; do not nag on other runs. Existing task branches and worktrees are left alone either way. |
+| `agents.baseBranch` | `harness.config.json` only. **Connect** (empty → branch): only when git is detected (repo + `origin`); otherwise refuse and say what is missing. **Disconnect** (branch → empty): always allowed, including when git is no longer detected; confirm that worktrees, commits and PRs stop and runs become sequential. If the value is set but git is no longer detected, say so and offer to disconnect. After a connect, if `agents.git` is missing, ask the **Git operations question** next. Disconnect keeps `agents.git`; it is ignored while git is disabled. When the value is empty and git is detected, offer to connect only if the user names git or the base branch; do not nag on other runs. Existing task branches and worktrees are left alone either way. |
+| `agents.reportChange` | **Changelog question**, showing the current value. Config only. |
+| `agents.git` | Only when git is connected and `agents.baseBranch` is set: **Git operations question**, showing the current set. Config only. |
+| Tracker write actions (`agents.tracker.write`) | See **Tracker** → **Change**. Config only. |
 | Statuses, tracker maps, `fetchFields`, content language, product line | Config only. Do **not** regenerate agent bodies. |
 
 - Do not touch `agents.brainstorm` (that is `/{{prefix}}grillit`).
@@ -222,35 +270,47 @@ Do not offer Jira and ADO together after one is chosen. If a tracker is already 
 
 Credentials live in the project-local ignored file `harness.credentials.local.json` (`seh install` already ignores that filename). Never paste a token or PAT in chat. Never write a real token into `harness.config.json`. Keys: Jira `{"jiraToken":"…"}`, ADO `{"adoPat":"…"}`. Only the active kind's key is required; on connect, create the file with the active kind's key set to `""` only when it is missing; if it exists, keep other keys of that kind and do not overwrite an existing token. When switching kind, drop the old kind's key from the file (and `agents.tracker`) as part of Remove.
 
-**Read-only mode (one question, right after the user picks Jira or Azure DevOps, before any connection question).** Default: no (full write). Explain both answers in the question:
-
-- **No** = full <Jira|Azure DevOps> support: seh creates items, writes spec, prompt, and log on them, and moves statuses. No repo files for tasks.
-- **Yes** = <Jira|Azure DevOps> is only read (e.g. to point the Architect at an existing item). seh never changes it; spec, prompt, log, and status live in repo files.
-
-Write `readOnly: false` or `readOnly: true`. Whatever the answer, continue with the connection keys and **Token step** of the chosen kind. There is no other storage question.
-
-Read-only is enforced by seh, not by the token. Never tell the user to remove tracker permissions or use a different token.
-
 **Token step (Add and token rotation on Change).** After the connection keys are in `agents.tracker` (Jira: `url`, `user`, `projectKey`; ADO: `organizationUrl`, `project`; write to `harness.config.json` as needed so `meta` can run):
 
 1. If `harness.credentials.local.json` is missing at the project root, create it with the empty key for the active kind (`{"jiraToken":""}` or `{"adoPat":""}`) only. If it exists, do not overwrite an existing token — show the path and ask the user to set or update the key locally.
 2. Tell the user to paste the token / PAT in that file (never in chat). One question: confirm when it is in the file.
 3. Run `.seh/scripts/jira meta` or `.seh/scripts/ado meta`. On `OK`, briefly confirm the connection and continue. On `BLOCKED:`, show the full `BLOCKED:` line, explain what to fix (token/PAT, URL, user, project, or access), and loop: user fixes token, `organizationUrl`, or `project` (or Jira url/user/key) → confirm again → `meta` until `OK` or they stop.
-4. Then fetch mapping data from the successful `meta` output (states/statuses, types, fields) and continue mapping below.
+4. Then fetch mapping data from the successful `meta` output (states/statuses, types, fields). On **Add**, continue with the **Tracker actions question**, then **Mappings**.
 
-**Mapping after `meta` OK.**
+**Tracker actions question (Add, right after `meta` `OK`).** One question with all five actions, answered in one reply. Show reading as always on.
 
-- **Read-only (`readOnly: true`):** ask `blocker` only (a numbered list of statuses from `meta`, or `null` = no tracker-key dependencies), then `fetchFields`. Do **not** ask status keys `todo`…`done`, `fields`, or `issueTypes` / `workItemTypes`: those serve writes. Leave their skeleton values; seh ignores them.
-- **Full write (`readOnly: false`):** the full mapping in the table below: status keys, `blocker`, spec/prompt/log `fields`, types, `fetchFields`.
+| Action | ON: seh does it automatically | OFF: where it is kept |
+|--------|-------------------------------|-----------------------|
+| read (always on) | reads items | — |
+| `create` | creates and links items | files basename; binding by hand is allowed |
+| `spec` | writes the spec to the item | `docs/features/<basename>.feature.md` |
+| `prompt` | writes the prompt to the item | `docs/prompt/<basename>.prompt.md` |
+| `log` | writes the log and comments to the item | `docs/feature-log/<basename>.log.md` |
+| `status` | moves the item's status | `status:` in local spec frontmatter |
+
+Explain in the question: off means **not automatically** — seh still does it when the user explicitly asks for it. Reply with the actions to turn on, for example `all`, `none`, or `spec, status`.
+
+Nothing is preselected: no recommendation, and an empty or unclear reply is not an answer (ask once more for the unclear part only). Write all five booleans to `agents.tracker.write`.
+
+These switches are applied by seh, not by the token. Never tell the user to remove tracker permissions or use a different token.
+
+**Mappings.** Only for enabled actions, one question per group, using the real lists from `meta`. Never one question per action or per status key.
+
+1. `status` ON → one question: a numbered list of the tracker's statuses / states; the user maps all of `todo`, `inProgress`, `codeReview`, `inReview`, `done` in one reply (a number each, or skip = `null`). ADO: the `status.N` lines of `ado meta` are the union over all work item types, so warn that a state missing on a given type makes `ado transition` `BLOCKED:` for that type.
+2. Any of `spec`, `prompt`, `log` ON → one question mapping `fields.<action>` for each enabled one. Jira: a custom field, `description`, or `comment`. ADO: a field `referenceName`, `description`, `comment`, or `history`.
+3. `create` ON → one question: `feature` and `bug` types (`issueTypes` on Jira; `workItemTypes` on ADO, exact names from the `issueType.N` lines of `ado meta`, which does not need them set first).
+4. On **Add** always → one question: `blocker` (a numbered list of statuses, or `null` = no tracker-key dependencies) and `fetchFields` (field names or refs; may be empty).
+
+Maps of disabled actions stay at their skeleton values; seh does not use them. A reply that leaves part of a group unclear: one follow-up for that part only.
 
 | Intent | What happens |
 |--------|----------------|
-| **Add — Jira** (no tracker yet, user chooses Jira) | **Read-only mode** question. Then ask URL, user, project key (one question at a time). Write those keys, `kind: "jira"`, and `readOnly` into `agents.tracker`, then **Token step** (`jiraToken`). Read-only: `blocker` + `fetchFields` only and done. Full write: one question at a time, map **each** key `todo`, `inProgress`, `codeReview`, `inReview`, `done` to a Jira status from that project’s real list (numbered), or skip = `null`. Map `blocker` if they use dependencies. Map where spec and prompt live (two custom fields, description, or comments) and map log if used. Issue types for `feature` and `bug`. Write `agents.tracker` from `.seh/references/harness.tracker.json` plus answers (`kind`, `readOnly`, `statuses`, `issueTypes`, `fields`, `fetchFields` as needed, `url`, `user`, `projectKey`). Agents must not pick a Jira status that is not in this map. Do not compose `curl`. |
-| **Add — Azure DevOps** (no tracker yet, user chooses ADO) | **Read-only mode** question. Then ask `organizationUrl` (e.g. `https://dev.azure.com/{org}`, no trailing slash), then `project` (name or GUID), one question at a time; no PAT in chat. Write those keys, `kind: "ado"`, and `readOnly` into `agents.tracker` (start from `.seh/references/harness.tracker.ado.json`), then **Token step** (`adoPat`, initially `""`). Read-only: `blocker` + `fetchFields` only and done. Full write: map statuses: each of `todo`, `inProgress`, `codeReview`, `inReview`, `done` to an exact state name from the `ado meta` output (`status.N` lines, numbered; the list is the union over all work item types, so warn that a state missing on a given type makes `ado transition` `BLOCKED:` for that type), or skip = `null`; map `blocker` if they use dependencies. Map `workItemTypes.feature` and `.bug` to exact type names from the `issueType.N` lines of `ado meta` (`meta` does not need them set first). Map `fields.spec`, `fields.prompt`, `fields.log` to a field `referenceName`, `description`, `comment`, or `history` (log optional). `fetchFields` as needed (field refs). Agents must not pick a state that is not in this map. Do not use `az devops`, `az boards`, MCP, or raw `curl`. |
-| **Change** (tracker already there) | One question: change integration or remove it. Change = same mapping questions for the fields they named. One extra option: **toggle read-only**. read-only → full write: set `readOnly: false`, then ask exactly the maps still missing for full write (status keys `todo`…`done`, `issueTypes` / `workItemTypes`, `fields`). "Missing" = still at the skeleton value (status `null`, type or field `""`); skip any map that already holds values (earlier full write → read-only → full write); no migration of files or tickets. Full write → read-only: set `readOnly: true`, leave existing maps untouched, ask `blocker` only if it is missing. If they rotate the token / PAT, change `organizationUrl` / `project` / Jira connection keys, or you need fresh metadata, run **Token step** and `meta` once for the active kind; do not re-run `meta` for every small mapping edit. |
+| **Add — Jira** (no tracker yet, user chooses Jira) | Ask URL, user, project key (one question at a time). Start `agents.tracker` from `.seh/references/harness.tracker.json` (`kind: "jira"`) with those keys; its all-`false` `write` block is a placeholder until the actions question is answered, never a proposal or an answer. Then **Token step** (`jiraToken`), **Tracker actions question**, **Mappings**. Agents must not pick a Jira status that is not in this map. Do not compose `curl`. |
+| **Add — Azure DevOps** (no tracker yet, user chooses ADO) | Ask `organizationUrl` (e.g. `https://dev.azure.com/{org}`, no trailing slash), then `project` (name or GUID), one question at a time; no PAT in chat. Start `agents.tracker` from `.seh/references/harness.tracker.ado.json` (`kind: "ado"`) with those keys; its all-`false` `write` block is a placeholder until the actions question is answered, never a proposal or an answer. Then **Token step** (`adoPat`, initially `""`), **Tracker actions question**, **Mappings**. Agents must not pick a state that is not in this map. Do not use `az devops`, `az boards`, MCP, or raw `curl`. |
+| **Change** (tracker already there) | One question: change integration or remove it. Change = the **Mappings** questions for the fields they named, or **toggle actions**: show the five actions with their current ON / OFF and the off-means-not-automatically line, and take one reply (the set to turn on, or changes such as `+log -create`). Write `agents.tracker.write`. A newly enabled action asks only for its maps still at skeleton values (status `null`, type or field `""`), grouped as in **Mappings**; skip maps that already hold values. Ask `blocker` only if it is missing. Disabling an action leaves its maps in config. The toggle copies no files or tickets. If they rotate the token / PAT, change `organizationUrl` / `project` / Jira connection keys, or you need fresh metadata, run **Token step** and `meta` once for the active kind; do not re-run `meta` for every small mapping edit. |
 | **Remove** | Confirm, drop `agents.tracker` from config, delete or clear the active kind's key (`jiraToken` or `adoPat`) in `harness.credentials.local.json`. Project is files-only again. `jiraOffer` does not block a later **Add**. |
 
-`null` on a tracker status means that step does not transition. There is no file fallback and no invented name.
+`null` on a tracker status means that step does not transition. Never invent a status name.
 
 After a tracker change, write the mapping into `harness.config.json`. Do not regenerate agent markdown for `fetchFields` or the task key pattern.
 
