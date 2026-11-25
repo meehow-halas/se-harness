@@ -53,7 +53,7 @@ For `manual` (other hosts, Codex included: it has no host API to start a session
 |---|---|---|
 | `/{{prefix}}planit` | launch checkout, `use_worktree: false` | Architect is spec-only, no git. Parallel specs must write disjoint files. |
 | `/{{prefix}}doit` | worktree from `.seh/scripts/start-task <KEY>` run by the parent; child starts in the launch checkout | Parent runs `start-task` before spawning. Prompt carries `Worktree: <abs>`. The child cds there. |
-| `/{{prefix}}checkit` review or update | as `/{{prefix}}doit` | Safe in parallel. |
+| `/{{prefix}}checkit` review or update | as `/{{prefix}}doit`, but the parent runs `start-task <KEY> --existing` | Safe in parallel. A `BLOCKED:` key is not spawned. |
 | `/{{prefix}}runit` | Architect in launch checkout; Implementer and Reviewer in the worktree | One key per session by definition. |
 | `/{{prefix}}shipit` | as `/{{prefix}}runit` (child runs `/{{prefix}}runit <KEY>`); no `Worktree:` line | Child prompt carries `Auto-merge: yes`. Parent never runs `start-task`. |
 

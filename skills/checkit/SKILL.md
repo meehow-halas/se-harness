@@ -57,7 +57,7 @@ This skill does not update a task branch from base. Merging the base into a task
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git and the `worktree` operation enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit`, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning; do not launch Reviewer here. Two or more keys with git or `worktree` disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `.seh/references/session-fanout.md` section 2), never in the order given. Two or more keys, git and `worktree` enabled, and `sessionSpawn` is `manual`: print the commands per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git and the `worktree` operation enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `checkit`, one child session per key. The parent runs `.seh/scripts/start-task <task> --existing` per key before spawning (a `BLOCKED:` key is not spawned); do not launch Reviewer here. Two or more keys with git or `worktree` disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `.seh/references/session-fanout.md` section 2), never in the order given. Two or more keys, git and `worktree` enabled, and `sessionSpawn` is `manual`: print the commands per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
 
 ## Resolve the tasks
 
@@ -101,7 +101,7 @@ For each resolved task:
 
 **`worktree` disabled** (`agents.git` present and `agents.git.worktree` not `true`): handle it as git disabled — no fan-out, no `start-task`, no `Worktree:` line, several keys one after another in the launch checkout in dependency order.
 
-1. Run `.seh/scripts/start-task <task>` from the launch checkout if a worktree is not already printed for it (git or `worktree` disabled: skip). Copy `worktree:`. Do not compose `git`.
+1. Run `.seh/scripts/start-task <task> --existing` from the launch checkout if a worktree is not already printed for it (git or `worktree` disabled: skip). Always pass `--existing`: review needs work that already exists, so no new branch is created; on `BLOCKED:` stop that task. Copy `worktree:`. Do not compose `git`.
 2. Launch Reviewer with at least:
    - `Mode: <mode>`
    - Task key

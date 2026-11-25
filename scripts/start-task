@@ -1,6 +1,7 @@
 #!/bin/sh
-# start-task <task> [--user-request <words>]
+# start-task <task> [--existing] [--user-request <words>]
 # Create or reuse a git worktree for the task branch. Does not switch the caller.
+# --existing (review): only reuse or attach; BLOCKED instead of a new branch.
 # Reads project-root harness.config.json. Copies this task's file-tracker files
 # into the worktree, then removes uncommitted copies of those paths from launch.
 # No commit, no push, no uncommit.
@@ -12,11 +13,16 @@
 
 git_gate "worktree: $(project_root)"
 require_git
-usage='usage: start-task <task> [--user-request <words>]'
+usage='usage: start-task <task> [--existing] [--user-request <words>]'
 task=
 user_request=
+existing_only=
 while [ $# -gt 0 ]; do
   case $1 in
+    --existing)
+      existing_only=yes
+      shift
+      ;;
     --user-request)
       require_user_request "${2-}"
       user_request=$2
@@ -84,6 +90,10 @@ if [ "$branch" = "$task" ] && remote_branch_exists "$task"; then
     blocked "could not add worktree from origin/$task ($out)" "fetch origin/$task, then retry start-task"
   fi
   finish ok "branch: $task" "base: $base" "created: no" "worktree: $wt"
+fi
+
+if [ -n "$existing_only" ]; then
+  blocked "no worktree or branch holds the work of $task" "if it is uncommitted in $launch, turn the worktree operation off in /{{prefix}}setit-se and rerun; if it is elsewhere, bring it to branch $task or fetch origin/$task"
 fi
 
 # Cut from the remote base when there is one: a local base can be behind
