@@ -27,11 +27,11 @@ Exactly five product agents. Live copies live under every `agentsDir` in `.seh/r
 
 | Role | Job |
 |------|-----|
-| Architect | Spec + prompt + first log row on the active tracker. Status stays at the configured `todo` string. Read-only on application code. No git writes. |
+| Architect | Spec + prompt + first log row, each in its store (tracker write actions below). Status stays at the configured `todo` string. Read-only on application code. No git writes. |
 | Designer | Only for a spec with `ui: true` and `agents.designer.enabled: true`. Adds the **UX/UI decisions** section and `UX:` acceptance criteria to the spec, and log rows `D<n>`. Read-only on application code. No git writes. Status unchanged. Does not change requirements or Architect decisions. |
 | Implementer | Implements the spec (`feature` or `bug`). Own phase plan. Runs inline in the session that invoked `/{{prefix}}doit` or `/{{prefix}}runit`, not as a subagent. After each phase, that session launches Consultant. Calls `.seh/scripts/start-task` before work (git worktree; does not switch the user’s checkout). |
 | Consultant | Code quality on the phase diff. Does not edit product code. Does not talk to the user. Does not judge spec compliance. Not a user-facing skill. |
-| Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: record the change (`record-change`), then git allowlist scripts. Does not merge the PR, except in a `/{{prefix}}shipit` child launched with `Auto-merge: yes` (then via `merge-pr`). |
+| Reviewer | Spec compliance (requirements + acceptance criteria) only. After acceptance: record the change (`record-change`), then the enabled git operations; reports what a disabled one left to the user. Does not merge the PR, except in a `/{{prefix}}shipit` child launched with `Auto-merge: yes` (then via `merge-pr`). |
 
 Models and optional role `rules` (reviewer may have `checklist`) come from `agents.roles` in `harness.config.json`. Each role’s `model` is keyed by host `id`. Brainstorm turns use `agents.brainstorm.model` for this host the same way.
 
@@ -43,9 +43,9 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | `/{{prefix}}planit` | Architect once, then the Designer when the spec has `ui: true` and `agents.designer.enabled` is `true`. Offer the next step; do not start it. Optional input: a design file from `/{{prefix}}designit` (then no Designer stage). |
 | `/{{prefix}}designit` | Designer once, UX/UI only, before the spec: writes `docs/designs/<slug>.design.md`. No tracker, no spec, no git. Needs the Designer enabled. Offers `/{{prefix}}planit` with the file. Intent "learn conventions": writes `docs/designs/ux-conventions.md` (the project's UX rules, read by the Designer on later runs) and offers nothing after it. |
 | `/{{prefix}}doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
-| `/{{prefix}}checkit` | One Reviewer round per named task: review against the spec. An accepted review ends with commit, PR and `done`. |
+| `/{{prefix}}checkit` | One Reviewer round per named task: review against the spec. An accepted review ends with the enabled git operations and `done`. |
 | `/{{prefix}}runit` | Architect → (Designer) → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session; several keys fan out (`.seh/references/session-fanout.md`), with no dependency ordering; git disabled: run in this session in dependency order. |
-| `/{{prefix}}shipit` | Many specced tasks: one `/{{prefix}}runit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. |
+| `/{{prefix}}shipit` | Many specced tasks: one `/{{prefix}}runit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. Needs all four git operations. |
 | `/{{prefix}}scopeit` | Creates or updates the project PRD (purpose, users, scope, non-goals). Never writes config. |
 | `/{{prefix}}grillit` | Members, app context, and a consult round. |
 
@@ -53,7 +53,17 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 
 One tracker connection: files-only when `agents.tracker` is absent, or Jira / Azure DevOps (`agents.tracker.kind`: `jira` or `ado`) when it is present. Do not mirror the same artifact text in two places.
 
-Which mode is active is in `harness.config.json`. If `agents.tracker` is present, the tracker (`kind` `jira`: issue key; `kind` `ado`: numeric work item id) holds the key, workflow, and reads via `.seh/scripts/jira` (Jira Cloud REST) or `.seh/scripts/ado` (Azure DevOps WIT REST) by `kind` — **`.seh/scripts/ado` (Recommended)** for ADO over raw REST / `curl` / `az boards`; not MCP. Unless `agents.tracker.readOnly` is `true`, spec, prompt, log, and status live only on the issue / work item; no repo files for them. Do not invent Jira or ADO status names. When `agents.tracker.readOnly` is `true`, the tracker is read-only: agents `get` items but never create, set, comment, transition, or link; spec, prompt, log, and status live in the repo files under the task key (or a files basename for a task with no tracker item). Credentials are in a local ignored file, never in git and never in chat.
+Which mode is active is in `harness.config.json`. If `agents.tracker` is present, the tracker (`kind` `jira`: issue key; `kind` `ado`: numeric work item id) is read via `.seh/scripts/jira` (Jira Cloud REST) or `.seh/scripts/ado` (Azure DevOps WIT REST) by `kind` — **`.seh/scripts/ado` (Recommended)** for ADO over raw REST / `curl` / `az boards`; not MCP. Reading is always on. `agents.tracker.write` says which writes are on; each artifact and the status live in one store:
+
+| Action | ON | OFF |
+|--------|----|-----|
+| `create` | seh creates the item first (basename = key) and links items | Files basename, `tracker:` empty; never `create` or `link` |
+| `spec` | Mapped field | `docs/features/<basename>.feature.md` |
+| `prompt` | Mapped field | `docs/prompt/<basename>.prompt.md` |
+| `log` | Log field and comments | `docs/feature-log/<basename>.log.md` |
+| `status` | `transition` to `agents.tracker.statuses` | `status:` in local spec frontmatter (`agents.statuses`) |
+
+A task is bound when `tracker:` in its local spec frontmatter holds a key, or its basename is the key; an unbound task keeps everything in repo files. Basename and branch never change after binding. With `spec` ON, a bound task has a local spec file only if basename differs from the key or `status` is OFF, and it is frontmatter only. At the first seh step that touches a bound task with local content for an ON action, move that content to the tracker once (and the status when `status` is ON), then leave the stub and remove the moved prompt / log files; content on both sides is `BLOCKED:` naming both, and a failed write keeps the local content. A `depends` status is read from where it lives (tracker: `agents.tracker.statuses.blocker`; local: `agents.statuses.done`). Do not invent Jira or ADO status names. Credentials are in a local ignored file, never in git and never in chat.
 
 If `agents.tracker` is absent, the files tracker is active. Same basename for all three files (example: `001-feature-example-name`):
 
@@ -71,7 +81,7 @@ Several keys in one work-skill call: on hosts whose `sessionSpawn` is `start_ses
 
 ## Git
 
-Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh`, `curl`, or `az boards` themselves. Git scripts read `agents.baseBranch` from `harness.config.json`. Optional `agents.commitTrailer` (one line, for example `Co-Authored-By: Name <mail>`) is appended to every commit `commit-task` makes; absent means no trailer. Jira and ADO scripts read `agents.tracker` and `harness.credentials.local.json`. No rebase, reset, or force. No merge of the PR (human on GitHub). Implementer and Reviewer always use a git worktree at `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`. A launch may name `Worktree: <abs>`. Architect does not use worktrees.
+Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/scripts/`. Agents call those scripts. They do not compose the matching `git`/`gh`, `curl`, or `az boards` themselves. Git scripts read `agents.baseBranch` from `harness.config.json`. Optional `agents.commitTrailer` (one line, for example `Co-Authored-By: Name <mail>`) is appended to every commit `commit-task` makes; absent means no trailer. Jira and ADO scripts read `agents.tracker` and `harness.credentials.local.json`. No rebase, reset, or force. No merge of the PR (human on GitHub). `agents.git` (`worktree`, `commit`, `push`, `pr`; missing = all on; each needs the ones before it) switches operations off: the script answers `UNCHANGED` + `git: <op> disabled`; do not do that step another way, and tell the user what is left. Unless `worktree` is disabled (then work in the launch checkout, sequentially), Implementer and Reviewer always use a git worktree at `$(git rev-parse --git-common-dir)/seh-worktrees/<task>`. A launch may name `Worktree: <abs>`. Architect does not use worktrees.
 
 | Script | Who |
 |--------|-----|
@@ -80,13 +90,13 @@ Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/script
 | `push-task` | Reviewer |
 | `open-pr` | Reviewer, after acceptance |
 | `update-from-base` | Reviewer, only on a merge conflict with `Auto-merge: yes` |
-| `return-to-base` | Reviewer, after PR opened (removes the seh worktree) |
+| `return-to-base` | Reviewer, after the last enabled git operation (removes the seh worktree when clean) |
 | `jira` | `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 | `ado` | Same who-calls-what as `jira`, when `agents.tracker.kind` is `ado`: `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress` / `codeReview`, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 
-With `agents.tracker.readOnly` `true`, only `meta` and `get` apply to `jira` / `ado`; every other verb in the rows above is `BLOCKED:` and agents do not call it.
+A `jira` / `ado` write verb in the rows above applies only when its action is ON (`create`: `create`, `link`; `spec` / `prompt` / `log`: `set` of that part, `comment` with `log`; `status`: `transition`); otherwise it is `BLOCKED:` and agents do not call it.
 
-**Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with the change record and status written to files. The scripts also answer `UNCHANGED` + `git: disabled`.
+**Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with the change record written and status set where it lives. The scripts also answer `UNCHANGED` + `git: disabled`.
 
 Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira` or `ado`.
 

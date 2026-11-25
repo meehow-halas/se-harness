@@ -27,7 +27,7 @@ Source: conversation 2026-11-25
 - Q6: tracker-origin task uses the key as basename; locally created task uses a files basename and `tracker:` in spec frontmatter; basename and branch never change after binding. (rejected: rename on binding)
 - Q7: `create` is its own action; ON: seh creates the item, also later in the task's life; OFF: seh never creates, binding by hand allowed. (rejected: tied to `spec`)
 - Q8: no preselected tracker actions; one question for all of them, same for git ops; mapping follow-ups only for enabled actions, grouped. (rejected: one question per action)
-- Q9: on binding, local content of ON actions moves to the tracker once; both sides non-empty → `BLOCKED`. (rejected: local stays the source; no late creation)
+- Q9: local content of a bound task for ON actions moves to the tracker once, at the first seh step that touches it, after binding or after an action is turned on (confirmed 2026-11-25); both sides non-empty → `BLOCKED`. (rejected: local stays the source; no late creation)
 - Q10: new task without an item and `create` ON: issue first, basename = key. (rejected: files basename + `tracker:` for every task)
 - Q11: no manual test scenarios or manual stage. (user decision)
 
@@ -43,7 +43,7 @@ Source: conversation 2026-11-25
 
 ## Out of scope
 
-- Migration of artifacts between tracker and files when toggling actions (PRD: switching does not migrate); Q9 covers only binding a task.
+- Bulk migration of artifacts when toggling actions (setup copies nothing; Q9 moves only a bound task, when a step touches it) and any copy from the tracker back to files.
 - Partial git ops for `/<prefix>shipit`.
 - Trackers other than Jira / ADO.
 - Root `README.md` (only on explicit request).

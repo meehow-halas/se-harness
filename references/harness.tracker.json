@@ -1,6 +1,12 @@
 {
   "kind": "jira",
-  "readOnly": false,
+  "write": {
+    "create": false,
+    "spec": false,
+    "prompt": false,
+    "log": false,
+    "status": false
+  },
   "url": "",
   "user": "",
   "projectKey": "",

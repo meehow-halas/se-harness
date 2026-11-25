@@ -2,6 +2,22 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] - 2026-11-25
+
+### Added
+
+- Config key `agents.git` (`worktree`, `commit`, `push`, `pr`; chain `pr` ⇒ `push` ⇒ `commit` ⇒ `worktree`; missing = all `true` with a base branch) in the PRD and `references/` (`harness.config.json`, `harness.config.md`, `AGENTS.md`).
+- `tracker:` key in `references/spec.feature.md` frontmatter, and the PRD binding rules (naming, stub, move on binding, conflict).
+
+### Changed
+
+- **Breaking.** PRD and `references/` describe per-action tracker writes: `agents.tracker.write` (`create`, `spec`, `prompt`, `log`, `status`) in `harness.tracker.json` and `harness.tracker.ado.json`; a disabled action falls back to the files-tracker location.
+- `agents.reportChange` is asked by `/<prefix>setit-se`. `done` means accepted and every enabled git operation finished; `/<prefix>shipit` needs all four.
+
+### Removed
+
+- **Breaking.** Config key `agents.tracker.readOnly`; a later `/<prefix>setit-se` migrates it once to `agents.tracker.write`.
+
 ## [1.7.1] - 2026-11-20
 
 ### Fixed

@@ -10,6 +10,9 @@ status: todo
 type: feature
 depends: []
 relates: []
+# tracker: Jira / ADO issue key or work item id of a task whose basename is not the key; empty when unbound or when the basename is the key.
+# With the tracker `spec` action ON, a bound task's local spec is this frontmatter only, and exists only if basename differs from the key or the `status` action is OFF.
+tracker:
 # ui: true when the task changes something a user sees (screen, interaction, UI text, navigation); absent = false.
 # With ui: true and agents.designer.enabled, the Designer adds a `## UX/UI decisions` section after Architectural decisions and `UX:` acceptance criteria.
 # The Architect writes that heading only from a design file (launch `Design: <path>`). Its presence tells the skills the Designer stage is done.

@@ -4,7 +4,7 @@ Source of truth at run time is the live project-root `harness.config.json` (vali
 
 Parseable defaults: `harness.config.json` in this directory. External tracker shape: `harness.tracker.json` for Jira (`kind`: `"jira"`) or `harness.tracker.ado.json` for Azure DevOps Boards (`kind`: `"ado"`). Copy the matching object to `agents.tracker` only when that tracker is connected; omit `agents.tracker` on the files tracker. Exactly one external tracker per project — never Jira and ADO together. Legacy configs without `kind` are treated as Jira when `url` and `user` are present. Never put credentials in either file (tokens live in a local ignored file; never in git, never in chat).
 
-`seh.generatedFrom` is set by setup to the contents of `.seh/VERSION`. `seh.generatedPrefix` is set by setup to the contents of `.seh/PREFIX` (the skill-name prefix; may be empty). `agents.baseBranch` has no value until setup asks (suggested default `dev`). **Empty string or `null` disables git** for the harness: no worktrees, branches, commits or PRs; tasks run sequentially; the git scripts print `UNCHANGED` + `git: disabled`. Setup leaves it empty when the project has no git repo or the user answers “no git”. Optional role `rules`; reviewer may use `checklist`. `jiraOffer` is `declined` when they decline the first offer (`null` until then). `agents.brainstorm.consult` is `any` | `significant` (default if unset) | `broad`. `agents.reportChange` (boolean, default `true` when missing): `false` means agents write no change entries (the project may still keep a changelog by hand). `record-change` then writes nothing and `commit-task` does not add `CHANGELOG.md` by itself (it still commits it when listed); the flow does not stop. `record-change` puts entries under `## [Unreleased]` → `### Changed` (created above the first `## ` heading when missing). Members themselves are not this template’s job.
+`seh.generatedFrom` is set by setup to the contents of `.seh/VERSION`. `seh.generatedPrefix` is set by setup to the contents of `.seh/PREFIX` (the skill-name prefix; may be empty). `agents.baseBranch` has no value until setup asks (suggested default `dev`). **Empty string or `null` disables git** for the harness: no worktrees, branches, commits or PRs; tasks run sequentially; the git scripts print `UNCHANGED` + `git: disabled`. Setup leaves it empty when the project has no git repo or the user answers “no git”. Optional role `rules`; reviewer may use `checklist`. `jiraOffer` is `declined` when they decline the first offer (`null` until then). `agents.brainstorm.consult` is `any` | `significant` (default if unset) | `broad`. `agents.git` (booleans `worktree`, `commit`, `push`, `pr`) says which git operations seh runs; setup asks it in one question when a base branch is set. With a base branch and no `agents.git` all four are `true` (a later `/{{prefix}}setit-se` asks once); with git disabled it is ignored. Chain `pr` ⇒ `push` ⇒ `commit` ⇒ `worktree`: an operation is enabled only when it and every one before it are `true`; a disabled one answers `UNCHANGED` + `git: <op> disabled`, and `/{{prefix}}shipit` needs all four. `agents.reportChange` (boolean) is asked by setup (proposal `true` when project-root `CHANGELOG.md` exists, else `false`; a later run asks once when the key is missing). At run time a missing key means `true`. `false` means agents write no change entries (the project may still keep a changelog by hand). `record-change` then writes nothing and `commit-task` does not add `CHANGELOG.md` by itself (it still commits it when listed); the flow does not stop. `record-change` puts entries under `## [Unreleased]` → `### Changed` (created above the first `## ` heading when missing). Members themselves are not this template’s job.
 
 Supported hosts are **not** a tree in this config. They live in `hosts.json` in this directory (`.seh/references/hosts.json` after install). Install and `/{{prefix}}setit-se` always write every row. Adding a host is a new row plus a path/frontmatter adapter (rules extension, agent format, `modelSuggest`). Codex is the fourth row: `agentFormat: "codex-toml"` (TOML agents via `codex-adapters.cjs`), `skillHide: "openai-yaml"` (work skills get `agents/openai.yaml`), `rulesIndex: "agents-md"` (a seh-managed section in `AGENTS.md` points at `rulesDir`), skills in `.agents/skills`, invoked as `$<prefix><name>`.
 
@@ -36,7 +36,8 @@ Supported hosts are **not** a tree in this config. They live in `hosts.json` in 
     },
     "designer": { "enabled": false },
     "brainstorm": { "consult": "significant" },
-    "reportChange": true
+    "reportChange": true,
+    "git": { "worktree": true, "commit": true, "push": true, "pr": true }
   }
 }
 ```
@@ -45,14 +46,24 @@ When Jira is connected, add `agents.tracker` from `harness.tracker.json` (includ
 
 Credentials in `harness.credentials.local.json`: `jiraToken` for Jira; `adoPat` for ADO (may coexist only when the other tracker is disconnected and the unused key is empty). Setup must not require both tokens active at once.
 
-`readOnly` (boolean, default `false` when missing): when `false` (full write), spec, prompt, log, and status live only on the work item / issue (map `fields.spec` / `prompt` / `log` and status keys in `/{{prefix}}setit-se`); no repo files for task artifacts. When `true`, seh only reads the tracker (`meta`, `get`); `create` / `set` / `comment` / `transition` / `link` are `BLOCKED:` with no HTTP. Spec, prompt, log, and status live in repo files (`agents.statuses`). Ignores `fields`, `issueTypes` / `workItemTypes`, and status keys other than `blocker`. `statuses.blocker` is required when a `depends` entry is a tracker key with no local spec (`null` = no such dependencies). `fetchFields` still applies to `get`. Same for Jira and ADO.
+`agents.tracker.write` holds the booleans `create`, `spec`, `prompt`, `log`, `status`; `/{{prefix}}setit-se` asks them in one question with nothing preselected (the `false` values in the skeletons are placeholders). Reading the tracker (`meta`, `get`) is always on. An action that is ON writes to the work item / issue. An action that is OFF is `BLOCKED:` in the script with no HTTP and its artifact falls back to the files tracker:
+
+| Action | Verbs refused when OFF | When OFF |
+|--------|------------------------|----------|
+| `create` | `create`, `link` | No item; files basename, `tracker:` empty; binding by hand is allowed |
+| `spec` | `set spec` | `docs/features/<basename>.feature.md` |
+| `prompt` | `set prompt` | `docs/prompt/<basename>.prompt.md` |
+| `log` | `set log`, `comment` | `docs/feature-log/<basename>.log.md` |
+| `status` | `transition` | `status:` in local spec frontmatter (`agents.statuses`) |
+
+Mappings are asked only for enabled actions: status keys `todo`…`done` with `status`, `fields.spec` / `prompt` / `log` with the matching action, `issueTypes` / `workItemTypes` with `create`. `statuses.blocker` and `fetchFields` are always asked; `blocker` is required when a `depends` entry is read from the tracker (`null` = no such dependencies). A tracker config with no `write` block is `BLOCKED:` run `/{{prefix}}setit-se`. A config from before 2.0 has `readOnly` instead: a later `/{{prefix}}setit-se` migrates it once (`true` → all actions `false`; `false` or missing → all `true`) and deletes it; scripts read only `write`. Same for Jira and ADO.
 
 Jira skeleton:
 
 ```json
 {
   "kind": "jira",
-  "readOnly": false,
+  "write": { "create": false, "spec": false, "prompt": false, "log": false, "status": false },
   "url": "",
   "user": "",
   "projectKey": "",
@@ -77,7 +88,7 @@ ADO skeleton (`harness.tracker.ado.json`):
 ```json
 {
   "kind": "ado",
-  "readOnly": false,
+  "write": { "create": false, "spec": false, "prompt": false, "log": false, "status": false },
   "organizationUrl": "",
   "project": "",
   "workItemTypes": { "feature": "", "bug": "" },
