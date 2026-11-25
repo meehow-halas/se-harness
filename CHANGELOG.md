@@ -11,6 +11,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 ### Changed
 
 - Install commands drop `-p` and the `seh` bin name: `npx se-harness install`, `npx github:meehow-halas/se-harness install` (the package has a single bin). README, guide, PRD, skill `BLOCKED:` messages, `references/AGENTS.md` and `scripts/check-update` match.
+- `packs/aspnetcore/web.md`: built-in validation note. `AddValidation()` does not cover nullable value-type parameters (before .NET 11) or unmapped JSON properties, so a manual check stays for those.
 
 ### Removed
 
