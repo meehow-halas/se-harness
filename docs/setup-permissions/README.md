@@ -11,7 +11,7 @@ Source: conversation 2026-11-25
 | NN | Stage | Executor | Status | Verification |
 |----|-------|----------|--------|--------------|
 | 01 | [PRD and references](01-prd-references.md) | agent | done | `npm test`; PRD diff review |
-| 02 | [Tracker scripts](02-tracker-scripts.md) | agent | planned | `node --test scripts/jira.test.js scripts/ado.test.js` |
+| 02 | [Tracker scripts](02-tracker-scripts.md) | agent | done | `node --test scripts/jira.test.js scripts/ado.test.js` |
 | 03 | [Git scripts](03-git-scripts.md) | agent | planned | `node --test` on touched `scripts/*.test.js` |
 | 04 | [setit-se](04-setit-se.md) | agent | planned | `npm test`; skill diff review |
 | 05 | [Agents and skills](05-agents-skills.md) | agent | planned | `npm test`; diff review |
