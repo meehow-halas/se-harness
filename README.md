@@ -87,7 +87,7 @@ Whole runs step by step, from a single `/_doit` to an overnight `/_shipit`: [Exa
 - **[Install and setup](docs/guide/setup.md).** Install sources and `--prefix`, everything `/_setit-se` asks and changes, package updates, uninstall, rule packs, git worktrees and language.
 - **[Git worktrees](docs/guide/worktrees.md).** Where each task's worktree lives, when it is created and removed, when it stays, and manual cleanup.
 - **[Skills, agents, and modes](docs/guide/workflow.md).** What each skill does, the five agents (Architect, Designer, Implementer, Consultant, Reviewer), and the `interactive` / `critical` / `autonomous` modes.
-- **[Trackers and statuses](docs/guide/trackers.md).** One active tracker: repo files (default), Jira, or Azure DevOps, full write or read-only. Credentials, field mapping, and the `todo → in progress → implemented → in review → done` statuses.
+- **[Trackers and statuses](docs/guide/trackers.md).** One active tracker: repo files (default), Jira, or Azure DevOps, with a switch per tracker write. Credentials, field mapping, and the `todo → in progress → implemented → in review → done` statuses.
 - **[Brainstorm](docs/guide/brainstorm.md).** Optional personae that comment on a spec in isolation through `/_grillit`; the Architect decides.
 - **[Hosts](docs/guide/hosts.md).** How Claude Code, Cursor, OpenCode, and Codex differ, and the role model map per host.
 

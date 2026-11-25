@@ -20,7 +20,8 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 - `--user-request "<words>"` on `start-task`, `commit-task`, `push-task` and `open-pr`: the user's explicit request runs a disabled git operation for that call. Empty words are `BLOCKED:`. It does not override git disabled, and `merge-pr` takes no flag. PRD and `references/` state the rule. With `worktree` off, a requested `commit-task` on the base branch creates the task branch in that checkout, switches to it and commits.
 - `pr-state` prints `local_branch:` for a task whose work exists only on a local branch, and answers `state: none` instead of `BLOCKED:` when `pr` is off and `gh` is missing or fails. `/<prefix>planit`, `doit`, `checkit` and `runit` check it before treating a spec as missing.
 - Tracker skeletons start with `agents.tracker.write: null`; setup that stopped before the actions question asks it on the next run, and `jira` / `ado` answer `BLOCKED: tracker write actions are not set` until then.
-- Move on binding also moves a local `status:` line once when `status` is ON, and appends a local log to a `comment` / `history` log instead of reporting a conflict.
+- Move on binding also moves a local `status:` line once when `status` is ON, and adds local content of an artifact mapped to `comment` / `history` (spec, prompt or log) as a new entry instead of reporting a conflict.
+- `open-pr` usage messages name `--user-request`; `/<prefix>designit` offers a spec “in its store”, not “on the active tracker”.
 - `/<prefix>setit-se` asks which git operations seh runs (`agents.git`) in one question, and whether to write change entries (`agents.reportChange`, proposal from project-root `CHANGELOG.md`); a later run asks each once when the key is missing.
 
 ### Changed

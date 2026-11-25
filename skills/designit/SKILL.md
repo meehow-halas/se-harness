@@ -88,7 +88,7 @@ Report the path, the `status` (`draft` or `ready`), the number of `D<n>` decisio
 
 Offer the next step. Do **not** start it:
 
-- `/{{prefix}}planit "<request>" docs/designs/<slug>.design.md` — spec on the active tracker, with the UX taken from this file
+- `/{{prefix}}planit "<request>" docs/designs/<slug>.design.md` — spec in its store (tracker or repo file), with the UX taken from this file
 - `/{{prefix}}runit "<request>" docs/designs/<slug>.design.md` — full path
 
 Do not call tracker scripts or git scripts.

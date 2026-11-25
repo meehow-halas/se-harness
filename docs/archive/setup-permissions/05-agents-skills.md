@@ -68,13 +68,13 @@ OFF means seh does not do it automatically where it normally would. On the user'
 
 ## Acceptance criteria
 
-- [ ] `grep -rn readOnly agents skills references scripts` → only the migration rule in `setit-se`, tests, and the unrelated `codex-adapters.*` option.
-- [ ] Every agent that writes an artifact picks the store by its action flag.
-- [ ] Naming, stub, move and conflict rules are stated for the agents that touch a task.
-- [ ] With any git op OFF the Reviewer report names what is left; `shipit` stops.
-- [ ] `npm test` green.
-- [ ] Agents and skills say OFF = not automatic, and how a user request runs it (words verbatim, never self-initiated).
-- [ ] Overwrite confirmation and missing-mapping question are stated.
+- [x] `grep -rn readOnly agents skills references scripts` → only the migration rule in `setit-se`, tests, and the unrelated `codex-adapters.*` option.
+- [x] Every agent that writes an artifact picks the store by its action flag.
+- [x] Naming, stub, move and conflict rules are stated for the agents that touch a task.
+- [x] With any git op OFF the Reviewer report names what is left; `shipit` stops.
+- [x] `npm test` green.
+- [x] Agents and skills say OFF = not automatic, and how a user request runs it (words verbatim, never self-initiated).
+- [x] Overwrite confirmation and missing-mapping question are stated.
 
 ## Verification
 

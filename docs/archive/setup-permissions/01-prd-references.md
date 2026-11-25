@@ -65,11 +65,11 @@ A task is bound when `tracker:` in its local spec frontmatter holds a key, or it
 
 ## Acceptance criteria
 
-- [ ] No `readOnly` left in `docs/prd.md` or `references/` (except `codex-adapters.*`, an unrelated option) outside the migration rule.
-- [ ] Every disabled action / op has exactly one stated fallback or hand-off.
-- [ ] Binding rules (naming, stub, move, conflict) are in the PRD.
-- [ ] `package.json` is `2.0.0` and `CHANGELOG.md` has a `[2.0.0]` entry.
-- [ ] `npm test` green.
+- [x] No `readOnly` left in `docs/prd.md` or `references/` (except `codex-adapters.*`, an unrelated option) outside the migration rule.
+- [x] Every disabled action / op has exactly one stated fallback or hand-off.
+- [x] Binding rules (naming, stub, move, conflict) are in the PRD.
+- [x] `package.json` is `2.0.0` and `CHANGELOG.md` has a `[2.0.0]` entry.
+- [x] `npm test` green.
 
 ## Verification
 

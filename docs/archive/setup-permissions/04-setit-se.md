@@ -31,12 +31,12 @@ Q1, Q2, Q3, Q5, Q8, Q12, Q14.
 
 ## Acceptance criteria
 
-- [ ] Jira with all actions ON: no more questions than today's full-write path; no path asks one question per action.
-- [ ] The skill text contains no default selection for tracker actions.
-- [ ] Changelog proposal depends on project-root `CHANGELOG.md`; the user still answers.
-- [ ] Migration rule matches Q5 and runs once.
-- [ ] `npm test` green.
-- [ ] Neither question describes OFF as forbidden.
+- [x] Jira with all actions ON: no more questions than today's full-write path; no path asks one question per action.
+- [x] The skill text contains no default selection for tracker actions.
+- [x] Changelog proposal depends on project-root `CHANGELOG.md`; the user still answers.
+- [x] Migration rule matches Q5 and runs once.
+- [x] `npm test` green.
+- [x] Neither question describes OFF as forbidden.
 
 ## Verification
 

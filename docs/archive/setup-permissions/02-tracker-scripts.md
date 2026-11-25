@@ -46,16 +46,16 @@ OFF means seh does not do it automatically where it normally would. On the user'
 
 ## Acceptance criteria
 
-- [ ] For each verb × its action OFF: non-zero exit, `BLOCKED:` naming the action, zero requests at the HTTP stub, also without a credentials file.
-- [ ] Same verb with its action ON and another action OFF: the request reaches the stub.
-- [ ] `get` with mixed flags (e.g. spec ON, prompt OFF, log ON, status OFF): bodies come from the right store; fixture values differ per store.
-- [ ] `status` OFF: `get <key>` with no local spec holding the key prints the tracker status; with a local spec holding it (as basename, or in `tracker:`), not the tracker status.
-- [ ] `get <basename>` of a bound local task reads the key's tracker parts and the basename's local parts.
-- [ ] Config with `readOnly: true` and no `write`: `BLOCKED:` run setup; `meta` still works.
-- [ ] Same behaviour for `jira` and `ado`.
-- [ ] Verb with its action OFF and `--user-request` with non-empty words: the request reaches the stub; empty words → `BLOCKED:`, zero requests.
-- [ ] `get <key> --user-request` with actions OFF prints the tracker values; without the flag, the repo values.
-- [ ] PRD and `references/` state the explicit user request rule for tracker actions.
+- [x] For each verb × its action OFF: non-zero exit, `BLOCKED:` naming the action, zero requests at the HTTP stub, also without a credentials file.
+- [x] Same verb with its action ON and another action OFF: the request reaches the stub.
+- [x] `get` with mixed flags (e.g. spec ON, prompt OFF, log ON, status OFF): bodies come from the right store; fixture values differ per store.
+- [x] `status` OFF: `get <key>` with no local spec holding the key prints the tracker status; with a local spec holding it (as basename, or in `tracker:`), not the tracker status.
+- [x] `get <basename>` of a bound local task reads the key's tracker parts and the basename's local parts.
+- [x] Config with `readOnly: true` and no `write`: `BLOCKED:` run setup; `meta` still works.
+- [x] Same behaviour for `jira` and `ado`.
+- [x] Verb with its action OFF and `--user-request` with non-empty words: the request reaches the stub; empty words → `BLOCKED:`, zero requests.
+- [x] `get <key> --user-request` with actions OFF prints the tracker values; without the flag, the repo values.
+- [x] PRD and `references/` state the explicit user request rule for tracker actions.
 
 ## Verification
 

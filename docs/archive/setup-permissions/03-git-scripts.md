@@ -42,15 +42,15 @@ OFF means seh does not do it automatically where it normally would. On the user'
 
 ## Acceptance criteria
 
-- [ ] Per script: op OFF → `UNCHANGED` + `git: <op> disabled`, git refs and remote state unchanged (assert refs, not only output).
-- [ ] Chain: `commit: false, push: true` → `push-task` also disabled.
-- [ ] Op ON with a later op OFF: the earlier script still acts (commit created, nothing pushed).
-- [ ] `return-to-base` keeps a dirty worktree with `commit` OFF.
-- [ ] `fanout-plan` is sequential with `worktree` OFF.
-- [ ] Missing `agents.git` with base branch set: full flow as before (existing tests green).
-- [ ] Per flagged script: op OFF with `--user-request` acts (assert refs / `gh` argv); empty words → `BLOCKED:`, nothing changed.
-- [ ] The flag with empty `agents.baseBranch` still answers `git: disabled`; `merge-pr` with `pr` OFF stays disabled.
-- [ ] PRD and `references/` state the explicit user request rule for git operations.
+- [x] Per script: op OFF → `UNCHANGED` + `git: <op> disabled`, git refs and remote state unchanged (assert refs, not only output).
+- [x] Chain: `commit: false, push: true` → `push-task` also disabled.
+- [x] Op ON with a later op OFF: the earlier script still acts (commit created, nothing pushed).
+- [x] `return-to-base` keeps a dirty worktree with `commit` OFF.
+- [x] `fanout-plan` is sequential with `worktree` OFF.
+- [x] Missing `agents.git` with base branch set: full flow as before (existing tests green).
+- [x] Per flagged script: op OFF with `--user-request` acts (assert refs / `gh` argv); empty words → `BLOCKED:`, nothing changed.
+- [x] The flag with empty `agents.baseBranch` still answers `git: disabled`; `merge-pr` with `pr` OFF stays disabled.
+- [x] PRD and `references/` state the explicit user request rule for git operations.
 
 ## Verification
 
