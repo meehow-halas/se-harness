@@ -6,7 +6,7 @@ Planning: complete
 ## Etapy
 | NN | Etap | Wykonawca | Status | Weryfikacja |
 |----|------|-----------|--------|-------------|
-| 01 | [Packi csharp / aspnetcore / efcore z detekcją](01-dotnet-packs.md) | agent | planned | `node --test src/cli.test.js`, `npm test` + przegląd agenta |
+| 01 | [Packi csharp / aspnetcore / efcore z detekcją](01-dotnet-packs.md) | agent | done | `node --test src/cli.test.js`, `npm test` + przegląd agenta |
 
 ## Decyzje
 - Q1: trzy packi: `csharp` (język C# + .NET 10 SDK/BCL + testy), `aspnetcore` (web: minimal API/kontrolery, DI, middleware, konfiguracja), `efcore` (EF Core, osobno). (Analogia python → django/fastapi; EF Core występuje też poza web.)
