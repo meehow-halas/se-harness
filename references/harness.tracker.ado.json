@@ -1,12 +1,6 @@
 {
   "kind": "ado",
-  "write": {
-    "create": false,
-    "spec": false,
-    "prompt": false,
-    "log": false,
-    "status": false
-  },
+  "write": null,
   "organizationUrl": "",
   "project": "",
   "workItemTypes": {

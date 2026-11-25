@@ -1134,6 +1134,26 @@ describe("ado", () => {
         });
       }
 
+      test("write null: get and write verbs BLOCKED not set; meta works", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { write: null } });
+          const stub = writeCurlStub(cwd, routes());
+          const file = bodyFile(cwd);
+          const calls = [
+            ["get", KEY],
+            ["get", KEY, "--user-request", "w"],
+            ...VERBS.map(([, argv]) => argv(file)),
+            ...VERBS.map(([, argv]) => [...argv(file), "--user-request", "w"]),
+          ];
+          for (const args of calls) {
+            assertBlocked(runAdo(cwd, args, stub.env), /tracker write actions are not set — run \/.*setit-se/);
+          }
+          assert.equal(requested(stub), false);
+          assert.equal(runAdo(cwd, ["meta"], stub.env).status, 0);
+          assert.equal(requested(stub), true);
+        });
+      });
+
       test("readOnly is ignored when write is present", () => {
         withTempDir((cwd) => {
           writeProject(cwd, { trackerOver: { readOnly: true } });

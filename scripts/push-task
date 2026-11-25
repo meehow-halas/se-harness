@@ -35,9 +35,11 @@ base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
 git_op_gate push "$user_request"
 
-branch=$(task_branch "$task")
+resolve_task_branch "$task"
+branch=$SEH_BRANCH
 if ! local_branch_exists "$branch"; then
-  blocked "task branch $branch does not exist" "run start-task $task, then retry push-task"
+  hint=$(missing_branch_hint "$task" push-task)
+  blocked "task branch $branch does not exist" "$hint"
 fi
 
 push_remote

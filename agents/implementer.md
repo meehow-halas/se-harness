@@ -76,19 +76,19 @@ A task is **bound** when `tracker:` in its local spec frontmatter holds a key, o
 | `log` | `comment <key>` (`Q<n>`, review reports, link failures); other rows `comment` or `set <key> log` | Log file |
 | `status` | `transition <key> <step>` to `agents.tracker.statuses` | `status:` in local spec frontmatter (`agents.statuses`) |
 
-Each artifact and the status live in exactly one store; never mirror. Pick the store by that action's flag and do not call a verb whose action is OFF (`BLOCKED: tracker action <name> is disabled` means you did: write the repo file instead). Read a bound task with `get <basename>` or `get <key>`, in the task worktree when it has one: it takes each part from its store. Read an unbound task from the files.
+Each artifact and the status live in exactly one store; never mirror. Pick the store by that action's flag and do not call a verb whose action is OFF (`BLOCKED: tracker action <name> is disabled` means you did: write the repo file instead). Read a bound task with `get <basename>`, in the task worktree when it has one: it takes each part from its store. Use `get <key>` only for a key that no local spec holds: when basename ≠ key, `get <key>` misses the local parts and status. Read an unbound task from the files.
 
-**Stub.** With `spec` ON, a bound task has a local spec file only when basename ≠ key or `status` is OFF. It is frontmatter only (`id`, `title`, `status`, `type`, `depends`, `relates`, `ui`, `tracker`); read those fields from it. Text sent to the tracker as the spec has no `status:` line.
+**Stub.** With `spec` ON, a bound task has a local spec file only when basename ≠ key or `status` is OFF. It is frontmatter only (`id`, `title`, `status` (only with `status` OFF), `type`, `depends`, `relates`, `ui`, `tracker`); read those fields from it. Text sent to the tracker as the spec has no `status:` line.
 
-**Status.** Steps: `todo` → `todo`, `in progress` → `inProgress`, `implemented` → `codeReview`, `in review` → `inReview`, `done` → `done`. `status` ON: `transition` to the step (a `null` map prints `UNCHANGED`); compare what you read with `agents.tracker.statuses`; do not write the local `status:`. `status` OFF or unbound: write and compare the `agents.statuses` string in the spec frontmatter. A mapped status missing from the item type's workflow is a stop (fix the mapping in `/{{prefix}}setit-se`).
+**Status.** Steps: `todo` → `todo`, `in progress` → `inProgress`, `implemented` → `codeReview`, `in review` → `inReview`, `done` → `done`. `status` ON: `transition` to the step (a `null` map prints `UNCHANGED`); compare what you read with `agents.tracker.statuses`; do not write the local `status:`. A `status:` line still in the local spec of such a task has not moved yet: until **Move on binding** removes it, it is the task's status (compare with `agents.statuses`) and wins over `get`. `status` OFF or unbound: write and compare the `agents.statuses` string in the spec frontmatter; a local spec with no `status:` line is `BLOCKED: <task> has no status — set status: in <path>`. A mapped status missing from the item type's workflow is a stop (fix the mapping in `/{{prefix}}setit-se`).
 
 ### Move on binding
 
-At your first step on a bound task, before reading it for work or changing it, look for local content of an ON action: a spec body (below the frontmatter), a prompt file, a log file. A stub is not content. No such content: move nothing and make no transition for it. Otherwise move it once:
+At your first step on a bound task, before reading it for work or changing it, look for local content of an ON action: a spec body (below the frontmatter), a prompt file, a log file, and with `status` ON a `status:` line in the local spec. A stub without that line is not content. No such content: move nothing and make no transition. Otherwise move it once:
 
-1. Run `get <basename>`. If any of those artifacts is non-empty on the tracker too, stop before any write: `BLOCKED: <artifact> of <key> is on both the tracker and <path> — keep one and remove the other`. Overwrite nothing.
-2. With `status` ON, `transition` to the step of the local status.
-3. For each artifact: `set <key> spec|prompt|log --file <path>`. Only after that write succeeded, turn the local spec into the stub (delete it when no stub is needed), or delete the local prompt / log file. Set `tracker:` in a stub whose basename ≠ key.
+1. Run `get <basename>`. If the spec, prompt or log that has local content is non-empty on the tracker too, stop before any write: `BLOCKED: <artifact> of <key> is on both the tracker and <path> — keep one and remove the other`. Overwrite nothing. A log mapped to `comment` or `history` (`agents.tracker.fields.log`) is never such a conflict: it only grows, so the local log is added as a new entry.
+2. With `status` ON and a local `status:` line, `transition` to its step, then remove the line. Keep the line when the transition fails or the step is mapped to `null`.
+3. For each artifact: `set <key> spec|prompt|log --file <path>`. Only after that write succeeded, turn the local spec into the stub (delete it when no stub is needed and it has no `status:` line left; first make sure its `depends`, `relates` and `ui` are in the tracker spec), or delete the local prompt / log file. Set `tracker:` in a stub whose basename ≠ key.
 
 A failed write leaves the local content in place: copy the `BLOCKED:` line and stop. Content of OFF actions stays local.
 
@@ -98,7 +98,7 @@ Change only this task’s status (`in progress`, `implemented`) and its log, eac
 
 ### `depends` gate
 
-Read each entry's status where it lives for that task. Bound and `status` ON: `get <entry>`, and it must equal `agents.tracker.statuses.blocker`. Otherwise (files tracker, `status` OFF, or unbound): the frontmatter of the local spec holding the entry (basename or `tracker:`) must be at `agents.statuses.done`. A tracker key that no local spec holds is always read with `get <entry>`, whatever the flag, and must equal `blocker`. When `blocker` is needed and missing or `null`, stop: `BLOCKED: map blocker in /{{prefix}}setit-se`.
+Read each entry's status where it lives for that task. Bound, `status` ON, and no `status:` line left in a local spec: `get <entry>`, and it must equal `agents.tracker.statuses.blocker`. Otherwise (files tracker, `status` OFF, unbound, or a status not moved yet): the frontmatter of the local spec holding the entry (basename or `tracker:`) must be at `agents.statuses.done`. A tracker key that no local spec holds is always read with `get <entry>`, whatever the flag, and must equal `blocker`. When `blocker` is needed and missing or `null`, stop: `BLOCKED: map blocker in /{{prefix}}setit-se`.
 
 ### Explicit user request (tracker)
 

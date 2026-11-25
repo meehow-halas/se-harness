@@ -184,7 +184,7 @@ write a spec for password reset and also copy the spec to PROJ-12
 ```
 
 - Your words are passed on verbatim (`--user-request "<your words>"` on the script). SE Harness never adds this for its own steps, in any mode. Your config does not change.
-- **Git:** works for creating the worktree, commit, push and opening the PR. It runs the operation you asked for even when an earlier one is off. It does not work with git disabled, does not let anything merge outside `/_shipit`, and does not satisfy the `/_shipit` requirement.
+- **Git:** works for creating the worktree, commit, push and opening the PR. It runs the operation you asked for even when an earlier one is off. With `worktree` off, a commit you ask for while on the base branch creates the task branch in your checkout, switches to it and commits there. It does not work with git disabled, does not let anything merge outside `/_shipit`, and does not satisfy the `/_shipit` requirement.
 - **Tracker:** the write is a one-off copy. Repo files stay the source for that action, nothing is synced, and the local status does not change. If the target field already has content, you are asked before it is overwritten. If the needed mapping is missing, SE Harness lists the values, asks, saves the mapping with your consent and runs the write; the action stays off. A requested read takes every part from the tracker.
 - An item created on your request is [bound](trackers.md#binding) to the task.
 

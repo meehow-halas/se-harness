@@ -402,6 +402,40 @@ remote_branch_exists() {
   git show-ref --verify --quiet "refs/remotes/origin/$1"
 }
 
+# Exit 0 when $1 is a follow-up branch <task>-N (N >= 2) of task $2.
+is_task_suffix_branch() {
+  case $1 in
+    "$2"-*) ;;
+    *) return 1 ;;
+  esac
+  case ${1#"$2"-} in
+    ''|*[!0-9]*|0*|1) return 1 ;;
+  esac
+  return 0
+}
+
+# Sets SEH_BRANCH to the branch of task $1: task_branch, except that with the
+# worktree operation off a <task>-N checked out in this checkout is the task's.
+# Must not be called from command substitution.
+resolve_task_branch() {
+  SEH_BRANCH=$(task_branch "$1")
+  if ! git_op_enabled worktree && [ ! -d "$(seh_worktree_path "$1")" ]; then
+    _here=$(current_branch)
+    if is_task_suffix_branch "$_here" "$1"; then
+      SEH_BRANCH=$_here
+    fi
+  fi
+}
+
+# Hint when the branch of task $1 does not exist yet, for script $2.
+missing_branch_hint() {
+  if git_op_enabled worktree; then
+    printf 'run start-task %s, then retry %s\n' "$1" "$2"
+  else
+    printf 'commit the work with commit-task on the user request first, then retry %s\n' "$2"
+  fi
+}
+
 require_on_task() {
   _task=$1
   _cur=$(current_branch)
@@ -409,7 +443,16 @@ require_on_task() {
     blocked "detached HEAD" "check out the task branch $_task and retry"
   fi
   if [ "$_cur" != "$_task" ]; then
-    blocked "checkout is $_cur, not task branch $_task" "run start-task $_task, then retry"
+    _hint="run start-task $_task, then retry"
+    # With worktree off start-task makes nothing: say what to check out.
+    if ! git_op_enabled worktree; then
+      if local_branch_exists "$_task"; then
+        _hint="check out $_task, then retry"
+      else
+        _hint="check out ${SEH_BASE_BRANCH:-the base branch}, then repeat the commit request"
+      fi
+    fi
+    blocked "checkout is $_cur, not task branch $_task" "$_hint"
   fi
 }
 

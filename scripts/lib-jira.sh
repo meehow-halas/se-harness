@@ -110,11 +110,17 @@ read_body_file() {
   printf '%s\n' "$_tmp"
 }
 
-# A tracker config without agents.tracker.write predates 2.0.
+# A tracker config without agents.tracker.write predates 2.0; write: null means
+# setup stopped before the actions question.
 require_write_block() {
   require_node
   require_tracker_config
-  if ! jira_json write "$(config_path)" create >/dev/null 2>&1; then
+  _wrc=0
+  jira_json write "$(config_path)" create >/dev/null 2>&1 || _wrc=$?
+  if [ "$_wrc" -eq 3 ]; then
+    blocked "tracker write actions are not set" "run /{{prefix}}setit-se"
+  fi
+  if [ "$_wrc" -ne 0 ]; then
     blocked "tracker config predates 2.0" "run /{{prefix}}setit-se"
   fi
 }

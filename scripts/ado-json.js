@@ -367,6 +367,10 @@ if (cmd === "mapped-field") {
 
 if (cmd === "write") {
   const t = trackerFrom(readJson(process.argv[3]));
+  // Exit 3: setup has not asked the actions yet.
+  if (t.write === null) {
+    process.exit(3);
+  }
   if (!t.write || typeof t.write !== "object") {
     fail("no-write");
   }

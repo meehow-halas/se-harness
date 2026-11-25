@@ -58,9 +58,11 @@ if ! command -v gh >/dev/null 2>&1; then
   blocked "gh is not available" "install GitHub CLI (gh) and retry open-pr"
 fi
 
-branch=$(task_branch "$task")
+resolve_task_branch "$task"
+branch=$SEH_BRANCH
 if ! local_branch_exists "$branch"; then
-  blocked "task branch $branch does not exist" "run start-task $task, then retry open-pr"
+  hint=$(missing_branch_hint "$task" open-pr)
+  blocked "task branch $branch does not exist" "$hint"
 fi
 
 # Only an open PR counts: a closed or merged PR for the same branch name

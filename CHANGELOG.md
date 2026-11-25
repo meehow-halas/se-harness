@@ -17,7 +17,10 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 - `tracker:` key in `references/spec.feature.md` frontmatter, and the PRD binding rules (naming, stub, move on binding, conflict).
 - `--user-request "<words>"` on the `jira` / `ado` write verbs and `get`: the user's explicit request runs a disabled tracker action for that call (`get` then reads every part from the tracker). Empty words are `BLOCKED:`. PRD and `references/` state the rule.
 - `jira get` / `ado get` accept the basename of a task whose spec has `tracker:`.
-- `--user-request "<words>"` on `start-task`, `commit-task`, `push-task` and `open-pr`: the user's explicit request runs a disabled git operation for that call. Empty words are `BLOCKED:`. It does not override git disabled, and `merge-pr` takes no flag. PRD and `references/` state the rule.
+- `--user-request "<words>"` on `start-task`, `commit-task`, `push-task` and `open-pr`: the user's explicit request runs a disabled git operation for that call. Empty words are `BLOCKED:`. It does not override git disabled, and `merge-pr` takes no flag. PRD and `references/` state the rule. With `worktree` off, a requested `commit-task` on the base branch creates the task branch in that checkout, switches to it and commits.
+- `pr-state` prints `local_branch:` for a task whose work exists only on a local branch, and answers `state: none` instead of `BLOCKED:` when `pr` is off and `gh` is missing or fails. `/<prefix>planit`, `doit`, `checkit` and `runit` check it before treating a spec as missing.
+- Tracker skeletons start with `agents.tracker.write: null`; setup that stopped before the actions question asks it on the next run, and `jira` / `ado` answer `BLOCKED: tracker write actions are not set` until then.
+- Move on binding also moves a local `status:` line once when `status` is ON, and appends a local log to a `comment` / `history` log instead of reporting a conflict.
 - `/<prefix>setit-se` asks which git operations seh runs (`agents.git`) in one question, and whether to write change entries (`agents.reportChange`, proposal from project-root `CHANGELOG.md`); a later run asks each once when the key is missing.
 
 ### Changed

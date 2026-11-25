@@ -218,10 +218,104 @@ describe("agents.git: --user-request", () => {
     });
   });
 
-  test("commit-task with the flag still refuses the base checkout", () => {
+  // A launch checkout on the base branch holding uncommitted work, no task branch.
+  function launchFixture(off, run) {
     withTempDir((cwd) => {
       initGitRepo(cwd, { baseBranch: "trunk" });
-      setOps(cwd, ops(...OPS));
+      writeFile(cwd, ".git/info/exclude", ".bin/\nharness.config.json\n");
+      const bare = addBareOrigin(cwd);
+      setOps(cwd, ops(...off));
+      writeFile(cwd, "work.txt", "work\n");
+      run({ cwd, bare });
+    });
+  }
+
+  const branchOf = (cwd) => git(cwd, ["branch", "--show-current"]).stdout.trim();
+
+  test("worktree off: requested commit creates the task branch, then push and PR work", () => {
+    launchFixture(OPS, ({ cwd, bare }) => {
+      writeFile(cwd, "other.txt", "other\n");
+      const base = revParse(cwd, "trunk");
+      assertOk(runScript("commit-task", [TASK, ...WORDS, "work.txt"], { cwd }));
+      assert.equal(branchOf(cwd), TASK);
+      assert.equal(revParse(cwd, "trunk"), base);
+      assert.equal(revParse(cwd, `${TASK}~1`), base);
+      assert.equal(
+        git(cwd, ["show", "--name-only", "--format=", TASK]).stdout.trim(),
+        "work.txt"
+      );
+      assert.equal(fs.existsSync(path.join(cwd, "other.txt")), true);
+      assertOk(runScript("push-task", [TASK, ...WORDS], { cwd }));
+      assert.equal(revParse(bare, `refs/heads/${TASK}`), revParse(cwd, TASK));
+      const stub = gh(cwd);
+      assertOk(runScript("open-pr", [TASK, ...WORDS], { cwd, env: stub.env }));
+      const create = stub.log().find((a) => a[1] === "create");
+      assert.equal(create[create.indexOf("--head") + 1], TASK);
+    });
+  });
+
+  test("worktree off: nothing to commit or a bad path leaves the checkout on base", () => {
+    launchFixture(OPS, ({ cwd, bare }) => {
+      const before = state(cwd, bare);
+      assertBlocked(
+        runScript("commit-task", [TASK, ...WORDS, "work.txt", "nope.txt"], { cwd }),
+        /does not exist/
+      );
+      assertUnchanged(runScript("commit-task", [TASK, ...WORDS, "README.md"], { cwd }));
+      assert.equal(branchOf(cwd), "trunk");
+      assert.equal(state(cwd, bare), before);
+    });
+  });
+
+  test("worktree off: an existing task branch is not recreated or moved", () => {
+    launchFixture(OPS, ({ cwd, bare }) => {
+      git(cwd, ["branch", TASK]);
+      const before = state(cwd, bare);
+      assertBlocked(
+        runScript("commit-task", [TASK, ...WORDS, "work.txt"], { cwd }),
+        /already exists/
+      );
+      assert.equal(branchOf(cwd), "trunk");
+      assert.equal(state(cwd, bare), before);
+    });
+  });
+
+  test("worktree off: a merged task branch gets <task>-2, which push-task uses", () => {
+    launchFixture(OPS, ({ cwd, bare }) => {
+      git(cwd, ["branch", TASK]);
+      const old = revParse(cwd, TASK);
+      const stub = gh(cwd, writeGhStub);
+      // branch_is_historical asks gh with --jq: answer with the joined states.
+      fs.writeFileSync(path.join(cwd, ".bin", "gh"), "#!/bin/sh\necho MERGED\n", { mode: 0o755 });
+      assertOk(runScript("commit-task", [TASK, ...WORDS, "work.txt"], { cwd, env: stub.env }));
+      assert.equal(branchOf(cwd), `${TASK}-2`);
+      assert.equal(revParse(cwd, TASK), old);
+      assertOk(runScript("push-task", [TASK, ...WORDS], { cwd }));
+      assert.equal(revParse(bare, `refs/heads/${TASK}-2`), revParse(cwd, "HEAD"));
+    });
+  });
+
+  test("worktree off: a requested commit on another branch is BLOCKED", () => {
+    launchFixture(OPS, ({ cwd, bare }) => {
+      git(cwd, ["checkout", "-q", "-b", "mine"]);
+      const before = state(cwd, bare);
+      assertBlocked(
+        runScript("commit-task", [TASK, ...WORDS, "work.txt"], { cwd }),
+        /not task branch.*check out trunk/
+      );
+      assert.equal(state(cwd, bare), before);
+      git(cwd, ["branch", TASK]);
+      assertBlocked(
+        runScript("commit-task", [TASK, ...WORDS, "work.txt"], { cwd }),
+        new RegExp(`not task branch.*check out ${TASK},`)
+      );
+    });
+  });
+
+  test("commit-task with the flag and worktree on still refuses the base checkout", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd, { baseBranch: "trunk" });
+      setOps(cwd, ops("commit", "push", "pr"));
       writeFile(cwd, "work.txt", "work\n");
       const head = revParse(cwd, "trunk");
       assertBlocked(

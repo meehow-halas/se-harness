@@ -11,6 +11,7 @@ type: feature
 depends: []
 relates: []
 # tracker: Jira / ADO issue key or work item id of a task whose basename is not the key; empty when unbound or when the basename is the key.
+# A bound task with the tracker `status` action ON has no status: line (one left over is moved to the tracker once, then removed).
 # With the tracker `spec` action ON, a bound task's local spec is this frontmatter only, and exists only if basename differs from the key or the `status` action is OFF.
 tracker:
 # ui: true when the task changes something a user sees (screen, interaction, UI text, navigation); absent = false.

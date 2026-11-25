@@ -1,12 +1,6 @@
 {
   "kind": "jira",
-  "write": {
-    "create": false,
-    "spec": false,
-    "prompt": false,
-    "log": false,
-    "status": false
-  },
+  "write": null,
   "url": "",
   "user": "",
   "projectKey": "",
