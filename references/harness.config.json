@@ -65,6 +65,12 @@
     "brainstorm": {
       "consult": "significant"
     },
-    "reportChange": true
+    "reportChange": true,
+    "git": {
+      "worktree": true,
+      "commit": true,
+      "push": true,
+      "pr": true
+    }
   }
 }

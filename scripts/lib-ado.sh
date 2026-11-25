@@ -135,14 +135,30 @@ read_body_file() {
   printf '%s\n' "$_tmp"
 }
 
-# Hard guard: agents.tracker.readOnly true means no write verb reaches the
-# tracker. Runs before credentials are read and before any curl.
-guard_read_only() {
-  _ro_cfg=$(config_path)
-  if [ ! -f "$_ro_cfg" ] || ! command -v node >/dev/null 2>&1; then
+# A tracker config without agents.tracker.write predates 2.0; write: null means
+# setup stopped before the actions question.
+require_write_block() {
+  require_node
+  require_tracker_config
+  _wrc=0
+  ado_json write "$(config_path)" create >/dev/null 2>&1 || _wrc=$?
+  if [ "$_wrc" -eq 3 ]; then
+    blocked "tracker write actions are not set" "run /{{prefix}}setit-se"
+  fi
+  if [ "$_wrc" -ne 0 ]; then
+    blocked "tracker config predates 2.0" "run /{{prefix}}setit-se"
+  fi
+}
+
+# Hard guard: a write verb whose agents.tracker.write.<action> is not true
+# reaches no tracker. SEH_USER_REQUEST (from --user-request) lifts it for this
+# call only. Runs before credentials are read and before any curl.
+guard_write() {
+  require_write_block
+  if [ -n "$SEH_USER_REQUEST" ]; then
     return 0
   fi
-  if [ "$(ado_json read-only "$_ro_cfg" 2>/dev/null)" = "true" ]; then
-    blocked "tracker is read-only" "edit repo files (agents.tracker.readOnly)"
+  if [ "$(ado_json write "$(config_path)" "$1")" != "true" ]; then
+    blocked "tracker action $1 is disabled" "write the repo file (agents.tracker.write.$1)"
   fi
 }

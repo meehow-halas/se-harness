@@ -1,24 +1,20 @@
-# 01 — PRD and references
+# 06 — Docs and release
 
 ## Goal
 
-PRD and reference files describe the target behaviour before any code changes.
+User guide and changelog match the shipped 2.0.0 behaviour.
 
 ## Scope
 
 In:
-- `docs/prd.md`: Feature tracking (drop the read-only exception, add the per-action write list and files fallback), Jira / ADO sections and script tables (verb ↔ action, `get` per flag), Git (`agents.git` ops, chain, `UNCHANGED` + `git: <op> disabled`), Reviewer after-acceptance sequence, `/<prefix>setit-se` detail (changelog, git ops, tracker actions questions, migration), `/<prefix>shipit` requirement and key selection, Statuses (`done` meaning), Decisions.
-- `references/harness.config.md`, `references/harness.config.json`: `agents.reportChange` asked by setup, `agents.git`, `agents.tracker.write`.
-- `references/harness.tracker.json`, `references/harness.tracker.ado.json`: `write` block, no `readOnly`.
-- `references/spec.feature.md`: `tracker:` frontmatter key.
-- `references/AGENTS.md`: replace read-only wording.
-- `package.json` → `2.0.0`; new `CHANGELOG.md` entry `[2.0.0]`.
+- `docs/guide/` (`setup.md`, `trackers.md`, `worktrees.md`, `workflow.md`, `examples.md` where affected): new questions, behaviour tables, binding, explicit user request.
+- `CHANGELOG.md` `[2.0.0]` complete: Added (`agents.git`, `agents.tracker.write`, `create`, `tracker:` binding, changelog question), Changed (setup questions), Removed (`agents.tracker.readOnly`), migration note.
 
-Out: scripts, skills, agents.
+Out: root `README.md` (only on explicit request).
 
 ## Decisions
 
-Q1–Q7, Q9, Q10.
+Q5, Q11, Q12–Q15.
 
 ## Detailed plan
 
@@ -34,7 +30,7 @@ Q1–Q7, Q9, Q10.
 
 ### Disabled tracker action
 
-| Action OFF | Script verb refused (`BLOCKED:`, no HTTP, before credentials) | Where it goes instead |
+| Action OFF | Script verb refused (`BLOCKED:`, no HTTP, before credentials; unless `--user-request`) | Where it goes instead |
 |------------|----------------------------------------------------------------|-----------------------|
 | `create` | `create`, `link` **(A: links belong to `create`)** | No issue; task keeps files basename, `tracker:` empty |
 | `spec` | `set spec` | `docs/features/<basename>.feature.md` |
@@ -42,7 +38,7 @@ Q1–Q7, Q9, Q10.
 | `log` | `set log`, `comment` (Q<n>, Reviewer reports, link failures) | `docs/feature-log/<basename>.log.md` |
 | `status` | `transition` | `status:` in local spec frontmatter (`agents.statuses`); with `spec` ON that file is a frontmatter-only stub (`status`, `tracker`) **(A)** |
 
-`get` assembles each body from tracker or file according to the same flags. `depends` gate: status is read from wherever status lives for that task (tracker when `status` ON and the task is bound, else local frontmatter); a tracker key with no local file is read with `get` and compared with `blocker`, as today. Setup asks `statuses.todo…done` only with `status` ON, `fields.spec/prompt/log` only for the matching action, `issueTypes` / `workItemTypes` only with `create` ON; `blocker` and `fetchFields` always.
+`get` assembles each body from tracker or file according to the same flags. `depends` gate: status is read from wherever status lives for that task (tracker when `status` ON and the task is bound, else local frontmatter); a tracker key no local spec holds (basename or `tracker:`) is read with `get`, status from the tracker whatever the flag, and compared with `blocker`, as today. Setup asks `statuses.todo…done` only with `status` ON, `fields.spec/prompt/log` only for the matching action, `issueTypes` / `workItemTypes` only with `create` ON; `blocker` and `fetchFields` always.
 
 ### Binding
 
@@ -63,22 +59,33 @@ A task is bound when `tracker:` in its local spec frontmatter holds a key, or it
 
 "Done" = accepted + every enabled op finished. `/<prefix>shipit` with any op OFF: `BLOCKED: /<prefix>shipit needs worktree, commit, push and pr enabled — change them in /<prefix>setit-se`.
 
+### Explicit user request (Q12)
+
+OFF means seh does not do it automatically where it normally would. On the user's explicit request seh still does it.
+
+- The guarded script takes `--user-request "<the user's words>"`, which lifts the `agents.tracker.write` / `agents.git` guard for that call only. Empty value → `BLOCKED:`. **(A: flag name)**
+- The words come from the user in this session, or from a launch line that carries them verbatim. seh never adds the flag for its own steps, in any mode. **(A)**
+- Tracker (Q13): the write is a one-off copy. Repo files stay the source for an OFF action, nothing is synced, local status is unchanged. A non-empty target field → ask before overwriting; `get <key> --user-request` reads every part from the tracker. **(A: `get` flag)**
+- Missing mapping (Q15): the skill lists values from `meta`, asks, writes the mapping to config with the user's consent, runs the action; the action stays OFF.
+- Manual `create` binds the task (`tracker:`); content of OFF actions stays local. A later switch to ON follows the move rule, including its `BLOCKED:` when both sides are non-empty. **(A)**
+- Git (Q14): applies to `start-task`, `commit-task`, `push-task`, `open-pr`; the flag runs that one operation even when an earlier one in the chain is OFF. It does not override git disabled (empty `agents.baseBranch`), does not change who may merge (`merge-pr` only on a `/<prefix>shipit` run), and does not satisfy the `/<prefix>shipit` requirement. **(A)**
+
 ## Acceptance criteria
 
-- [ ] No `readOnly` left in `docs/prd.md` or `references/` (except `codex-adapters.*`, an unrelated option) outside the migration rule.
-- [ ] Every disabled action / op has exactly one stated fallback or hand-off.
-- [ ] Binding rules (naming, stub, move, conflict) are in the PRD.
-- [ ] `package.json` is `2.0.0` and `CHANGELOG.md` has a `[2.0.0]` entry.
-- [ ] `npm test` green.
+- [x] No `readOnly` in `docs/guide/` outside the migration note.
+- [x] Guide describes the three setup questions, disabled actions / ops, and binding, consistent with the PRD.
+- [x] `CHANGELOG.md` `[2.0.0]` has Added, Changed, Removed and the migration note.
+- [x] `npm test` green.
+- [x] Guide explains running a disabled action / op on request.
 
 ## Verification
 
-`npm test`; review of the PRD diff.
+`npm test`; review of guide pages against the PRD.
 
 ## Files / materials
 
-`docs/prd.md`, `references/`, `package.json`, `CHANGELOG.md`
+`docs/guide/`, `CHANGELOG.md`
 
 ## Depends on
 
-—
+05 (`done`)

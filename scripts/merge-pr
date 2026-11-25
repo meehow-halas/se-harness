@@ -2,18 +2,12 @@
 # merge-pr <task>
 # gh pr merge <number> --squash for the open PR of the task branch into
 # agents.baseBranch. No --auto, --admin, --delete-branch, rebase, or force.
+# PR disabled in agents.git: UNCHANGED; no flag lifts this.
 
 . "$(dirname "$0")/lib.sh"
 
 git_gate
 require_git
-
-if ! command -v gh >/dev/null 2>&1; then
-  blocked "gh is not available" "install GitHub CLI (gh) and retry merge-pr"
-fi
-if ! command -v node >/dev/null 2>&1; then
-  blocked "node is not available" "install node and retry merge-pr"
-fi
 
 if [ $# -gt 1 ]; then
   blocked "expected exactly one task argument" "usage: merge-pr <task>"
@@ -23,6 +17,14 @@ require_task "$task"
 read_base_branch
 base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
+git_op_gate pr ""
+
+if ! command -v gh >/dev/null 2>&1; then
+  blocked "gh is not available" "install GitHub CLI (gh) and retry merge-pr"
+fi
+if ! command -v node >/dev/null 2>&1; then
+  blocked "node is not available" "install node and retry merge-pr"
+fi
 
 branch=$(task_branch "$task")
 

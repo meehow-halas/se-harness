@@ -2,6 +2,7 @@
 
 const { describe, test } = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("fs");
 const path = require("path");
 
 const {
@@ -9,10 +10,12 @@ const {
   assertBlocked,
   assertOk,
   assertUnchanged,
+  git,
   initGitRepo,
   pathHidingCommand,
   runScript,
   withTempDir,
+  writeFile,
   writeGhPrStub,
   writeHarnessConfig,
 } = require("../test/helpers");
@@ -138,6 +141,68 @@ describe("pr-state", () => {
       assert.deepEqual(argvLogArgv(logFile), []);
     });
   });
+
+  // A repo whose branch(es) hold commits that are not on dev.
+  function withBranches(branches, run) {
+    withTempDir((cwd) => {
+      initGitRepo(cwd, { baseBranch: "dev" });
+      for (const [name, commits] of branches) {
+        git(cwd, ["checkout", "-q", "-b", name, "dev"]);
+        for (let i = 0; i < commits; i += 1) {
+          git(cwd, ["commit", "-q", "--allow-empty", "-m", `${name} ${i}`]);
+        }
+      }
+      git(cwd, ["checkout", "-q", "dev"]);
+      run(cwd);
+    });
+  }
+
+  function localBranch(branches, prs = []) {
+    let found;
+    withBranches(branches, (cwd) => {
+      const { env } = withGh(cwd, { prs });
+      found = assertOk(runScript("pr-state", ["ABC-1"], { cwd, env })).fields.local_branch;
+    });
+    return found;
+  }
+
+  test("local_branch names the task branch with work not on base", () => {
+    assert.equal(localBranch([["ABC-1", 1]]), "ABC-1");
+    assert.equal(localBranch([["ABC-1", 1], ["ABC-1-2", 1], ["ABC-1-10", 1]]), "ABC-1-10");
+  });
+
+  test("no local_branch for an empty, foreign, or PR-backed branch", () => {
+    assert.equal(localBranch([["ABC-1", 0]]), undefined);
+    assert.equal(localBranch([["ABC-10", 1], ["ABC-1-x", 1]]), undefined);
+    assert.equal(localBranch([["ABC-1", 1]], [pr()]), undefined);
+  });
+
+  for (const prOn of [false, true]) {
+    test(`pr ${prOn ? "on" : "off"}: gh missing or failing`, () => {
+      withBranches([["ABC-1", 1]], (cwd) => {
+        writeFile(
+          cwd,
+          "harness.config.json",
+          JSON.stringify({
+            agents: { baseBranch: "dev", git: { worktree: true, commit: true, push: true, pr: prOn } },
+          })
+        );
+        const missing = { PATH: pathHidingCommand(cwd, "gh") };
+        const bin = path.join(cwd, ".bin");
+        writeFile(cwd, ".bin/gh", "#!/bin/sh\necho boom >&2\nexit 1\n");
+        fs.chmodSync(path.join(bin, "gh"), 0o755);
+        const failing = { PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+        for (const env of [missing, failing]) {
+          const result = runScript("pr-state", ["ABC-1"], { cwd, env });
+          if (prOn) {
+            assertBlocked(result, /gh (is not available|pr list failed \(boom\))/);
+          } else {
+            assertOk(result, { state: "none", local_branch: "ABC-1" });
+          }
+        }
+      });
+    });
+  }
 
   test("BLOCKED when gh is not on PATH", () => {
     withTempDir((cwd) => {

@@ -1,10 +1,14 @@
 #!/bin/sh
-# commit-task <task> [--message <text>] [--] <path> [<path> ...]
+# commit-task <task> [--message <text>] [--user-request <words>] [--] <path> ...
 # git add of the listed paths only, then git commit on the task branch.
 # After an update-from-base merge, --message may be omitted (finishes the merge).
 # Reads project-root harness.config.json. When agents.reportChange is true or
 # missing, a changed CHANGELOG.md at the project root is added too. Otherwise
 # (false, invalid, or unreadable) nothing extra is added; listed paths always are.
+# Commit disabled in agents.git: UNCHANGED, unless --user-request carries the
+# user's explicit request. With the worktree operation also off, such a request
+# made on the base branch creates the task branch from HEAD in this checkout,
+# switches to it (uncommitted changes stay), and commits there.
 # No rebase, reset, or force.
 
 . "$(dirname "$0")/lib.sh"
@@ -15,6 +19,7 @@ require_git
 task=
 message=
 paths=
+user_request=
 
 while [ $# -gt 0 ]; do
   case $1 in
@@ -23,6 +28,11 @@ while [ $# -gt 0 ]; do
         blocked "missing value for --message" "pass commit-task <task> --message <text> -- <path> ..."
       fi
       message=$2
+      shift 2
+      ;;
+    --user-request)
+      require_user_request "${2-}"
+      user_request=$2
       shift 2
       ;;
     --)
@@ -53,8 +63,23 @@ require_task "$task"
 read_base_branch
 base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
-branch=$(task_branch "$task")
-require_on_task "$branch"
+git_op_gate commit "$user_request"
+resolve_task_branch "$task"
+branch=$SEH_BRANCH
+
+# Without a worktree nobody else makes the task branch: a requested commit does.
+create_branch=no
+if [ -n "$user_request" ] && [ "$(current_branch)" = "$base" ] && ! git_op_enabled worktree; then
+  create_branch=yes
+  if local_branch_exists "$task" || remote_branch_exists "$task"; then
+    if ! branch_is_historical "$task"; then
+      blocked "task branch $task already exists" "check it out, then retry commit-task"
+    fi
+    branch=$(next_task_branch "$task")
+  fi
+else
+  require_on_task "$branch"
+fi
 
 flag=$(read_report_change 2>/dev/null) || flag=
 changelog=$(project_root)/CHANGELOG.md
@@ -66,6 +91,32 @@ fi
 in_merge=no
 if [ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
   in_merge=yes
+fi
+
+# Check before switching: a refused or empty commit leaves the checkout alone.
+if [ "$create_branch" = "yes" ]; then
+  changed=no
+  set -f
+  old_ifs=$IFS
+  IFS='
+'
+  for p in $paths; do
+    [ -n "$p" ] || continue
+    if [ ! -e "$p" ] && ! git ls-files --error-unmatch "$p" >/dev/null 2>&1; then
+      blocked "path $p does not exist" "pass paths that were changed on this task"
+    fi
+    if [ -n "$(git status --porcelain -- "$p" 2>/dev/null)" ]; then
+      changed=yes
+    fi
+  done
+  IFS=$old_ifs
+  set +f
+  if [ "$changed" = "no" ]; then
+    unchanged "branch: $base" "commit: none"
+  fi
+  if ! out=$(git checkout -q -b "$branch" 2>&1); then
+    blocked "could not create $branch ($out)" "fix the git error, then retry commit-task"
+  fi
 fi
 
 added=no

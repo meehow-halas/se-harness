@@ -2,6 +2,45 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] - 2026-11-25
+
+### Migration from 1.x
+
+- Run `seh install`, then `/<prefix>setit-se`.
+- Tracker config: until setup has run, `jira` / `ado` `get` and write verbs are `BLOCKED:`. Setup migrates `agents.tracker.readOnly` once to `agents.tracker.write`: `true` → all five actions off; `false` or missing → all on.
+- Setup asks once for a missing `agents.reportChange`, and for a missing `agents.git` when a base branch is set. Until answered, both count as on.
+
+### Added
+
+- Config key `agents.tracker.write` with one switch per tracker write: `create`, `spec`, `prompt`, `log`, `status`. `create` lets seh create items and links, or leaves a task on a files basename.
+- Config key `agents.git` (`worktree`, `commit`, `push`, `pr`; chain `pr` ⇒ `push` ⇒ `commit` ⇒ `worktree`; missing = all `true` with a base branch) in the PRD and `references/` (`harness.config.json`, `harness.config.md`, `AGENTS.md`).
+- `tracker:` key in `references/spec.feature.md` frontmatter, and the PRD binding rules (naming, stub, move on binding, conflict).
+- `--user-request "<words>"` on the `jira` / `ado` write verbs and `get`: the user's explicit request runs a disabled tracker action for that call (`get` then reads every part from the tracker). Empty words are `BLOCKED:`. PRD and `references/` state the rule.
+- `jira get` / `ado get` accept the basename of a task whose spec has `tracker:`.
+- `--user-request "<words>"` on `start-task`, `commit-task`, `push-task` and `open-pr`: the user's explicit request runs a disabled git operation for that call. Empty words are `BLOCKED:`. It does not override git disabled, and `merge-pr` takes no flag. PRD and `references/` state the rule. With `worktree` off, a requested `commit-task` on the base branch creates the task branch in that checkout, switches to it and commits.
+- `pr-state` prints `local_branch:` for a task whose work exists only on a local branch, and answers `state: none` instead of `BLOCKED:` when `pr` is off and `gh` is missing or fails. `/<prefix>planit`, `doit`, `checkit` and `runit` check it before treating a spec as missing.
+- Tracker skeletons start with `agents.tracker.write: null`; setup that stopped before the actions question asks it on the next run, and `jira` / `ado` answer `BLOCKED: tracker write actions are not set` until then.
+- Move on binding also moves a local `status:` line once when `status` is ON, and adds local content of an artifact mapped to `comment` / `history` (spec, prompt or log) as a new entry instead of reporting a conflict.
+- `open-pr` usage messages name `--user-request`; `/<prefix>designit` offers a spec “in its store”, not “on the active tracker”.
+- `/<prefix>setit-se` asks which git operations seh runs (`agents.git`) in one question, and whether to write change entries (`agents.reportChange`, proposal from project-root `CHANGELOG.md`); a later run asks each once when the key is missing.
+
+### Changed
+
+- **Breaking.** PRD and `references/` describe per-action tracker writes: `agents.tracker.write` (`create`, `spec`, `prompt`, `log`, `status`) in `harness.tracker.json` and `harness.tracker.ado.json`; a disabled action falls back to the files-tracker location.
+- **Breaking.** `jira` / `ado` guard each write verb by its `agents.tracker.write` action (`link` belongs to `create`, `comment` to `log`); `get` takes spec, prompt, log and status each from the tracker or the repo file accordingly (a key no local spec holds: status from the tracker). A tracker config without `write` is `BLOCKED:` for `get` and write verbs; `meta` still works.
+- `agents.reportChange` is asked by `/<prefix>setit-se`. `done` means accepted and every enabled git operation finished; `/<prefix>shipit` needs all four.
+- `depends` gate: a tracker key that no local spec holds takes its status from the tracker even with `status` OFF. A disabled `worktree` operation means sequential runs, like git disabled.
+- **Breaking.** Git scripts honour `agents.git`: a disabled operation makes `start-task` (`worktree`; prints the launch checkout), `commit-task`, `push-task`, `open-pr` and `merge-pr` (`pr`) answer `UNCHANGED` + `git: <op> disabled` with no git or `gh` write. `fanout-plan` plans sequentially with `worktree` off. With `commit` off, `return-to-base` keeps a dirty worktree.
+- **Breaking.** `/<prefix>setit-se` replaces the tracker read-only question with one question for the five write actions (none preselected) after `meta` succeeds, asks grouped mappings only for enabled actions, and migrates `readOnly` once to `agents.tracker.write`.
+- **Breaking.** Agents pick the store of spec, prompt, log and status per `agents.tracker.write` action at run time, name and bind tasks (`create` ON: item first, basename = key; OFF: files basename, `tracker:` empty), keep a frontmatter-only stub where needed, move a bound task’s local content to the tracker once (`BLOCKED:` when both sides have it), link only with `create` ON, and read `depends` status where it lives.
+- Agents skip disabled git operations: with `worktree` off they work in the launch checkout; the Reviewer runs the enabled operations only, reports what is left to the user, and with `status` ON transitions `done` after the last of them.
+- Agents and work skills treat OFF as “not automatic”: on the user’s explicit request (`User write request:` launch line, verbatim) they pass `--user-request`, ask before overwriting a non-empty field, and ask for a missing mapping, saving it with consent.
+- `/<prefix>planit`, `doit`, `checkit`, `runit` and session fan-out run several keys sequentially with `worktree` off. `/<prefix>shipit` is `BLOCKED:` unless all four git operations are enabled, and without keys scans local specs only when the `status` action is OFF.
+
+### Removed
+
+- **Breaking.** Config key `agents.tracker.readOnly`; a later `/<prefix>setit-se` migrates it once to `agents.tracker.write`.
+
 ## [1.7.1] - 2026-11-20
 
 ### Fixed

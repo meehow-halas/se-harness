@@ -1,20 +1,24 @@
-# 06 — Docs and release
+# 01 — PRD and references
 
 ## Goal
 
-User guide and changelog match the shipped 2.0.0 behaviour.
+PRD and reference files describe the target behaviour before any code changes.
 
 ## Scope
 
 In:
-- `docs/guide/` (`setup.md`, `trackers.md`, `worktrees.md`, `workflow.md`, `examples.md` where affected): new questions, behaviour tables, binding.
-- `CHANGELOG.md` `[2.0.0]` complete: Added (`agents.git`, `agents.tracker.write`, `create`, `tracker:` binding, changelog question), Changed (setup questions), Removed (`agents.tracker.readOnly`), migration note.
+- `docs/prd.md`: Feature tracking (drop the read-only exception, add the per-action write list and files fallback), Jira / ADO sections and script tables (verb ↔ action, `get` per flag), Git (`agents.git` ops, chain, `UNCHANGED` + `git: <op> disabled`), Reviewer after-acceptance sequence, `/<prefix>setit-se` detail (changelog, git ops, tracker actions questions, migration), `/<prefix>shipit` requirement and key selection, Statuses (`done` meaning), Decisions.
+- `references/harness.config.md`, `references/harness.config.json`: `agents.reportChange` asked by setup, `agents.git`, `agents.tracker.write`.
+- `references/harness.tracker.json`, `references/harness.tracker.ado.json`: `write` block, no `readOnly`.
+- `references/spec.feature.md`: `tracker:` frontmatter key.
+- `references/AGENTS.md`: replace read-only wording.
+- `package.json` → `2.0.0`; new `CHANGELOG.md` entry `[2.0.0]`.
 
-Out: root `README.md` (only on explicit request).
+Out: scripts, skills, agents.
 
 ## Decisions
 
-Q5, Q11.
+Q1–Q7, Q9, Q10.
 
 ## Detailed plan
 
@@ -61,19 +65,20 @@ A task is bound when `tracker:` in its local spec frontmatter holds a key, or it
 
 ## Acceptance criteria
 
-- [ ] No `readOnly` in `docs/guide/` outside the migration note.
-- [ ] Guide describes the three setup questions, disabled actions / ops, and binding, consistent with the PRD.
-- [ ] `CHANGELOG.md` `[2.0.0]` has Added, Changed, Removed and the migration note.
-- [ ] `npm test` green.
+- [x] No `readOnly` left in `docs/prd.md` or `references/` (except `codex-adapters.*`, an unrelated option) outside the migration rule.
+- [x] Every disabled action / op has exactly one stated fallback or hand-off.
+- [x] Binding rules (naming, stub, move, conflict) are in the PRD.
+- [x] `package.json` is `2.0.0` and `CHANGELOG.md` has a `[2.0.0]` entry.
+- [x] `npm test` green.
 
 ## Verification
 
-`npm test`; review of guide pages against the PRD.
+`npm test`; review of the PRD diff.
 
 ## Files / materials
 
-`docs/guide/`, `CHANGELOG.md`
+`docs/prd.md`, `references/`, `package.json`, `CHANGELOG.md`
 
 ## Depends on
 
-05 (`done`)
+—
