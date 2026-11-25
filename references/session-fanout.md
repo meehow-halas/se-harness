@@ -1,21 +1,21 @@
 # Session fan-out
 
-Shared procedure for work skills (`/{{prefix}}planit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}runit`) when the user names **two or more** keys. One key = run the skill in this session as before. `/{{prefix}}shipit` uses the same procedure with the differences marked `shipit` below; its own steps are in `.seh/skills/shipit/SKILL.md`.
+Shared procedure for work skills (`/{{prefix}}planit`, `/{{prefix}}doit`, `/{{prefix}}checkit`, `/{{prefix}}runit`) when the user names **two or more** keys. One key = run the skill in this session as before. Sessions are started only with git and the `worktree` operation enabled; with git or `worktree` disabled (`agents.git.worktree` off) the keys run sequentially in this session (section 2). `/{{prefix}}shipit` uses the same procedure with the differences marked `shipit` below; its own steps are in `.seh/skills/shipit/SKILL.md`.
 
 Planner: `.seh/scripts/fanout-plan`. Host adapter: `sessionSpawn` in `.seh/references/hosts.json` for this host.
 
 ## 1. Guard and resolve (parent, once)
 
 - Run the skill's own guard first (unchanged).
-- Resolve each key (spec, status, `depends`) as the skill does for one key. Keys whose spec is missing are `BLOCKED` for that key only, except for `planit` (writing the spec is its job) and `runit`: a missing spec does not block the key, and its child starts at Architect (see Rules); for `runit` after the `pr-state` check in `runit` *Resolve the task* (an open or merged PR is reported, not started).
+- Resolve each key (spec, status, `depends`, each read from its store) as the skill does for one key. Keys whose spec is missing are `BLOCKED` for that key only, except for `planit` (writing the spec is its job) and `runit`: a missing spec does not block the key, and its child starts at Architect (see Rules); for `runit` after the `pr-state` check in `runit` *Resolve the task* (an open or merged PR is reported, not started).
 
 ## 2. Plan
 
-Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in this invocation. A dependency on a key outside the invocation must already be `done` (pass it in `--done`), or that key stays blocked.
+Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in this invocation. A dependency on a key outside the invocation must already pass the `depends` gate of the agent files (status read where it lives; pass it in `--done`), or that key stays blocked.
 
-`runit` with `mode: parallel` (git enabled) does no dependency ordering: pass no `--depends`. A key whose spec already has a `depends` on a sibling key that is not `done` is not started; report it `BLOCKED: depends on <DEP> — rerun /{{prefix}}runit <KEY> after <DEP> is merged`. Full automation with dependencies is `/{{prefix}}shipit` with specs written beforehand.
+`runit` with `mode: parallel` (git and `worktree` enabled) does no dependency ordering: pass no `--depends`. A key whose spec already has a `depends` on a sibling key that is not `done` is not started; report it `BLOCKED: depends on <DEP> — rerun /{{prefix}}runit <KEY> after <DEP> is merged`. Full automation with dependencies is `/{{prefix}}shipit` with specs written beforehand.
 
-`runit` with `mode: sequential` (git disabled) follows dependencies, never the order the keys were given: pass `--depends` as above and run the keys as the `sequential` bullet below says. When the *Dependency gate* in `runit` stops a key on a sibling key that is not `done` yet, that stop is not dropped: add `--depends KEY:DEP` and the key goes to `waiting` and runs again later in this session from the written spec.
+`runit` with `mode: sequential` (git or `worktree` disabled) follows dependencies, never the order the keys were given: pass `--depends` as above and run the keys as the `sequential` bullet below says. When the *Dependency gate* in `runit` stops a key on a sibling key that is not `done` yet, that stop is not dropped: add `--depends KEY:DEP` and the key goes to `waiting` and runs again later in this session from the written spec.
 
 ```text
 .seh/scripts/fanout-plan --skill <name> --keys <K1,K2,...> [--variant review] [--depends KEY:DEP,...] [--done <k,...>] [--running <k,...>] [--max <n>]
@@ -23,7 +23,7 @@ Call the planner. Pass `--depends KEY:DEP` only for dependencies between keys in
 
 Output: `OK`, then `mode`, `max`, `ready` (comma list, may be empty), and optional `waiting`, `blocked`, `queued`, `stuck` lines. `BLOCKED: ...` means fix the arguments and retry.
 
-- `mode` is `parallel`, or `sequential` (with `max: 1`) when git is disabled (`agents.baseBranch` empty). On `sequential`, do not start sessions: run the keys one after another in this session, in the planner's order, never in the order the keys were given. Run the one `ready` key, then call the planner again: a key that finished goes to `--done`; a key that stopped on `BLOCKED:` is dropped from `--keys` together with its own `--depends` entries (its dependents then report `blocked`). A `Q<n>` is asked in this session: wait for the user's answer and continue the same key; it is not dropped. Git disabled means `sequential` on every host, `manual` included.
+- `mode` is `parallel`, or `sequential` (with `max: 1`) when git is disabled (`agents.baseBranch` empty) or the `worktree` operation is off in `agents.git`. On `sequential`, do not start sessions: run the keys one after another in this session, in the planner's order, never in the order the keys were given. Run the one `ready` key, then call the planner again: a key that finished goes to `--done`; a key that stopped on `BLOCKED:` is dropped from `--keys` together with its own `--depends` entries (its dependents then report `blocked`). A `Q<n>` is asked in this session: wait for the user's answer and continue the same key; it is not dropped. Git or `worktree` disabled means `sequential` on every host, `manual` included: no sessions, no `start-task`, no `Worktree:` line.
 - Default `--max 4`. Above that, ask the user first.
 
 ## 3. Start sessions (desktop app host)
@@ -76,5 +76,6 @@ One table: key, session link (`[title](#local_<id>)`), state (done, `BLOCKED: ..
 - Run only the skill the user named. The parent never starts another skill's session, for example `planit` for a missing spec. For `doit`, `checkit` and `shipit` a missing spec or prompt is `BLOCKED` for that key, with the one-line fix (`run /{{prefix}}planit <KEY> first`). `planit` writes the spec in its child. `runit` is the other exception: the child starts at the first missing stage, so a key with no spec runs Architect inside the child (the parent still never starts `planit`).
 - `runit` with `mode: parallel`, `depends` between sibling keys found by a child's Architect: the child stops after the Architect stage with `BLOCKED: depends on <KEY> — rerun /{{prefix}}runit <this key> after <KEY> is merged` (spec stays `todo`). The parent lists it in the report table; there is no waiting, no side channel, and no new wave (same for a `depends` already in the spec, see section 2). The rerun reuses the written spec.
 - A child's `BLOCKED:` or `Q<n>` does not stop siblings.
+- A disabled tracker action or git operation runs only on the user's explicit request, made in the session that does it. The parent never adds `--user-request` and never adds a line to a child prompt for it.
 - Children share no notes folder and no side channel. The parent does not create one. Coordination goes through the user and the repo's own tracker files.
 - Shared files (tracker, log, status) written by parallel children need the skill's own locking or per-key files; a shared-file collision is a stop for that key, not a silent overwrite.

@@ -21,6 +21,10 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 - `depends` gate: a tracker key that no local spec holds takes its status from the tracker even with `status` OFF. A disabled `worktree` operation means sequential runs, like git disabled.
 - **Breaking.** Git scripts honour `agents.git`: a disabled operation makes `start-task` (`worktree`; prints the launch checkout), `commit-task`, `push-task`, `open-pr` and `merge-pr` (`pr`) answer `UNCHANGED` + `git: <op> disabled` with no git or `gh` write. `fanout-plan` plans sequentially with `worktree` off. With `commit` off, `return-to-base` keeps a dirty worktree.
 - **Breaking.** `/<prefix>setit-se` replaces the tracker read-only question with one question for the five write actions (none preselected) after `meta` succeeds, asks grouped mappings only for enabled actions, and migrates `readOnly` once to `agents.tracker.write`.
+- **Breaking.** Agents pick the store of spec, prompt, log and status per `agents.tracker.write` action at run time, name and bind tasks (`create` ON: item first, basename = key; OFF: files basename, `tracker:` empty), keep a frontmatter-only stub where needed, move a bound task’s local content to the tracker once (`BLOCKED:` when both sides have it), link only with `create` ON, and read `depends` status where it lives.
+- Agents skip disabled git operations: with `worktree` off they work in the launch checkout; the Reviewer runs the enabled operations only, reports what is left to the user, and with `status` ON transitions `done` after the last of them.
+- Agents and work skills treat OFF as “not automatic”: on the user’s explicit request (`User write request:` launch line, verbatim) they pass `--user-request`, ask before overwriting a non-empty field, and ask for a missing mapping, saving it with consent.
+- `/<prefix>planit`, `doit`, `checkit`, `runit` and session fan-out run several keys sequentially with `worktree` off. `/<prefix>shipit` is `BLOCKED:` unless all four git operations are enabled, and without keys scans local specs only when the `status` action is OFF.
 
 ### Removed
 

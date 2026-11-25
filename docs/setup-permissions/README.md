@@ -14,7 +14,7 @@ Source: conversation 2026-11-25
 | 02 | [Tracker scripts](02-tracker-scripts.md) | agent | done | `node --test scripts/jira.test.js scripts/ado.test.js` |
 | 03 | [Git scripts](03-git-scripts.md) | agent | done | `node --test` on touched `scripts/*.test.js` |
 | 04 | [setit-se](04-setit-se.md) | agent | done | `npm test`; skill diff review |
-| 05 | [Agents and skills](05-agents-skills.md) | agent | planned | `npm test`; diff review |
+| 05 | [Agents and skills](05-agents-skills.md) | agent | done | `npm test`; diff review |
 | 06 | [Docs and release](06-docs-release.md) | agent | planned | `npm test`; guide review |
 
 ## Decisions

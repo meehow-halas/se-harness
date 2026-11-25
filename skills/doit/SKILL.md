@@ -53,11 +53,11 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `doit`, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning, then the **Prompt check** in that file before each spawn (only the allowed lines; no shared folder, notes file, or extra instruction). Do not launch Implementer here. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `.seh/references/session-fanout.md` section 2), never in the order given. Two or more keys, git enabled, and `sessionSpawn` is `manual`: print the `start-task` and `/{{prefix}}doit <KEY>` commands per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
+If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git and the `worktree` operation enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `doit`, one child session per key. The parent runs `.seh/scripts/start-task` per key before spawning, then the **Prompt check** in that file before each spawn (only the allowed lines; no shared folder, notes file, or extra instruction). Do not launch Implementer here. Two or more keys with git or `worktree` disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `.seh/references/session-fanout.md` section 2), never in the order given. Two or more keys, git and `worktree` enabled, and `sessionSpawn` is `manual`: print the `start-task` and `/{{prefix}}doit <KEY>` commands per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
 
 ## Resolve the tasks
 
-Need an existing spec **and** prompt on the **active tracker** (files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present — bodies on the issue / work item). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: bodies are repo files, status is spec frontmatter (`agents.statuses`), and nothing writes the tracker. **Files tracker with a worktree:** when `.git/seh-worktrees/<task>` exists, `start-task` has moved the uncommitted spec, prompt, and log into that worktree. Read them there, not from the launch checkout (an empty `docs/prompt/` there is expected in that case).
+Need an existing spec **and** prompt, each in its store. Spec, prompt, log and status each live in one store (never mirror): files if `agents.tracker` is absent or the task is unbound; for a bound task (`tracker:` in its local spec, or basename = key) the Jira / ADO item (`agents.tracker.kind`) for each action ON in `agents.tracker.write`, the repo files (status: spec frontmatter, `agents.statuses`) for each action OFF. Read with `jira get` / `ado get <basename or key>` for a bound task, else the files. A key that a local spec holds in `tracker:` means that task: use its basename for files, `start-task` and the agents. The skill writes nothing to the tracker itself; the agents write, and move local content of a bound task at their first step (see the agent file). **Files in a worktree:** when `.git/seh-worktrees/<task>` exists, `start-task` has moved the uncommitted task files into that worktree. Read them there, not from the launch checkout (an empty `docs/prompt/` there is expected in that case).
 
 - User named one or more basenames or issue keys → those tasks, in that order.
 - Otherwise pick the task they clearly mean. If several match and they did not list them, one question in `interactive`; otherwise:
@@ -74,13 +74,13 @@ If spec or prompt is missing:
 BLOCKED: spec and prompt are missing — run /{{prefix}}planit or /{{prefix}}runit
 ```
 
-Read status from the active tracker. Compare to `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). If status is already the configured `implemented`, `in review`, or `done` string:
+Read status where it lives. Compare to `agents.tracker.statuses` (bound task with `status` ON) or `agents.statuses` (otherwise). If status is already the configured `implemented`, `in review`, or `done` string:
 
 ```text
 BLOCKED: task is already implemented, in review, or done — use /{{prefix}}checkit for review or update; do not re-implement
 ```
 
-A basename/key in `depends` that is not at the configured `done` status is a stop **for that task** (Implementer also enforces this; with `readOnly` `true`, per the `depends` rule in the Implementer file). Do not work around it. Continue the other named tasks.
+A basename/key in `depends` that does not pass the **`depends` gate** in the Implementer file is a stop **for that task** (Implementer also enforces this). Do not work around it. Continue the other named tasks.
 
 A task whose spec has `ui: true`, while `agents.designer.enabled` is `true` in `harness.config.json`, and that has no **UX/UI decisions** section needs the Designer stage first. Stop **that task** (siblings continue):
 
@@ -90,6 +90,10 @@ BLOCKED: <KEY> needs the Designer stage — run /{{prefix}}planit <KEY>
 
 Do not launch the Designer from this skill.
 
+## Explicit user request
+
+A disabled tracker action (`agents.tracker.write`) or git operation (`agents.git`) is OFF **automatically** only: on the user's explicit request seh still does it. When the user asks for it in this session (or the launch has that line), pass `User write request: <the user's own words, verbatim>` to the Implementer, which adds `--user-request` to that one call (a requested worktree: the `start-task` call this session runs takes the flag). Never paraphrase or infer a request and never add one for the skill's own steps, in any mode.
+
 ## Launch Implementer
 
 Follow the live Implementer file for this host (`<agentsDir>/implementer.md` from `.seh/references/hosts.json` — a copy from `/{{prefix}}setit-se`, not a symlink to `.seh/agents/`) **inline in this session**. Do not launch Implementer as a subagent: subagents cannot launch Consultant. Do not duplicate that procedure here. Launch Consultant from this session as a subagent after each phase; do not expose Consultant as a skill.
@@ -98,7 +102,9 @@ For each task that passed resolve:
 
 **Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout, in dependency order (*Several keys*).
 
-1. Run `.seh/scripts/start-task <task>` from the launch checkout. Copy its `worktree:` path (git disabled: skip). Do not compose `git`. Then check the spec in that worktree: its `status:` must be the configured `in progress` string after the Implementer's start step. When the Implementer reports done, its `status:` must be the configured `implemented` string. Otherwise stop that task: `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
+**`worktree` disabled** (`agents.git` present and `agents.git.worktree` not `true`): handle it as git disabled — no fan-out, no `start-task`, no `Worktree:` line, several keys one after another in the launch checkout in dependency order.
+
+1. Run `.seh/scripts/start-task <task>` from the launch checkout. Copy its `worktree:` path (git or `worktree` disabled: skip). Do not compose `git`. Then check the status where it lives (spec in that worktree, or `get`): it must be `in progress` after the Implementer's start step and `implemented` when the Implementer reports done (a `null` tracker map leaves it unchanged; that is not a stop). Otherwise stop that task: `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
 2. Apply the Implementer procedure in this session with at least:
    - `Mode: <mode>`
    - Task key (basename or issue key)
@@ -115,4 +121,4 @@ When all phases have `continue`, status stays `in progress`. Do not start Review
 
 ## After Implementer finishes
 
-Report each task key, its `worktree:` (git enabled only), and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/{{prefix}}checkit` (one Reviewer round, same list) or `/{{prefix}}runit` for a single leftover. Do **not** start review.
+Report each task key, its `worktree:` (git and `worktree` enabled only), and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/{{prefix}}checkit` (one Reviewer round, same list) or `/{{prefix}}runit` for a single leftover. Do **not** start review.
