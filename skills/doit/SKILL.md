@@ -119,8 +119,8 @@ N>1 in this session (no fan-out): run the tasks one after another in dependency 
 
 A `BLOCKED:` on one task stops that task; report it and continue with the next one.
 
-When all phases have `continue`, status stays `in progress`. Do not start Reviewer.
+When all phases have `continue`, the Implementer sets status `implemented` and appends its log row, each in its store. Do not set `in review` or `done`. Do not start Reviewer.
 
 ## After Implementer finishes
 
-Report each task key, its `worktree:` (git and `worktree` enabled only), and that status remains `in progress` (or that task’s `BLOCKED:`). Offer `/{{prefix}}checkit` (one Reviewer round, same list) or `/{{prefix}}runit` for a single leftover. Do **not** start review.
+Report each task key, its `worktree:` (git and `worktree` enabled only), and the status read from its store after the run: `implemented`, or unchanged with a `null` tracker map (or that task’s `BLOCKED:`). Offer `/{{prefix}}checkit` (one Reviewer round, same list) or `/{{prefix}}runit` for a single leftover. Do **not** start review.
