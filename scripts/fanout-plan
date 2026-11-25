@@ -3,7 +3,8 @@
 #   [--depends <key:dep,...>] [--done <k,...>] [--running <k,...>] [--max <n>]
 # Stateless planner for multi-key fan-out. Prints which keys may start a session now.
 # Does not start sessions, read the tracker, or touch git. When agents.baseBranch
-# is empty (git disabled) it plans sequentially: mode sequential, max 1. The parent calls it again
+# is empty (git disabled) or the worktree operation is off in agents.git, it
+# plans sequentially: mode sequential, max 1. The parent calls it again
 # after each session ends, with --done and --running updated.
 # Output: OK, then mode / max / ready / waiting / blocked / queued / stuck lines.
 
@@ -93,7 +94,7 @@ mode=parallel
 _cfg=$(config_path)
 if [ -f "$_cfg" ]; then
   _gb=$(_extract_base_branch "$_cfg") || _gb=x
-  if [ -z "$_gb" ]; then
+  if [ -z "$_gb" ] || ! git_op_enabled worktree; then
     mode=sequential
     max=1
   fi

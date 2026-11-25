@@ -1,20 +1,18 @@
 #!/bin/sh
-# open-pr <task> [--title <text>] [--body <text>]
+# open-pr <task> [--title <text>] [--body <text>] [--user-request <words>]
 # gh pr create --base <agents.baseBranch> --head <task>
-# Does not merge the pull request.
+# Does not merge the pull request. PR disabled in agents.git: UNCHANGED, unless
+# --user-request carries the user's explicit request.
 
 . "$(dirname "$0")/lib.sh"
 
 git_gate
 require_git
 
-if ! command -v gh >/dev/null 2>&1; then
-  blocked "gh is not available" "install GitHub CLI (gh) and retry open-pr"
-fi
-
 task=
 title=
 body=
+user_request=
 
 while [ $# -gt 0 ]; do
   case $1 in
@@ -30,6 +28,11 @@ while [ $# -gt 0 ]; do
         blocked "missing value for --body" "usage: open-pr <task> [--title <text>] [--body <text>]"
       fi
       body=$2
+      shift 2
+      ;;
+    --user-request)
+      require_user_request "${2-}"
+      user_request=$2
       shift 2
       ;;
     --*)
@@ -49,6 +52,11 @@ require_task "$task"
 read_base_branch
 base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
+git_op_gate pr "$user_request"
+
+if ! command -v gh >/dev/null 2>&1; then
+  blocked "gh is not available" "install GitHub CLI (gh) and retry open-pr"
+fi
 
 branch=$(task_branch "$task")
 if ! local_branch_exists "$branch"; then

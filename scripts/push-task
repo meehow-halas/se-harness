@@ -1,20 +1,39 @@
 #!/bin/sh
-# push-task <task>
+# push-task <task> [--user-request <words>]
 # Push only the task branch. No force. Does not push agents.baseBranch.
+# Push disabled in agents.git: UNCHANGED, unless --user-request carries the
+# user's explicit request.
 
 . "$(dirname "$0")/lib.sh"
 
 git_gate
 require_git
-require_task "${1-}"
-task=$1
-if [ $# -ne 1 ]; then
-  blocked "unexpected arguments" "usage: push-task <task>"
-fi
+usage='usage: push-task <task> [--user-request <words>]'
+task=
+user_request=
+while [ $# -gt 0 ]; do
+  case $1 in
+    --user-request)
+      require_user_request "${2-}"
+      user_request=$2
+      shift 2
+      ;;
+    *)
+      if [ -n "$task" ]; then
+        blocked "unexpected arguments" "$usage"
+      fi
+      require_task "$1"
+      task=$1
+      shift
+      ;;
+  esac
+done
+require_task "$task"
 
 read_base_branch
 base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
+git_op_gate push "$user_request"
 
 branch=$(task_branch "$task")
 if ! local_branch_exists "$branch"; then

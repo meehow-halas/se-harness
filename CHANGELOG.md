@@ -10,6 +10,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 - `tracker:` key in `references/spec.feature.md` frontmatter, and the PRD binding rules (naming, stub, move on binding, conflict).
 - `--user-request "<words>"` on the `jira` / `ado` write verbs and `get`: the user's explicit request runs a disabled tracker action for that call (`get` then reads every part from the tracker). Empty words are `BLOCKED:`. PRD and `references/` state the rule.
 - `jira get` / `ado get` accept the basename of a task whose spec has `tracker:`.
+- `--user-request "<words>"` on `start-task`, `commit-task`, `push-task` and `open-pr`: the user's explicit request runs a disabled git operation for that call. Empty words are `BLOCKED:`. It does not override git disabled, and `merge-pr` takes no flag. PRD and `references/` state the rule.
 
 ### Changed
 
@@ -17,6 +18,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 - **Breaking.** `jira` / `ado` guard each write verb by its `agents.tracker.write` action (`link` belongs to `create`, `comment` to `log`); `get` takes spec, prompt, log and status each from the tracker or the repo file accordingly (a key no local spec holds: status from the tracker). A tracker config without `write` is `BLOCKED:` for `get` and write verbs; `meta` still works.
 - `agents.reportChange` is asked by `/<prefix>setit-se`. `done` means accepted and every enabled git operation finished; `/<prefix>shipit` needs all four.
 - `depends` gate: a tracker key that no local spec holds takes its status from the tracker even with `status` OFF. A disabled `worktree` operation means sequential runs, like git disabled.
+- **Breaking.** Git scripts honour `agents.git`: a disabled operation makes `start-task` (`worktree`; prints the launch checkout), `commit-task`, `push-task`, `open-pr` and `merge-pr` (`pr`) answer `UNCHANGED` + `git: <op> disabled` with no git or `gh` write. `fanout-plan` plans sequentially with `worktree` off. With `commit` off, `return-to-base` keeps a dirty worktree.
 
 ### Removed
 

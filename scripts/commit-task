@@ -1,11 +1,12 @@
 #!/bin/sh
-# commit-task <task> [--message <text>] [--] <path> [<path> ...]
+# commit-task <task> [--message <text>] [--user-request <words>] [--] <path> ...
 # git add of the listed paths only, then git commit on the task branch.
 # After an update-from-base merge, --message may be omitted (finishes the merge).
 # Reads project-root harness.config.json. When agents.reportChange is true or
 # missing, a changed CHANGELOG.md at the project root is added too. Otherwise
 # (false, invalid, or unreadable) nothing extra is added; listed paths always are.
-# No rebase, reset, or force.
+# Commit disabled in agents.git: UNCHANGED, unless --user-request carries the
+# user's explicit request. No rebase, reset, or force.
 
 . "$(dirname "$0")/lib.sh"
 
@@ -15,6 +16,7 @@ require_git
 task=
 message=
 paths=
+user_request=
 
 while [ $# -gt 0 ]; do
   case $1 in
@@ -23,6 +25,11 @@ while [ $# -gt 0 ]; do
         blocked "missing value for --message" "pass commit-task <task> --message <text> -- <path> ..."
       fi
       message=$2
+      shift 2
+      ;;
+    --user-request)
+      require_user_request "${2-}"
+      user_request=$2
       shift 2
       ;;
     --)
@@ -53,6 +60,7 @@ require_task "$task"
 read_base_branch
 base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
+git_op_gate commit "$user_request"
 branch=$(task_branch "$task")
 require_on_task "$branch"
 

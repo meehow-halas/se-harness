@@ -289,6 +289,74 @@ git_gate() {
   return 0
 }
 
+# Exit 0 when git operation $1 (worktree|commit|push|pr) is enabled in
+# agents.git, 1 when it is disabled. No agents.git (or no config) = all enabled.
+# The operations form a chain: one is enabled only when it and every operation
+# before it are true. Must not be called from command substitution.
+git_op_enabled() {
+  _cfg=$(config_path)
+  if [ ! -f "$_cfg" ]; then
+    return 0
+  fi
+  _orc=0
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+var fs = require("fs");
+var c;
+try { c = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); } catch (e) { process.exit(0); }
+var a = c && c.agents;
+if (!a || typeof a !== "object" || !("git" in a)) process.exit(0);
+var g = a.git || {};
+var chain = ["worktree", "commit", "push", "pr"];
+var need = chain.slice(0, chain.indexOf(process.argv[2]) + 1);
+process.exit(need.every(function (k) { return g[k] === true; }) ? 0 : 1);
+' "$_cfg" "$1" || _orc=$?
+    return "$_orc"
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import json, sys
+try:
+    c = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+a = c.get("agents") if isinstance(c, dict) else None
+if not isinstance(a, dict) or "git" not in a:
+    sys.exit(0)
+g = a["git"] if isinstance(a["git"], dict) else {}
+chain = ["worktree", "commit", "push", "pr"]
+need = chain[:chain.index(sys.argv[2]) + 1]
+sys.exit(0 if all(g.get(k) is True for k in need) else 1)
+' "$_cfg" "$1" || _orc=$?
+    return "$_orc"
+  fi
+  case $(tr -d '\n' < "$_cfg") in
+    *'"git"'*) blocked "cannot read agents.git without node or python3" "install node, then retry" ;;
+  esac
+  return 0
+}
+
+# Guard for the script of git operation $1. $2 is the --user-request value
+# (empty when the flag was not passed): the user's explicit request runs this one
+# operation. Otherwise a disabled operation prints UNCHANGED with
+# "git: <op> disabled" plus any extra lines passed in, then exits 0.
+git_op_gate() {
+  _op=$1
+  _req=$2
+  shift 2
+  if [ -n "$_req" ] || git_op_enabled "$_op"; then
+    return 0
+  fi
+  unchanged "git: $_op disabled" "$@"
+}
+
+# BLOCKED when a --user-request value ($1) carries no words.
+require_user_request() {
+  if [ -z "$(printf '%s' "${1-}" | tr -d '[:space:]')" ]; then
+    blocked "empty --user-request" "pass the user's own words"
+  fi
+}
+
 # Sets SEH_BASE_BRANCH. Must not be called from command substitution
 # (BLOCKED: has to print on the script's stdout).
 read_base_branch() {
