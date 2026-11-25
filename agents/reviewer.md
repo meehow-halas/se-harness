@@ -124,7 +124,7 @@ Allowlisted git/`gh` operations go through `.seh/scripts/`. You do not compose t
 
 | When | Script |
 |------|--------|
-| Task branch missing | `.seh/scripts/start-task <task>` |
+| Task worktree missing | `.seh/scripts/start-task <task> --existing` |
 | After acceptance | `.seh/scripts/commit-task <task> --message <text> -- <path> ...` then `push-task` then `open-pr` then (only with `Auto-merge: yes`) `merge-pr` then `return-to-base` |
 | Merge (only with launch line `Auto-merge: yes`) | `.seh/scripts/merge-pr <task>` |
 | After resolving an auto-merge conflict | `.seh/scripts/commit-task <task> -- <resolved files>` (message optional during a merge) |
@@ -132,7 +132,7 @@ Allowlisted git/`gh` operations go through `.seh/scripts/`. You do not compose t
 | After the last enabled git operation (not with `worktree` disabled) | `.seh/scripts/return-to-base` (no arguments) |
 
 ```text
-.seh/scripts/start-task <task> [--user-request <words>]
+.seh/scripts/start-task <task> [--existing] [--user-request <words>]
 .seh/scripts/commit-task <task> [--message <text>] [--user-request <words>] [--] <path> [<path> ...]
 .seh/scripts/push-task <task> [--user-request <words>]
 .seh/scripts/open-pr <task> [--title <text>] [--body <text>] [--user-request <words>]
@@ -149,7 +149,7 @@ Do not push the base branch yourself. Do not open any other PR than the one afte
 
 1. Apply **Move on binding** (in the task worktree when there is one), then read the spec from its store. Check `depends`: an entry failing the **`depends` gate** → stop. `relates`: report conflicts with those specs under ⚠️ or ❌. A spec dependency missing from `depends` is ⚠️. Do not list a blocker as ❌.
 2. Gate on status. Allowed: `implemented` (first round, or the next round after a fix) and `in review` (a later round with no fix in between). Anything else stops with `BLOCKED: status <value> does not allow review — the Implementer must finish first`. Then set `in review` (**Status** rule) and log that review started. Do this **before** the review itself, even when Acceptance follows in the same run.
-3. If the task branch is missing, `.seh/scripts/start-task <task>` (git disabled: skip; `worktree` disabled: stay in the launch checkout).
+3. If the task worktree is missing, `.seh/scripts/start-task <task> --existing` (never without `--existing`: a review creates no new branch; git disabled: skip; `worktree` disabled: stay in the launch checkout).
 4. Run the checklist against the implementation. Follow generated rules that load on Read. Run the **project’s** test/lint/typecheck when an AC depends on it. A failure on code nobody on this task touched is a stop, not an ❌ for this task. Apply reviewer `checklist` from config when present (still spec constraints, not taste).
 5. Present the structured review. Do **not** append the final review to the log, set `done`, record the change, commit, push, or open a PR until Acceptance allows it.
 6. When Acceptance allows it, do the git order below. When it does not, stop after the report; status stays `in review`. If the report has any open ❌ (a fix round), set status to `in progress` (**Status** rule) and log it: the Implementer picks up from there and the review is run again after it sets `implemented`.

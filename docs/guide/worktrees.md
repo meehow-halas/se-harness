@@ -34,6 +34,8 @@ The same applies to `/_runit`, `/_shipit` and `/_checkit`: they all end with the
 
 A rerun of the task reuses the existing worktree and continues from the first missing stage.
 
+A review never creates a task branch. With no worktree and no `<task>` branch, `/_checkit` stops with `BLOCKED: no worktree or branch holds the work of <task>`, for example when the code is uncommitted in your own checkout.
+
 ## Task files (files tracker)
 
 `start-task` moves this task's uncommitted spec, prompt and log from your checkout into the worktree. While the task runs, an empty `docs/prompt/` in your checkout is expected; the files are in the worktree. Once committed they live on the task branch, and on the base branch once merged. Details: [Trackers and statuses](trackers.md).

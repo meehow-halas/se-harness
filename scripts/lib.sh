@@ -101,10 +101,12 @@ sync_launch_files() {
     "docs/prompt/${_task}.prompt.md" \
     "docs/feature-log/${_task}.log.md"; do
     if [ -f "$_launch/$_rel" ]; then
-      if [ -f "$_wt/$_rel" ] && [ -n "$(git -C "$_wt" status --porcelain -- "$_rel")" ]; then
-        # The worktree already holds uncommitted work on this file (the
-        # Implementer or Reviewer wrote it there). A launch copy is stale
-        # relative to that work: leave both files alone, do not overwrite.
+      if [ -f "$_wt/$_rel" ] && { ! git -C "$_wt" ls-files --error-unmatch -- "$_rel" >/dev/null 2>&1 ||
+        [ -n "$(git -C "$_wt" status --porcelain -- "$_rel")" ]; }; then
+        # The worktree already holds uncommitted work on this file (untracked,
+        # ignored included, or dirty: the Implementer or Reviewer wrote it
+        # there). A launch copy is stale relative to that work: leave both
+        # files alone, do not overwrite.
         continue
       fi
       mkdir -p "$_wt/$(dirname "$_rel")"

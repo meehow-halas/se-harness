@@ -87,7 +87,7 @@ Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/script
 
 | Script | Who |
 |--------|-----|
-| `start-task` | Implementer at start; Reviewer if the branch is missing. Creates or reuses the worktree; does not switch the caller. Copies this task’s file-tracker files into the worktree, then removes uncommitted copies of those paths from the launch tree |
+| `start-task` | Implementer at start; Reviewer if the worktree is missing, with `--existing` (`BLOCKED:` instead of a new branch). Creates or reuses the worktree; does not switch the caller. Copies this task’s file-tracker files into the worktree, then removes uncommitted copies of those paths from the launch tree |
 | `commit-task` | Reviewer, after acceptance, or after resolving an update merge (from the worktree) |
 | `push-task` | Reviewer |
 | `open-pr` | Reviewer, after acceptance |

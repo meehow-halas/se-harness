@@ -139,7 +139,7 @@ Review is due when status is the configured `implemented` or `in review` string.
 
 Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round.
 
-Pass the same `Mode:`, the task key, and `Worktree: <abs>` (when stage 2 did not run in this session, run `.seh/scripts/start-task <task>` first: it is idempotent and prints the existing `worktree:`; git or `worktree` disabled: no `start-task`, no `Worktree:`). Add `Auto-merge: yes` only under the rule in *Auto-merge*; otherwise do not merge.
+Pass the same `Mode:`, the task key, and `Worktree: <abs>` (when stage 2 did not run in this session, run `.seh/scripts/start-task <task> --existing` first: it reuses the worktree or attaches the task branch and never creates one; git or `worktree` disabled: no `start-task`, no `Worktree:`). Add `Auto-merge: yes` only under the rule in *Auto-merge*; otherwise do not merge.
 
 If Reviewer stops on `BLOCKED:` or `Q<n>` (including interactive acceptance), stop the pipeline and report.
 

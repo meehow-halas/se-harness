@@ -2,6 +2,20 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-11-25
+
+### Added
+
+- `start-task --existing`: reuses the task worktree or attaches the task branch, and is `BLOCKED:` instead of creating a new branch.
+
+### Changed
+
+- Review (`/<prefix>checkit`, the Reviewer, `/<prefix>runit` entering at review) calls `start-task --existing`, so work left outside the task branch stops the review instead of getting an empty worktree.
+
+### Fixed
+
+- `start-task` no longer overwrites a task file in an existing worktree with the launch copy when git ignores that file (for example `docs/` in `.gitignore`).
+
 ## [2.0.0] - 2026-11-25
 
 ### Migration from 1.x

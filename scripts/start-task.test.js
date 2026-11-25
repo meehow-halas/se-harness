@@ -391,6 +391,89 @@ describe("start-task", () => {
     });
   });
 
+  test("second start-task keeps the worktree copy when git ignores the task files", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      writeFile(cwd, ".gitignore", "docs\n");
+      git(cwd, ["add", ".gitignore"]);
+      git(cwd, ["commit", "-m", "ignore docs"]);
+      const task = "051-ignored";
+      const files = [
+        `docs/features/${task}.feature.md`,
+        `docs/prompt/${task}.prompt.md`,
+        `docs/feature-log/${task}.log.md`,
+      ];
+      for (const file of files) writeFile(cwd, file, "launch\n");
+      const wt = startWorktree(cwd, task);
+      for (const file of files) {
+        assert.equal(fs.readFileSync(path.join(wt, file), "utf8"), "launch\n");
+        writeFile(wt, file, "worktree\n");
+      }
+      assertUnchanged(startTask(cwd, task), { branch: task, created: "no", worktree: wt });
+      for (const file of files) {
+        assert.equal(fs.readFileSync(path.join(wt, file), "utf8"), "worktree\n");
+        assert.equal(fs.readFileSync(path.join(cwd, file), "utf8"), "launch\n");
+      }
+    });
+  });
+
+  test("--existing is BLOCKED and changes nothing when no branch holds the task", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const task = "052-review";
+      const spec = `docs/features/${task}.feature.md`;
+      writeFile(cwd, spec, "status: implemented\n");
+      writeFile(cwd, "code.txt", "uncommitted work\n");
+      assertBlocked(
+        runScript("start-task", [task, "--existing"], { cwd }),
+        /no worktree or branch holds the work of 052-review/
+      );
+      assert.equal(git(cwd, ["show-ref", "--heads"]).stdout.includes(task), false);
+      assert.equal(fs.existsSync(path.join(cwd, ".git", "seh-worktrees", task)), false);
+      assert.equal(fs.readFileSync(path.join(cwd, spec), "utf8"), "status: implemented\n");
+    });
+  });
+
+  test("--existing reuses a worktree and attaches a local or remote task branch", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const task = "053-review";
+      const wt = startWorktree(cwd, task);
+      writeFile(wt, "task.txt", "work\n");
+      git(wt, ["add", "task.txt"]);
+      git(wt, ["commit", "-m", "task work"]);
+      const sha = revParse(wt, "HEAD");
+      const args = [task, "--existing"];
+      assertUnchanged(runScript("start-task", args, { cwd }), { branch: task, worktree: wt });
+      assertOk(runScript("return-to-base", [], { cwd: wt }));
+      assertOk(runScript("start-task", args, { cwd }), { branch: task, created: "no" });
+      assert.equal(revParse(wt, "HEAD"), sha);
+      addBareOrigin(cwd);
+      git(wt, ["push", "-u", "origin", task]);
+      assertOk(runScript("return-to-base", [], { cwd: wt }));
+      git(cwd, ["branch", "-D", task]);
+      assertOk(runScript("start-task", args, { cwd }), { branch: task, created: "no" });
+      assert.equal(revParse(wt, "HEAD"), sha);
+    });
+  });
+
+  test("--existing is BLOCKED when the only task branch belongs to a merged PR", () => {
+    withTempDir((cwd) => {
+      initGitRepo(cwd);
+      const task = "054-review";
+      const wt = startWorktree(cwd, task);
+      assertOk(runScript("return-to-base", [], { cwd: wt }));
+      const bin = path.join(cwd, ".bin");
+      writeGhStub(bin, { prStates: "MERGED" });
+      const env = { PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+      assertBlocked(
+        runScript("start-task", [task, "--existing"], { cwd, env }),
+        /no worktree or branch holds the work of 054-review/
+      );
+      assert.equal(git(cwd, ["show-ref", "--heads"]).stdout.includes(`${task}-2`), false);
+    });
+  });
+
   test("symlinks .seh when it is missing from the worktree", () => {
     withTempDir((cwd) => {
       initGitRepo(cwd);

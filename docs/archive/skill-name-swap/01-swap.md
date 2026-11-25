@@ -16,7 +16,7 @@ Swap the two skill names. Today `shipit` = one task, no merge; `runit` = many ta
 ## Scope out
 
 - Root `README.md` (CLAUDE.md: not edited unless asked).
-- Historical plans: `docs/parallel-ship/`, `docs/implementation-plan/`, `docs/azure-dev-ops/`, `docs/optional-git/`, `docs/fanout-decisions/`, `docs/tracker-read-only-mode/`, `docs/codex-support/`, `docs/v2-plan/`. They keep the names they were written with.
+- Historical plans: `docs/parallel-ship/`, `docs/implementation-plan/`, `docs/azure-dev-ops/`, `docs/optional-git/`, `docs/fanout-decisions/`, `docs/tracker-read-only-mode/`, `docs/codex-support/`. They keep the names they were written with.
 - Released `CHANGELOG.md` entries and the unreleased `1.3.0` text (history stays as written).
 - Any behaviour change, new config key, alias or compatibility shim for the old meaning.
 - Legacy pre-prefix cleanup names in `skills/setit-se/SKILL.md` (`seh-shipit`, …) stay.
