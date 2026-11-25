@@ -193,4 +193,4 @@ When Reviewer returns ❌ items: implement only those items. Launch Consultant a
 
 ## Output
 
-Report the task basename and key, branch (or the launch checkout), phases, Consultant verdicts, debt/stale/skipped `should-fix` lines, and that status remains `in progress`.
+Report the task basename and key, branch (or the launch checkout), phases, Consultant verdicts, debt/stale/skipped `should-fix` lines, and the status read from its store after the run: `implemented`, or unchanged with a `null` tracker map. A run stopped before all phases have `continue` reports the status it left.

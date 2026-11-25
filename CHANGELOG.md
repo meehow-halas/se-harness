@@ -2,6 +2,12 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] - 2026-11-25
+
+### Fixed
+
+- `/<prefix>doit` and the Implementer no longer end with “status stays `in progress`”: a finished run sets `implemented`, as their other steps and the PRD already say, so `/<prefix>checkit` accepts the task.
+
 ## [2.1.0] - 2026-11-25
 
 ### Added
