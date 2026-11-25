@@ -1,6 +1,7 @@
 #!/bin/sh
 # return-to-base
 # From a seh worktree: remove it when clean. From the primary checkout: git checkout base.
+# With commit disabled in agents.git a dirty worktree is kept (UNCHANGED).
 # Does not delete the task branch or merge a PR.
 
 . "$(dirname "$0")/lib.sh"
@@ -20,6 +21,22 @@ fi
 
 if is_seh_worktree; then
   wt=$(repo_root)
+  if ! git_op_enabled commit; then
+    # Uncommitted work is the expected end state here: keep the worktree.
+    # The launch symlinks made by start-task do not count as work.
+    set -- .
+    for _link in .seh harness.config.json; do
+      if [ -L "$wt/$_link" ]; then
+        set -- "$@" ":(exclude)$_link"
+      fi
+    done
+    if ! dirty=$(git -C "$wt" status --porcelain --untracked-files=normal -- "$@" 2>&1); then
+      blocked "could not read the status of $wt ($dirty)" "fix the git error, then retry return-to-base"
+    fi
+    if [ -n "$dirty" ]; then
+      unchanged "worktree: $wt" "branch: $(current_branch)"
+    fi
+  fi
   main=$(CDPATH= cd -- "$(abs_git_common_dir)/.." && pwd)
   CDPATH= cd -- "$main" || blocked "could not enter the primary checkout" "retry return-to-base from the project directory"
   if [ -L "$wt/.seh" ]; then

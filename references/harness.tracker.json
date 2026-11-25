@@ -1,6 +1,6 @@
 {
   "kind": "jira",
-  "readOnly": false,
+  "write": null,
   "url": "",
   "user": "",
   "projectKey": "",

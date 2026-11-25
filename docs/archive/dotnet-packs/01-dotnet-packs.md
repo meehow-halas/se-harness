@@ -114,17 +114,17 @@ UI stack: dopisać „Razor or Blazor in an ASP.NET Core tree (`.razor` or `.csh
 
 ## Kryteria akceptacji
 
-- [ ] `packs/csharp/`, `packs/aspnetcore/`, `packs/efcore/` istnieją; każdy plik ma frontmatter `paths:` (lista YAML) i nagłówek `#`, jak istniejące packi.
-- [ ] Każda reguła zależna od wersji ma warunek wersji i jest potwierdzona w dokumentacji Microsoft (źródło wymienione w raporcie wykonawcy, nie w pliku packa).
-- [ ] `csharp/language.md` zawiera regułę „nie używaj funkcji powyżej `LangVersion` / TFM projektu”.
-- [ ] Tabela detekcji w `skills/setit-se/SKILL.md` ma wiersze `csharp`, `aspnetcore`, `efcore` z warunkami jak w planie; warunek **UI stack detected** i lista globów `ux-a11y` obejmują Razor/Blazor (`.razor`, `.cshtml`) w obu miejscach.
-- [ ] `packs/ux-a11y/a11y.md`, `states.md`, `touch-i18n.md` mają globy `**/*.razor` i `**/*.cshtml`; `react-native.md` bez zmian; nagłówek `a11y.md` wymienia Razor/Blazor wśród web DOM.
-- [ ] `docs/prd.md`: lista packów, lista frameworków, warunek UI stack i zakres plików `ux-a11y` uwzględniają C#/ASP.NET Core/EF Core i Razor/Blazor; brak sprzeczności (Grep: `Django templates`, `FastAPI`).
-- [ ] `docs/guide/setup.md`: wiersze `csharp`, `aspnetcore`, `efcore` w tabeli „Rule packs”; wiersz `ux-a11y` wymienia Razor/Blazor.
-- [ ] `src/cli.test.js`: test, który pada, gdy `seh install` nie skopiuje któregoś z nowych packów (lista plików każdego packa, frontmatter `paths:`, treść = źródło); test ux-a11y zaktualizowany, jeśli lista plików się zmienia.
-- [ ] `npm test` zielony.
-- [ ] Wersja: `git ls-remote --tags origin` sprawdzone; jeśli 1.7.0 nieotagowane — wpis dopisany do `[1.7.0]` w `CHANGELOG.md`, bez bumpa; jeśli otagowane — `package.json` 1.8.0 i nowa sekcja `[1.8.0]` (Added: packi + detekcja; Changed: UI stack / globy ux-a11y). Oczekiwania testów na wersję (jeśli są) zaktualizowane.
-- [ ] Brak zmian w `README.md` (korzeń), `.env`, brak commitów.
+- [x] `packs/csharp/`, `packs/aspnetcore/`, `packs/efcore/` istnieją; każdy plik ma frontmatter `paths:` (lista YAML) i nagłówek `#`, jak istniejące packi.
+- [x] Każda reguła zależna od wersji ma warunek wersji i jest potwierdzona w dokumentacji Microsoft (źródło wymienione w raporcie wykonawcy, nie w pliku packa).
+- [x] `csharp/language.md` zawiera regułę „nie używaj funkcji powyżej `LangVersion` / TFM projektu”.
+- [x] Tabela detekcji w `skills/setit-se/SKILL.md` ma wiersze `csharp`, `aspnetcore`, `efcore` z warunkami jak w planie; warunek **UI stack detected** i lista globów `ux-a11y` obejmują Razor/Blazor (`.razor`, `.cshtml`) w obu miejscach.
+- [x] `packs/ux-a11y/a11y.md`, `states.md`, `touch-i18n.md` mają globy `**/*.razor` i `**/*.cshtml`; `react-native.md` bez zmian; nagłówek `a11y.md` wymienia Razor/Blazor wśród web DOM.
+- [x] `docs/prd.md`: lista packów, lista frameworków, warunek UI stack i zakres plików `ux-a11y` uwzględniają C#/ASP.NET Core/EF Core i Razor/Blazor; brak sprzeczności (Grep: `Django templates`, `FastAPI`).
+- [x] `docs/guide/setup.md`: wiersze `csharp`, `aspnetcore`, `efcore` w tabeli „Rule packs”; wiersz `ux-a11y` wymienia Razor/Blazor.
+- [x] `src/cli.test.js`: test, który pada, gdy `seh install` nie skopiuje któregoś z nowych packów (lista plików każdego packa, frontmatter `paths:`, treść = źródło); test ux-a11y zaktualizowany, jeśli lista plików się zmienia.
+- [x] `npm test` zielony.
+- [x] Wersja: `git ls-remote --tags origin` sprawdzone (brak tagów; wynik: wpis w `[1.7.0]`, bez bumpa; późniejszy bump do 1.7.1 w osobnym commicie `314be2f`, a nie 1.8.0 z Q4);  jeśli 1.7.0 nieotagowane — wpis dopisany do `[1.7.0]` w `CHANGELOG.md`, bez bumpa; jeśli otagowane — `package.json` 1.8.0 i nowa sekcja `[1.8.0]` (Added: packi + detekcja; Changed: UI stack / globy ux-a11y). Oczekiwania testów na wersję (jeśli są) zaktualizowane.
+- [x] Brak zmian w `README.md` (korzeń) i `.env` w commicie `47e6a36`. Uwaga: commit `47e6a36` istnieje (wykonanie zostało zacommitowane), więc punkt „brak commitów” nie jest spełniony dosłownie.
 
 ## Weryfikacja
 

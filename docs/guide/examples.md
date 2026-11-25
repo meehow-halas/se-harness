@@ -4,12 +4,14 @@ What you can ask SE Harness to do, and what happens then. Simple runs come first
 
 Contracts in full: [`docs/prd.md`](../prd.md). Setup and reference: [`README.md`](../../README.md).
 
+The examples assume every [git operation](setup.md#git-operations), [tracker write](trackers.md#write-actions) and the [change record](setup.md#change-record) are on. A step that is off is skipped unless you [ask for it](setup.md#on-your-request).
+
 ## Before you read
 
 A few words used below:
 
 - **Task key**: the name of one task. With the files tracker it is a file name such as `001-login`; with Jira it is an issue key such as `MT-01`; with Azure DevOps a work item id. The examples use `MT-01`, `MT-02`, `MT-03`.
-- **Spec**: what the task must do (requirements, acceptance criteria). Written by the **Architect**. Together with the **prompt** (how to approach the work) and the **log** (decisions, history) it lives on the active tracker.
+- **Spec**: what the task must do (requirements, acceptance criteria). Written by the **Architect**. Together with the **prompt** (how to approach the work) and the **log** (decisions, history) it lives on the tracker or in repo files ([write actions](trackers.md#write-actions)).
 - **Status**: where the task is: `todo` → `in progress` → `implemented` → `in review` → `done`. Every agent checks it before working, so a task is never implemented twice or reviewed before it is built.
 - **Worktree**: a separate folder with its own git branch for one task. Your own checkout is never switched, and several tasks can be worked on at once without touching each other.
 - **PR**: the pull request the Reviewer opens at the end. You merge it on GitHub, except in `/_shipit`, which merges by itself.
@@ -213,7 +215,7 @@ These hosts cannot start sessions. `/_runit` prints one ready-to-paste request p
 
 `/_shipit` is for running many tasks without you, for example overnight. It needs:
 
-- **Git**: it merges.
+- **Git**, with `worktree`, `commit`, `push` and `pr` on: it merges.
 - **A spec and prompt for every task beforehand**: it never writes specs. Have them written first (`/_planit`), with you, including which task depends on which.
 
 ### Overnight run with a dependency
@@ -287,14 +289,14 @@ ship MT-01, MT-02 and MT-03, don't ask me
 - started but no session alive any more → planned again, and its new session resumes at the first missing stage;
 - `done` with the PR still open → `BLOCKED` until you merge it, and its dependents wait.
 
-Tasks with no keys given: asking to ship everything without questions takes every `todo` task that has a spec and a prompt. This works with the files tracker or a read-only Jira / Azure DevOps; with full-write Jira or Azure DevOps you name the keys.
+Tasks with no keys given: asking to ship everything without questions takes every `todo` task that has a spec and a prompt. This works with the files tracker or Jira / Azure DevOps with the `status` action off; with `status` on you name the keys.
 
 ## 5. Without git
 
 An empty `agents.baseBranch` in `harness.config.json` turns git off. The flow and the statuses stay the same; only git actions disappear:
 
 - no worktree: work happens in your checkout;
-- no commit, push or PR: `done` is set after acceptance, with a `CHANGELOG.md` line;
+- no commit, push or PR: `done` is set after acceptance, with a `CHANGELOG.md` line when the change record is on;
 - no parallel sessions: several tasks always run one after another, here, on every host;
 - `/_shipit` is not available: there is nothing to merge.
 
@@ -323,6 +325,8 @@ Every stop is one line, `BLOCKED: <what> — <what to do>`. Common ones:
 | `task is already done — the PR is opened` | Nothing left to do for this task | Merge the PR (resolve its conflict first if it has one) |
 | `MT-01 is done but its PR is not merged` (`/_shipit`) | `/_shipit` does not merge PRs it did not open in this run | Merge it, then ask to ship again |
 | `project checks fail after merging …` | Auto-merge found red tests after a conflict | Fix the branch in its worktree, merge the PR |
+| `/_shipit needs worktree, commit, push and pr enabled — …` | A [git operation](setup.md#git-operations) is off | Turn all four on in setup (`/_setit-se`), or use `/_runit` |
+| `tracker config predates 2.0 — run /_setit-se` | A 1.x tracker config | Run setup; it [migrates](trackers.md#upgrading-from-1x) the config |
 | `the Designer is disabled — enable it in /_setit-se` | `/_designit` needs the Designer | Turn the Designer on in setup (`/_setit-se`) |
 | `design … is draft — finish it in /_designit or rerun interactive` | Critical mode got a design file still in `draft` | Finish the design, or ask again in interactive mode |
 | `MT-01 already has a spec — run /_planit MT-01 <design path> …` | `/_runit` got a design file for a task whose spec was not built from it | Ask for the spec to be rebuilt from the design, then ask for the run again |

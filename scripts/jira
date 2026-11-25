@@ -16,6 +16,41 @@ fi
 verb=$1
 shift
 
+# --user-request "<the user's words>" (write verbs and get) lifts the
+# agents.tracker.write guard for this call. Values of other options are skipped.
+SEH_USER_REQUEST=
+case $verb in
+  get|create|set|comment|transition|link)
+    _argc=$#
+    while [ "$_argc" -gt 0 ]; do
+      _arg=$1
+      shift
+      _argc=$((_argc - 1))
+      case $_arg in
+        --user-request)
+          if [ "$_argc" -eq 0 ] || [ -z "$(printf '%s' "$1" | tr -d '[:space:]')" ]; then
+            blocked "empty --user-request" "pass the user's own words"
+          fi
+          SEH_USER_REQUEST=$1
+          shift
+          _argc=$((_argc - 1))
+          ;;
+        --type|--title|--file)
+          set -- "$@" "$_arg"
+          if [ "$_argc" -gt 0 ]; then
+            set -- "$@" "$1"
+            shift
+            _argc=$((_argc - 1))
+          fi
+          ;;
+        *)
+          set -- "$@" "$_arg"
+          ;;
+      esac
+    done
+    ;;
+esac
+
 parse_file_opt() {
   BODY_FILE=
   while [ $# -gt 0 ]; do
@@ -68,11 +103,14 @@ case $verb in
 
   get)
     if [ $# -ne 1 ]; then
-      blocked "unexpected arguments" "usage: jira get <issue-key>"
+      blocked "unexpected arguments" "usage: jira get <issue-key>|<basename>"
     fi
-    require_task "$1"
+    require_write_block
+    # A basename whose local spec has tracker: reads that issue.
+    _base=$1
+    _key=$(jira_json resolve-key "$(config_path)" "$_base")
+    require_task "$_key"
     load_jira
-    _key=$1
     _fields=$(jira_json fetch-fields "$SEH_JIRA_CFG")
     _issue=$(mktemp)
     _comments=$(mktemp)
@@ -81,14 +119,13 @@ case $verb in
     cp "$SEH_JIRA_BODY" "$_issue"
     jira_http GET "/rest/api/3/issue/${_key}/comment"
     cp "$SEH_JIRA_BODY" "$_comments"
-    _out=$(jira_json format-get "$SEH_JIRA_CFG" "$_issue" "$_comments")
+    _out=$(jira_json format-get "$SEH_JIRA_CFG" "$_issue" "$_comments" "$_base" "$SEH_USER_REQUEST")
     printf 'OK\n'
     printf '%s\n' "$_out"
     exit 0
     ;;
 
   create)
-    guard_read_only
     _type=
     _title=
     while [ $# -gt 0 ]; do
@@ -121,6 +158,7 @@ case $verb in
     if [ -z "$_title" ]; then
       blocked "missing --title" "usage: jira create --type feature|bug --title <text>"
     fi
+    guard_write create
     load_jira
     if ! jira_json issue-type "$SEH_JIRA_CFG" "$_type" >/dev/null; then
       blocked "issue type $_type is not mapped" "set agents.tracker.issueTypes in /{{prefix}}setit-se"
@@ -134,7 +172,6 @@ case $verb in
     ;;
 
   set)
-    guard_read_only
     if [ $# -lt 2 ]; then
       blocked "unexpected arguments" "usage: jira set <issue-key> spec|prompt|log [--file <path>]"
     fi
@@ -149,6 +186,7 @@ case $verb in
         ;;
     esac
     parse_file_opt "$@"
+    guard_write "$_kind"
     load_jira
     _loc=$(jira_json mapped-field "$SEH_JIRA_CFG" "$_kind")
     if [ -z "$_loc" ]; then
@@ -177,7 +215,6 @@ case $verb in
     ;;
 
   comment)
-    guard_read_only
     if [ $# -lt 1 ]; then
       blocked "unexpected arguments" "usage: jira comment <issue-key> [--file <path>]"
     fi
@@ -185,6 +222,7 @@ case $verb in
     _key=$1
     shift
     parse_file_opt "$@"
+    guard_write log
     load_jira
     _src=$(read_body_file "$BODY_FILE")
     _payload=$(mktemp)
@@ -195,7 +233,6 @@ case $verb in
     ;;
 
   transition)
-    guard_read_only
     if [ $# -ne 2 ]; then
       blocked "unexpected arguments" "usage: jira transition <issue-key> todo|inProgress|codeReview|inReview|done"
     fi
@@ -208,8 +245,7 @@ case $verb in
         blocked "invalid status key $_step" "usage: jira transition <issue-key> todo|inProgress|codeReview|inReview|done"
         ;;
     esac
-    require_node
-    require_tracker_config
+    guard_write status
     SEH_JIRA_CFG=$(config_path)
     if ! _want=$(jira_json status-map "$SEH_JIRA_CFG" "$_step"); then
       blocked "invalid status key $_step" "fix agents.tracker.statuses in /{{prefix}}setit-se"
@@ -239,7 +275,6 @@ case $verb in
     ;;
 
   link)
-    guard_read_only
     if [ $# -ne 3 ]; then
       blocked "unexpected arguments" "usage: jira link <issue-key> depends|relates <other-key>"
     fi
@@ -254,6 +289,7 @@ case $verb in
         blocked "invalid link type $_rel" "usage: jira link <issue-key> depends|relates <other-key>"
         ;;
     esac
+    guard_write create
     load_jira
     _payload=$(mktemp)
     trap 'rm -f "$SEH_JIRA_CURL_CFG" "$SEH_JIRA_BODY" "$_payload"' EXIT

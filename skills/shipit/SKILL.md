@@ -53,6 +53,14 @@ Git disabled (`agents.baseBranch` empty or `null`): there are no PRs to merge.
 BLOCKED: /{{prefix}}shipit needs git — set agents.baseBranch with /{{prefix}}setit-se
 ```
 
+Any git operation disabled (`agents.git` present and one of `worktree`, `commit`, `push`, `pr` not `true`; missing `agents.git` = all enabled):
+
+```text
+BLOCKED: /{{prefix}}shipit needs worktree, commit, push and pr enabled — change them in /{{prefix}}setit-se
+```
+
+An explicit user request does not satisfy this requirement. A disabled tracker action or git operation is off automatically only: a child does it on the user's explicit request made in that child's session (agent files, `--user-request`). The parent never adds `--user-request` and adds no line to the child prompt for it.
+
 ## Mode
 
 From **intent**. If the user asked, in any language, for the work to be done on its own without questions (for example "don't ask me", "autonomous"), `autonomous` for every child. Otherwise `interactive`. The same `Mode:` goes to every child. In any mode the merge happens after acceptance (interactive: after the user accepts in that child's session; `critical` / `autonomous`: a clean Reviewer run is acceptance).
@@ -62,10 +70,9 @@ Reply in the language of the user's latest message, every message. Pass that lan
 ## Key selection
 
 - `/{{prefix}}shipit K1 K2 …`: those keys (one key is allowed; it still runs as a child session).
-- No keys: every task that has spec **and** prompt and status `todo` (the configured `agents.statuses` / mapped `todo` string):
-  - files tracker (`agents.tracker` absent): scan `docs/features/` and `docs/prompt/`;
-  - `agents.tracker.readOnly` is `true`: the same scan in repo files (status is spec frontmatter);
-  - full-write Jira or ADO: there is no search verb, so stop:
+- No keys: every task that has spec **and** prompt and status `todo`, found in local spec frontmatter:
+  - files tracker (`agents.tracker` absent), or Jira / ADO with `status` OFF (`agents.tracker.write.status` not `true`): scan `docs/features/`; status is the spec's `status:` (the configured `agents.statuses` `todo` string). The prompt is checked in its store (`docs/prompt/`, or `get` for a bound task with `prompt` ON);
+  - Jira or ADO with `status` ON: there is no search verb, so stop:
 
 ```text
 BLOCKED: /{{prefix}}shipit needs keys with a Jira/ADO tracker — name the keys
@@ -75,14 +82,14 @@ No tasks found: `BLOCKED: no todo tasks with spec and prompt — run /{{prefix}}
 
 ## Resolve (parent, once)
 
-Per key, from the active tracker, as `/{{prefix}}runit` resolves one key (spec, prompt, status, `depends`). Check PR state with `.seh/scripts/pr-state <KEY>` (`state: merged|open|none`, `merged_at:`, `merge_commit:`, `url:`).
+Per key, each part from its store, as `/{{prefix}}runit` resolves one key (spec, prompt, status, `depends`). Check PR state with `.seh/scripts/pr-state <KEY>` (`state: merged|open|none`, `merged_at:`, `merge_commit:`, `url:`).
 
 - `pr-state` first. `merged`: pass in `--done`, no session, no spec check (after `return-to-base` the spec may exist only on the base branch, not in the launch checkout). Counts as "skipped (already merged)".
-- No spec or prompt (worktree copy when a seh worktree exists for the key, else the launch checkout): `BLOCKED: run /{{prefix}}planit <KEY> first`. That key is not started; dependents are `blocked`.
+- No spec or prompt (in its store; repo files: worktree copy when a seh worktree exists for the task, else the launch checkout): `BLOCKED: run /{{prefix}}planit <KEY> first`. That key is not started; dependents are `blocked`.
 - Status `done` and `pr-state` is `open`: `BLOCKED: <KEY> is done but its PR is not merged — merge it, then rerun /{{prefix}}shipit`. Not started; dependents wait.
 - Status `in progress` / `implemented` / `in review`: started before. On the desktop host check `list_sessions`: a live session for the key → `--running`; none → the run was interrupted: plan the key as any other (not in `--running`); its new child resumes at the first missing stage and reuses the spec and worktree. On `manual` hosts → `--running` (see *Manual hosts*).
 - `depends` between keys in this invocation: pass `--depends KEY:DEP`. The same key list is used for `--keys`.
-- `depends` on a key **outside** the invocation: satisfied when `pr-state <DEP>` is `merged` (pass it in `--done`; it is not in `--keys`). For a read-only tracker key with no local spec: satisfied when its tracker status equals `agents.tracker.statuses.blocker`. Otherwise that key is `blocked`.
+- `depends` on a key **outside** the invocation: satisfied when `pr-state <DEP>` is `merged` (pass it in `--done`; it is not in `--keys`). For a dependency whose status lives on the tracker (bound with `status` ON, or a tracker key no local spec holds: read with `get`): satisfied when its tracker status equals `agents.tracker.statuses.blocker`. Otherwise that key is `blocked`.
 
 ## Plan and go-ahead
 
@@ -145,7 +152,7 @@ Fan-out child: yes
 Auto-merge: yes
 ````
 
-Tell the user to paste each block in a new session. The parent keeps no state between runs: rerun `/{{prefix}}shipit` (same keys) later. The rerun recomputes from `pr-state` and the tracker status: `merged` → `--done`; status `in progress` / `implemented` / `in review` → `--running`; then it prints the next wave. When the rerun finds nothing left to start and nothing running, write the run report (this is the end of the fan-out). Times of sessions the parent did not start are `n/a`.
+Tell the user to paste each block in a new session. The parent keeps no state between runs: rerun `/{{prefix}}shipit` (same keys) later. The rerun recomputes from `pr-state` and the tracker status: `merged` → `--done`; status (read where it lives) `in progress` / `implemented` / `in review` → `--running`; then it prints the next wave. When the rerun finds nothing left to start and nothing running, write the run report (this is the end of the fan-out). Times of sessions the parent did not start are `n/a`.
 
 ## Run report
 
@@ -162,7 +169,7 @@ Sections, in this order:
 2. **Summary counts**: merged / blocked / not started (dependency blocked) / skipped (already merged before the run).
 3. **Per-task table**: key, title (from spec), wave number, session link, start, end, duration, status, PR URL, merge commit, merged at, result (`merged` / `BLOCKED: …` / `Q<n>` / not started).
 4. **Done**: per merged task, what was delivered (one or two lines from the spec goal / the change record line the child added).
-5. **Agent runs**: one line per task, counts only, read from the task log, plus the log path (do not copy log rows): `Implementer phases N · Consultant passes N (C items N, debt accepted N) · Reviewer rounds N (❌ N, ⚠️ N)`. Full-write Jira/ADO: Consultant `n/a` (not logged on the work item). Brainstorm personae are not reported (they do not run inside `/{{prefix}}shipit`).
+5. **Agent runs**: one line per task, counts only, read from the task log, plus the log path (do not copy log rows): `Implementer phases N · Consultant passes N (C items N, debt accepted N) · Reviewer rounds N (❌ N, ⚠️ N)`. A task log read from the tracker (`log` ON, via `get`): Consultant `n/a` (not logged on the work item). Brainstorm personae are not reported (they do not run inside `/{{prefix}}shipit`).
 6. **Not done and why**: per task not merged, the exact `BLOCKED:` line or open `Q<n>` and the session where it is; tasks never started and which dependency stopped them.
 7. **Decisions taken by agents** (`autonomous` / `critical`): the `Q<n>` decisions recorded in each task log, as facts, so the user can review them.
 8. **Open warnings**: ⚠️ items the Reviewer left (not blocking, not fixed).

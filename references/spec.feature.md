@@ -10,6 +10,10 @@ status: todo
 type: feature
 depends: []
 relates: []
+# tracker: Jira / ADO issue key or work item id of a task whose basename is not the key; empty when unbound or when the basename is the key.
+# A bound task with the tracker `status` action ON has no status: line (one left over is moved to the tracker once, then removed).
+# With the tracker `spec` action ON, a bound task's local spec is this frontmatter only, and exists only if basename differs from the key or the `status` action is OFF.
+tracker:
 # ui: true when the task changes something a user sees (screen, interaction, UI text, navigation); absent = false.
 # With ui: true and agents.designer.enabled, the Designer adds a `## UX/UI decisions` section after Architectural decisions and `UX:` acceptance criteria.
 # The Architect writes that heading only from a design file (launch `Design: <path>`). Its presence tells the skills the Designer stage is done.
@@ -34,4 +38,4 @@ What, why, and for whom (2–5 sentences).
 
 Choices and why, not a tutorial.
 
-Paths may appear as constraints (“do not change X”), never as a step list. A basename in `depends` must already be at the configured `done` status before implementation starts.
+Paths may appear as constraints (“do not change X”), never as a step list. A name in `depends` must be finished before implementation starts: the configured `done` status in local frontmatter, or, where the status lives in the tracker (`status` ON and the task bound, or a tracker key no local spec holds), the tracker `blocker` status.

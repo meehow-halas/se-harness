@@ -63,15 +63,15 @@ Reply in the language of the user's latest message, whatever that language is, e
 
 ## Several keys
 
-This skill runs one task. Two or more keys together with a design file: stop before any fan-out with `BLOCKED: a design file goes with one key — run /{{prefix}}runit <KEY> <design path> per key`. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). A key without a spec is not blocked: its child starts at the first missing stage, Architect, without user intervention in `autonomous` mode. No dependency ordering: a key whose spec `depends` on a sibling key is not started, and Architect's `depends` on a sibling key stops that child at the *Dependency gate* after the Architect stage; both are `BLOCKED` and the user reruns the key after the dependency is merged (`session-fanout.md`, section 2 and Rules). Full automation with dependencies: `/{{prefix}}shipit` with specs written beforehand; a key that exists nowhere follows *Task source* in the Architect file. Two or more keys with git disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `session-fanout.md` section 2), never in the order given (see stage 2). Two or more keys, git enabled, and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
+This skill runs one task. Two or more keys together with a design file: stop before any fan-out with `BLOCKED: a design file goes with one key — run /{{prefix}}runit <KEY> <design path> per key`. If the prompt has the line `Fan-out child: yes`, this session is a child: run the one key here and skip this section. Otherwise, two or more keys named, git and the `worktree` operation enabled (`agents.baseBranch` set), and `sessionSpawn` in `.seh/references/hosts.json` for this host is `start_session`: follow `.seh/references/session-fanout.md` with skill `runit`, one child session per key (each child runs the full pipeline for its key). A key without a spec is not blocked: its child starts at the first missing stage, Architect, without user intervention in `autonomous` mode. No dependency ordering: a key whose spec `depends` on a sibling key is not started, and Architect's `depends` on a sibling key stops that child at the *Dependency gate* after the Architect stage; both are `BLOCKED` and the user reruns the key after the dependency is merged (`session-fanout.md`, section 2 and Rules). Full automation with dependencies: `/{{prefix}}shipit` with specs written beforehand; a key that exists nowhere follows *Task source* in the Architect file. Two or more keys with git or `worktree` disabled, on any host: run them one after another in this session in dependency order from `.seh/scripts/fanout-plan` (`mode: sequential`, `session-fanout.md` section 2), never in the order given (see stage 2). Two or more keys, git and `worktree` enabled, and `sessionSpawn` is `manual`: print one `/{{prefix}}runit <KEY>` command per key, with the user's mode words (for example "don't ask me"), and stop. One key: continue below.
 
 ## Resolve the task
 
-Active tracker only: files if `agents.tracker` is absent; Jira or ADO (`agents.tracker.kind`) if present (artifact bodies on the issue / work item). Never mirror. When `agents.tracker.readOnly` is `true`, the tracker is read-only: bodies are repo files, status is spec frontmatter (`agents.statuses`), and nothing writes the tracker.
+Spec, prompt, log and status each live in one store (never mirror): files if `agents.tracker` is absent or the task is unbound; for a bound task (`tracker:` in its local spec, or basename = key) the Jira / ADO item (`agents.tracker.kind`) for each action ON in `agents.tracker.write`, the repo files (status: spec frontmatter, `agents.statuses`) for each action OFF. Read with `jira get` / `ado get <basename>` for a bound task (the key only when no local spec holds it), else the files. A key that a local spec holds in `tracker:` means that task: use its basename for files, `start-task` and the agents. The skill writes nothing to the tracker itself; the agents write, and move local content of a bound task at their first step (see the agent file). A `status:` line still in a bound task's local spec while `status` is ON has not moved yet: it is the task's status (compare with `agents.statuses`) until an agent moves it.
 
 - New work (a sentence, no key) → no spec yet.
-- Named basename or issue key → load spec, prompt, log, status from that tracker (files tracker or read-only: the task worktree copy when a seh worktree exists for the key, else the launch checkout). Two or more keys → *Several keys*. A key with no spec yet (neither in the task worktree nor in the launch checkout): with git enabled and a files or read-only tracker, run `.seh/scripts/pr-state <KEY>` first, because after `return-to-base` the spec may exist only on the task branch. `state: open` → the already-done stop below; `state: merged` → `BLOCKED: task is already merged — <url>; start new work with a new request`; `state: none` → stage 1 (Architect).
-- Status strings: `agents.statuses` (files, or `agents.tracker.readOnly` `true`) or mapped `agents.tracker.statuses` (Jira / ADO). Compare to those values; do not translate them.
+- Named basename or issue key → load spec, prompt, log, status from their stores (repo files: the task worktree copy when a seh worktree exists for the task, else the launch checkout). Two or more keys → *Several keys*. A key with no spec yet (neither in the task worktree nor in the launch checkout): with git enabled and spec or status kept in repo files (files tracker, or `spec` or `status` OFF), run `.seh/scripts/pr-state <KEY>` first, because after `return-to-base` the spec may exist only on the task branch. `state: open` → the already-done stop below; `state: merged` → `BLOCKED: task is already merged — <url>; start new work with a new request`; `local_branch: <name>` → with `worktree` on, run `.seh/scripts/start-task <KEY>` and, when it prints that `branch:`, resolve the task from its `worktree:`; otherwise (`worktree` off, or another branch) `BLOCKED: <KEY> has work on local branch <name> — check it out and rerun`. `state: none` with no `local_branch:` → stage 1 (Architect).
+- Status strings, read where the status lives: mapped `agents.tracker.statuses` (bound task with `status` ON), else `agents.statuses`. Compare to those values; do not translate them.
 
 If status is already the configured **`done`** string, stop. Do not re-run Architect, Designer, Implementer, or Reviewer:
 
@@ -99,13 +99,13 @@ If Architect asks `/{{prefix}}grillit`: stop and ask that skill; do not run the 
 
 If Architect stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
 
-On success, status stays `todo`. **Dependency gate** (only when Architect ran in this run): if the spec lists a `depends` entry that is not at the configured `done` status (read as the Implementer reads it), stop before stage 2, with no `start-task`:
+On success, status stays `todo`. **Dependency gate** (only when Architect ran in this run): if the spec lists a `depends` entry that does not pass the **`depends` gate** in the Implementer file, stop before stage 2, with no `start-task`:
 
 ```text
 BLOCKED: depends on <DEP> — rerun /{{prefix}}runit <KEY> after <DEP> is merged
 ```
 
-Git disabled: `after <DEP> is done` (there is no merge).
+Git or `worktree` disabled: `after <DEP> is done`.
 
 The spec stays `todo` in the launch checkout; the rerun starts at the first missing stage (stage 1b when it applies, else stage 2) with a worktree cut from the current base. Otherwise continue without pausing.
 
@@ -125,7 +125,9 @@ Follow the live Implementer file for this host (`<agentsDir>/implementer.md`) in
 
 **Git disabled** (`agents.baseBranch` empty or `null` in `harness.config.json`): no session fan-out, no `start-task`, no `Worktree:` line. Run multiple keys one after another in this session, in the launch checkout, in dependency order (*Several keys*). Skip the next step's `start-task` and omit `Worktree:` below.
 
-Run `.seh/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent). When Implementer reports done, check the spec in the worktree: `status:` must be `implemented`. Otherwise stop with `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
+**`worktree` disabled** (`agents.git` present and `agents.git.worktree` not `true`): handle it as git disabled — no fan-out, no `start-task`, no `Worktree:` line, several keys one after another in the launch checkout in dependency order.
+
+Run `.seh/scripts/start-task <task>` from the launch checkout. Pass the same `Mode:`, the task key, and `Worktree: <abs>` from the script. Implementer may call `start-task` again (idempotent). When Implementer reports done, check the status where it lives (spec in the worktree, or `get`): it must be `implemented` (a `null` tracker map leaves it unchanged; that is not a stop). Otherwise stop with `BLOCKED: status <value> after implementation — the Implementer did not finish the status steps for <task>`.
 
 If Implementer stops on `BLOCKED:` or `Q<n>`, stop the pipeline and report.
 
@@ -137,7 +139,7 @@ Review is due when status is the configured `implemented` or `in review` string.
 
 Follow the live Reviewer file for this host (`<agentsDir>/reviewer.md`). One review round.
 
-Pass the same `Mode:`, the task key, and `Worktree: <abs>` (when stage 2 did not run in this session, run `.seh/scripts/start-task <task>` first: it is idempotent and prints the existing `worktree:`; git disabled: no `Worktree:`). Add `Auto-merge: yes` only under the rule in *Auto-merge*; otherwise do not merge.
+Pass the same `Mode:`, the task key, and `Worktree: <abs>` (when stage 2 did not run in this session, run `.seh/scripts/start-task <task>` first: it is idempotent and prints the existing `worktree:`; git or `worktree` disabled: no `start-task`, no `Worktree:`). Add `Auto-merge: yes` only under the rule in *Auto-merge*; otherwise do not merge.
 
 If Reviewer stops on `BLOCKED:` or `Q<n>` (including interactive acceptance), stop the pipeline and report.
 
@@ -155,15 +157,19 @@ Do not start a fourth Reviewer round.
 
 ### 5. Finish
 
-- `interactive`: stop on agent questions (already handled). After a clean review, Reviewer waits for explicit acceptance, then git allowlist (commit, push, PR, return to base). Do not merge unless *Auto-merge* applies.
-- `critical` / `autonomous`: a clean Reviewer run is acceptance. Report the PR URL (and the merge result when *Auto-merge* applies). Do not merge otherwise.
+- `interactive`: stop on agent questions (already handled). After a clean review, Reviewer waits for explicit acceptance, then the enabled git operations (commit, push, PR, return to base). Do not merge unless *Auto-merge* applies.
+- `critical` / `autonomous`: a clean Reviewer run is acceptance. Report the PR URL (with a git operation disabled: what the Reviewer says is left to the user; and the merge result when *Auto-merge* applies). Do not merge otherwise.
 - `autonomous`: the final report asks nothing. List the agents' recorded decisions (`Q<n>`) as done facts; no follow-up question, no choice buttons, no "should I change X?". The user changes a decision with a new request.
 
-The Reviewer opens the PR and sets `done`. Without `Auto-merge: yes` the user merges it on GitHub. With it, the Reviewer merges through `merge-pr`; report `merged` (URL), or the final `BLOCKED:` line from `merge-pr`. This skill is finished.
+The Reviewer runs the enabled git operations and sets `done`; the final report names what a disabled one left (uncommitted worktree path and branch, local commit, or pushed branch without PR). Without `Auto-merge: yes` the user merges it on GitHub. With it, the Reviewer merges through `merge-pr`; report `merged` (URL), or the final `BLOCKED:` line from `merge-pr`. This skill is finished.
 
 ## Auto-merge
 
 The launch line `Auto-merge: yes` is honoured only together with `Fan-out child: yes` (set by `/{{prefix}}shipit`). Then pass `Auto-merge: yes` to the Reviewer. Any other launch with that line (a user typing `/{{prefix}}runit KEY`) ignores it: never merge, do not forward it.
+
+## Explicit user request
+
+A disabled tracker action (`agents.tracker.write`) or git operation (`agents.git`) is OFF **automatically** only: on the user's explicit request seh still does it. When the user asks for it in this session (or the launch has that line), pass `User write request: <the user's own words, verbatim>` to the agent whose step does that write, which adds `--user-request` to that one call (a requested worktree: the `start-task` call this session runs takes the flag). Never paraphrase or infer a request and never add one for the skill's own steps, in any mode.
 
 ## Launch payload (every agent)
 
@@ -173,5 +179,6 @@ The launch line `Auto-merge: yes` is honoured only together with `Fan-out child:
 - User request
 - `Conversation language: <name>` always (a German message gives `German`)
 - Stage 4: the ❌ list only
+- `User write request: <words>` only under *Explicit user request*
 
 Live files are copies from `/{{prefix}}setit-se` under every `agentsDir` in `.seh/references/hosts.json`, not symlinks to `.seh/agents/`. In this session use the copy this host loaded.

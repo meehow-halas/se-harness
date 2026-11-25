@@ -2,15 +2,15 @@
 # pr-state <task>
 # Read-only: is the task's PR into agents.baseBranch open, merged, or absent.
 # Heads considered: <task> and <task>-N (N >= 2). Open beats merged.
+# With state none, "local_branch:" names a local task branch holding commits that
+# are not on the base: work that exists only there. With the pr operation off in
+# agents.git, a missing or failing gh is state none, not BLOCKED.
 
 . "$(dirname "$0")/lib.sh"
 
 git_gate
 require_git
 
-if ! command -v gh >/dev/null 2>&1; then
-  blocked "gh is not available" "install GitHub CLI (gh) and retry pr-state"
-fi
 if ! command -v node >/dev/null 2>&1; then
   blocked "node is not available" "install node and retry pr-state"
 fi
@@ -24,14 +24,30 @@ read_base_branch
 base=$SEH_BASE_BRANCH
 require_not_base "$task" "$base"
 
-if ! list=$(gh pr list --base "$base" --state all --limit 500 \
-  --json number,state,url,mergedAt,mergeCommit,headRefName 2>&1); then
-  blocked "gh pr list failed ($list)" "fix the gh error, then retry pr-state"
+errfile=$(mktemp)
+trap 'rm -f "$errfile"' EXIT
+
+pr_off=no
+if ! git_op_enabled pr; then
+  pr_off=yes
 fi
-rc=0
-info=$(printf '%s' "$list" | node "$(dirname "$0")/pr-json.js" state "$task") || rc=$?
-if [ "$rc" -ne 0 ]; then
-  blocked "unreadable gh output" "retry pr-state"
+
+if ! command -v gh >/dev/null 2>&1; then
+  if [ "$pr_off" = "no" ]; then
+    blocked "gh is not available" "install GitHub CLI (gh) and retry pr-state"
+  fi
+  info="state: none"
+elif list=$(gh pr list --base "$base" --state all --limit 500 \
+  --json number,state,url,mergedAt,mergeCommit,headRefName 2>"$errfile"); then
+  rc=0
+  info=$(printf '%s' "$list" | node "$(dirname "$0")/pr-json.js" state "$task") || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    blocked "unreadable gh output" "retry pr-state"
+  fi
+elif [ "$pr_off" = "yes" ]; then
+  info="state: none"
+else
+  blocked "gh pr list failed ($(cat "$errfile"))" "fix the gh error, then retry pr-state"
 fi
 
 set -- "task: $task"
@@ -40,4 +56,31 @@ while IFS= read -r line; do
 done <<EOT
 $info
 EOT
+
+if [ "$info" = "state: none" ]; then
+  base_ref=$base
+  if remote_branch_exists "$base"; then
+    base_ref="origin/$base"
+  fi
+  # The newest branch wins: <task>-N with the highest N, else <task>.
+  found=
+  found_n=0
+  for b in $(git for-each-ref --format='%(refname:short)' refs/heads); do
+    if [ "$b" = "$task" ]; then
+      n=1
+    elif is_task_suffix_branch "$b" "$task"; then
+      n=${b#"$task"-}
+    else
+      continue
+    fi
+    ahead=$(git rev-list --count "$base_ref..refs/heads/$b" 2>/dev/null) || continue
+    if [ "$ahead" -gt 0 ] && [ "$n" -gt "$found_n" ]; then
+      found=$b
+      found_n=$n
+    fi
+  done
+  if [ -n "$found" ]; then
+    set -- "$@" "local_branch: $found"
+  fi
+fi
 ok "$@"

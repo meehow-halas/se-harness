@@ -1,6 +1,6 @@
 {
   "kind": "ado",
-  "readOnly": false,
+  "write": null,
   "organizationUrl": "",
   "project": "",
   "workItemTypes": {

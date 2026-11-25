@@ -16,6 +16,41 @@ fi
 verb=$1
 shift
 
+# --user-request "<the user's words>" (write verbs and get) lifts the
+# agents.tracker.write guard for this call. Values of other options are skipped.
+SEH_USER_REQUEST=
+case $verb in
+  get|create|set|comment|transition|link)
+    _argc=$#
+    while [ "$_argc" -gt 0 ]; do
+      _arg=$1
+      shift
+      _argc=$((_argc - 1))
+      case $_arg in
+        --user-request)
+          if [ "$_argc" -eq 0 ] || [ -z "$(printf '%s' "$1" | tr -d '[:space:]')" ]; then
+            blocked "empty --user-request" "pass the user's own words"
+          fi
+          SEH_USER_REQUEST=$1
+          shift
+          _argc=$((_argc - 1))
+          ;;
+        --type|--title|--file)
+          set -- "$@" "$_arg"
+          if [ "$_argc" -gt 0 ]; then
+            set -- "$@" "$1"
+            shift
+            _argc=$((_argc - 1))
+          fi
+          ;;
+        *)
+          set -- "$@" "$_arg"
+          ;;
+      esac
+    done
+    ;;
+esac
+
 parse_file_opt() {
   BODY_FILE=
   while [ $# -gt 0 ]; do
@@ -62,11 +97,14 @@ case $verb in
 
   get)
     if [ $# -ne 1 ]; then
-      blocked "unexpected arguments" "usage: ado get <work-item-id>"
+      blocked "unexpected arguments" "usage: ado get <work-item-id>|<basename>"
     fi
-    require_task "$1"
+    require_write_block
+    # A basename whose local spec has tracker: reads that work item.
+    _base=$1
+    _id=$(ado_json resolve-key "$(config_path)" "$_base")
+    require_task "$_id"
     load_ado
-    _id=$1
     _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
     _wit="/${_seg}/_apis/wit"
     _api=$(ado_json api-version)
@@ -77,20 +115,19 @@ case $verb in
     trap 'rm -f "$SEH_ADO_CURL_CFG" "$SEH_ADO_BODY" "$_item" "$_comments"' EXIT
     ado_http GET "${_wit}/workitems/${_id}?fields=${_fields}&api-version=${_api}"
     cp "$SEH_ADO_BODY" "$_item"
-    if [ "$(ado_json needs-comments "$SEH_ADO_CFG")" = "true" ]; then
+    if [ "$(ado_json needs-comments "$SEH_ADO_CFG" "$SEH_USER_REQUEST")" = "true" ]; then
       ado_http GET "${_wit}/workitems/${_id}/comments?api-version=${_capi}"
       cp "$SEH_ADO_BODY" "$_comments"
-      _out=$(ado_json format-get "$SEH_ADO_CFG" "$_item" "$_comments")
     else
-      _out=$(ado_json format-get "$SEH_ADO_CFG" "$_item")
+      printf '{}\n' > "$_comments"
     fi
+    _out=$(ado_json format-get "$SEH_ADO_CFG" "$_item" "$_comments" "$_base" "$SEH_USER_REQUEST")
     printf 'OK\n'
     printf '%s\n' "$_out"
     exit 0
     ;;
 
   create)
-    guard_read_only
     _type=
     _title=
     while [ $# -gt 0 ]; do
@@ -123,6 +160,7 @@ case $verb in
     if [ -z "$_title" ]; then
       blocked "missing --title" "usage: ado create --type feature|bug --title <text>"
     fi
+    guard_write create
     load_ado
     if ! _enc=$(ado_json type-encoded "$SEH_ADO_CFG" "$_type" 2>/dev/null); then
       blocked "work item type $_type is not mapped" "set agents.tracker.workItemTypes in /<prefix>setit-se"
@@ -138,7 +176,6 @@ case $verb in
     ;;
 
   set)
-    guard_read_only
     if [ $# -lt 2 ]; then
       blocked "unexpected arguments" "usage: ado set <work-item-id> spec|prompt|log [--file <path>]"
     fi
@@ -153,6 +190,7 @@ case $verb in
         ;;
     esac
     parse_file_opt "$@"
+    guard_write "$_kind"
     load_ado
     _loc=$(ado_json mapped-field "$SEH_ADO_CFG" "$_kind")
     if [ -z "$_loc" ]; then
@@ -183,7 +221,6 @@ case $verb in
     ;;
 
   comment)
-    guard_read_only
     if [ $# -lt 1 ]; then
       blocked "unexpected arguments" "usage: ado comment <work-item-id> [--file <path>]"
     fi
@@ -191,6 +228,7 @@ case $verb in
     _id=$1
     shift
     parse_file_opt "$@"
+    guard_write log
     load_ado
     _src=$(read_body_file "$BODY_FILE")
     _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
@@ -203,7 +241,6 @@ case $verb in
     ;;
 
   transition)
-    guard_read_only
     if [ $# -ne 2 ]; then
       blocked "unexpected arguments" "usage: ado transition <work-item-id> todo|inProgress|codeReview|inReview|done"
     fi
@@ -216,8 +253,7 @@ case $verb in
         blocked "invalid status key $_step" "usage: ado transition <work-item-id> todo|inProgress|codeReview|inReview|done"
         ;;
     esac
-    require_node
-    require_tracker_config
+    guard_write status
     SEH_ADO_CFG=$(config_path)
     if ! _want=$(ado_json status-map "$SEH_ADO_CFG" "$_step"); then
       blocked "invalid status key $_step" "fix agents.tracker.statuses in /<prefix>setit-se"
@@ -245,7 +281,6 @@ case $verb in
     ;;
 
   link)
-    guard_read_only
     if [ $# -ne 3 ]; then
       blocked "unexpected arguments" "usage: ado link <work-item-id> depends|relates <other-id>"
     fi
@@ -260,6 +295,7 @@ case $verb in
         blocked "invalid link type $_rel" "usage: ado link <work-item-id> depends|relates <other-id>"
         ;;
     esac
+    guard_write create
     load_ado
     _seg=$(ado_json project-encoded "$SEH_ADO_CFG")
     _api=$(ado_json api-version)
