@@ -44,7 +44,7 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | `/{{prefix}}designit` | Designer once, UX/UI only, before the spec: writes `docs/designs/<slug>.design.md`. No tracker, no spec, no git. Needs the Designer enabled. Offers `/{{prefix}}planit` with the file. Intent "learn conventions": writes `docs/designs/ux-conventions.md` (the project's UX rules, read by the Designer on later runs) and offers nothing after it. |
 | `/{{prefix}}doit` | Implementer, including the Consultant loop. One task or a list (parallel when the runtime allows). |
 | `/{{prefix}}checkit` | One Reviewer round per named task: review against the spec. An accepted review ends with the enabled git operations and `done`. |
-| `/{{prefix}}runit` | Architect → (Designer) → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session; several keys fan out (`.seh/references/session-fanout.md`), with no dependency ordering; git disabled: run in this session in dependency order. |
+| `/{{prefix}}runit` | Architect → (Designer) → Implementer (Consultant inside) → Reviewer → fix rounds. One task per session; several keys fan out (`.seh/references/session-fanout.md`), with no dependency ordering; git or `worktree` disabled: run in this session in dependency order. |
 | `/{{prefix}}shipit` | Many specced tasks: one `/{{prefix}}runit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. Needs all four git operations. |
 | `/{{prefix}}scopeit` | Creates or updates the project PRD (purpose, users, scope, non-goals). Never writes config. |
 | `/{{prefix}}grillit` | Members, app context, and a consult round. |
@@ -63,7 +63,7 @@ Which mode is active is in `harness.config.json`. If `agents.tracker` is present
 | `log` | Log field and comments | `docs/feature-log/<basename>.log.md` |
 | `status` | `transition` to `agents.tracker.statuses` | `status:` in local spec frontmatter (`agents.statuses`) |
 
-A task is bound when `tracker:` in its local spec frontmatter holds a key, or its basename is the key; an unbound task keeps everything in repo files. Basename and branch never change after binding. With `spec` ON, a bound task has a local spec file only if basename differs from the key or `status` is OFF, and it is frontmatter only. At the first seh step that touches a bound task with local content for an ON action, move that content to the tracker once (and the status when `status` is ON), then leave the stub and remove the moved prompt / log files; content on both sides is `BLOCKED:` naming both, and a failed write keeps the local content. A `depends` status is read from where it lives (tracker: `agents.tracker.statuses.blocker`; local: `agents.statuses.done`). Do not invent Jira or ADO status names. Credentials are in a local ignored file, never in git and never in chat.
+A task is bound when `tracker:` in its local spec frontmatter holds a key, or its basename is the key; an unbound task keeps everything in repo files. Basename and branch never change after binding. With `spec` ON, a bound task has a local spec file only if basename differs from the key or `status` is OFF, and it is frontmatter only. At the first seh step that touches a bound task with local content for an ON action, move that content to the tracker once (and the status when `status` is ON), then leave the stub and remove the moved prompt / log files; content on both sides is `BLOCKED:` naming both, and a failed write keeps the local content. A `depends` status is read from where it lives (tracker: `agents.tracker.statuses.blocker`; local: `agents.statuses.done`); a tracker key that no local spec holds is always read from the tracker with `get`. Do not invent Jira or ADO status names. Credentials are in a local ignored file, never in git and never in chat.
 
 If `agents.tracker` is absent, the files tracker is active. Same basename for all three files (example: `001-feature-example-name`):
 
@@ -77,7 +77,7 @@ Task key = basename. Branch name = basename, or `<basename>-N` when the old bran
 
 The change record and code stay in git on both modes. Settled brainstorm records stay under `docs/brainstorm/` (not a task tracker).
 
-Several keys in one work-skill call: on hosts whose `sessionSpawn` is `start_session`, one session per key (`.seh/references/session-fanout.md`, planner `.seh/scripts/fanout-plan`). On `manual` hosts with git enabled, one command per key is printed. Git disabled (any host): keys run one after another in the current session in dependency order (`fanout-plan`, `mode: sequential`). One key runs in the current session.
+Several keys in one work-skill call: with git and `worktree` enabled, on hosts whose `sessionSpawn` is `start_session`, one session per key (`.seh/references/session-fanout.md`, planner `.seh/scripts/fanout-plan`). On `manual` hosts with git and `worktree` enabled, one command per key is printed. Git or `worktree` disabled (any host): keys run one after another in the current session in dependency order (`fanout-plan`, `mode: sequential`). One key runs in the current session.
 
 ## Git
 

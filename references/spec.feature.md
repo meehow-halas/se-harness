@@ -37,4 +37,4 @@ What, why, and for whom (2–5 sentences).
 
 Choices and why, not a tutorial.
 
-Paths may appear as constraints (“do not change X”), never as a step list. A basename in `depends` must already be at the configured `done` status before implementation starts.
+Paths may appear as constraints (“do not change X”), never as a step list. A name in `depends` must be finished before implementation starts: the configured `done` status in local frontmatter, or, where the status lives in the tracker (`status` ON and the task bound, or a tracker key no local spec holds), the tracker `blocker` status.

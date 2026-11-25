@@ -13,6 +13,7 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 - **Breaking.** PRD and `references/` describe per-action tracker writes: `agents.tracker.write` (`create`, `spec`, `prompt`, `log`, `status`) in `harness.tracker.json` and `harness.tracker.ado.json`; a disabled action falls back to the files-tracker location.
 - `agents.reportChange` is asked by `/<prefix>setit-se`. `done` means accepted and every enabled git operation finished; `/<prefix>shipit` needs all four.
+- `depends` gate: a tracker key that no local spec holds takes its status from the tracker even with `status` OFF. A disabled `worktree` operation means sequential runs, like git disabled.
 
 ### Removed
 
