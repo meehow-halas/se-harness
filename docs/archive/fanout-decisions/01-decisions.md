@@ -19,7 +19,7 @@ Record what was decided for session fan-out and why, from building and testing i
 
 ## Scope out
 
-- New fan-out mechanisms for other hosts (see `docs/v2-plan/` if ever opened).
+- New fan-out mechanisms for other hosts.
 
 ## Decisions taken
 

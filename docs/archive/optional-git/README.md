@@ -21,4 +21,4 @@ Depends on (implementation plan): phases 2, 4, 5, 6, 10 (see `docs/implementatio
 ## Out of scope
 
 - `seh install` / `uninstall` changes. `check-update` (reads GitHub tags, not the project repo).
-- Local git without remote / `gh` as a separate mode (candidate for Deferred, see `docs/v2-plan/`).
+- Local git without remote / `gh` as a separate mode (candidate for Deferred).

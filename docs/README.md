@@ -25,7 +25,6 @@ Five kinds of things live here. Only the PRD is normative.
 | Path | What | Status |
 |------|------|--------|
 | [backlog/](backlog/) | Parked ideas (`/_parkit`), no scope, no structure. Not tickets. | ideas |
-| [v2-plan/](v2-plan/README.md) | The PRD Deferred list as v2 candidates. A closed list with its own stage, not a backlog: scope boundary, nothing approved. | `Planning: draft` |
 
 ## Archive
 
