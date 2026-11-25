@@ -50,10 +50,10 @@ If `harness.config.json` is missing, that is a **first run**. If the file is alr
 
 1. Reads the repo and states inferred choices so you can object.
 2. **Project PRD.** Detects only. Uses an existing one and does not rewrite it. If none exists, it asks nothing here: the last step (7) creates it through `/_scopeit`. Config stores a one-line product plus `agents.docs`, not the PRD body.
-3. **Questions** (before it writes config): for each host, then for each of the five roles, one model (suggest that host’s `modelSuggest`; see [Models per host](hosts.md#models-per-host)); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
+3. **Questions** (before it writes config): for each host, then for each of the five roles, one model (suggest that host’s `modelSuggest`; see [Models per host](hosts.md#models-per-host)); `agents.contentLanguage`; `agents.baseBranch` (suggest `dev` — it does not silently take `main`, `master`, or the current checkout); with a base branch, [which git operations](#git-operations) SE Harness runs; whether it [writes `CHANGELOG.md`](#change-record); one optional **project rule** (a standing instruction beyond generated packs; skip is the default); which packs to generate (`packsIgnored` if you name packs to skip).
 4. Writes `harness.config.json` (`seh.generatedFrom` = `.seh/VERSION`) and generates live agents, work skills, and rule packs from `.seh/` into **every** host tree. Each live agent’s `model:` is `agents.roles.<role>.model[<host.id>]` only.
 5. Merges project-root `AGENTS.md` and/or `CLAUDE.md` with the SE Harness template, shows the full proposed markdown, and waits for acceptance. The result is always `AGENTS.md`. It writes `CLAUDE.md` only when `.claude/` was present and/or `CLAUDE.md` already existed (prefer a symlink to `AGENTS.md`; if the link fails, an independent file with the same body).
-6. Offers an external tracker (Jira or Azure DevOps) **once**. A decline is stored; add, change, or remove later is this same skill.
+6. Offers an external tracker (Jira or Azure DevOps) **once**. If you connect one, it asks [which writes](trackers.md#write-actions) SE Harness does there. A decline is stored; add, change, or remove later is this same skill.
 7. **Project PRD (create)**, only when there was no PRD. Runs the `/_scopeit` create procedure (read from `.seh/skills/scopeit/SKILL.md`): purpose, users, scope and non-goals, one question at a time, each with a proposal from the repo you accept or correct (non-goals are never proposed). `skip` writes what exists; the rest is `TBD — not stated by the user`. `docs/prd.md` is always written. Then it adds `docs/prd.md` to `agents.docs` and sets the one-line `product`.
 
 ### Later run
@@ -61,6 +61,8 @@ If `harness.config.json` is missing, that is a **first run**. If the file is alr
 Config already exists. Say what to change in ordinary language.
 
 If a role `model` is still a string, or the map is missing a host `id`, it finishes that map first (prefill a legacy string on every host, then confirm per host). If `.seh/VERSION` does not match `seh.generatedFrom`, it first regenerates live agents, work skills, and rule packs into every host tree, sets `seh.generatedFrom` to `.seh/VERSION`, and tells you the installed package templates changed — then continues. That is the same mechanism as [After a package update](#after-a-package-update).
+
+A later run also asks, once each, a question your config has no answer for: `agents.reportChange`, and `agents.git` when a base branch is set. A tracker config from before 2.0 is [migrated](trackers.md#upgrading-from-1x) once.
 
 Then **one change at a time**: show current and new value, wait for confirmation, then write. It does not overwrite keys you did not confirm. A role `model` change is one cell `(role, host)` and rewrites `model:` in **that** host’s `agentsDir` only.
 
@@ -74,16 +76,18 @@ It does **not** touch `agents.brainstorm` (that is `/_grillit`), create or rewri
 | `agents.designer.enabled` | ask once (recommend yes when a UI stack is detected) | yes | config only; off = no Designer stage and `/_designit` stops `BLOCKED` |
 | `agents.contentLanguage` | ask | yes | config only |
 | `agents.baseBranch` | ask (empty = git disabled) | yes | config only |
+| [Git operations](#git-operations) (`agents.git`) | ask when a base branch is set | yes; asked once when missing | config only |
+| [Change record](#change-record) (`agents.reportChange`) | ask | yes; asked once when missing | config only |
 | Optional project rule | one; skip is default | if you ask — stored on the roles (`rules`; reviewer `checklist` when it is a review constraint) | stored on roles |
 | Packs / `packsIgnored` | detect; honour ignore | yes | regenerate rule packs |
 | Status strings | skeleton unless you confirm other strings | yes | config only |
 | Product line / `agents.docs` | from the PRD step | yes | config only |
-| Jira / Azure DevOps tracker | offer once: add or decline | add / change mapping / remove | config + local credentials file; no agent-body regen |
+| Jira / Azure DevOps tracker | offer once: add or decline | add / change mapping or [write actions](trackers.md#write-actions) / remove | config + local credentials file; no agent-body regen |
 | Project PRD | create only if missing | no rewrite | — |
 | `AGENTS.md` | merge + accept | no remake | later: only create missing `CLAUDE.md` if `.claude/` exists |
 | Brainstorm members / model / consult | no | no | `/_grillit` |
 
-**Jira / Azure DevOps.** First run offers a tracker once. Later: add, change the mapping, or remove. Details: [Jira tracker](trackers.md#jira-tracker), [Azure DevOps tracker](trackers.md#azure-devops-tracker).
+**Jira / Azure DevOps.** First run offers a tracker once. Later: add, change the mapping or the write actions, or remove. Details: [Jira tracker](trackers.md#jira-tracker), [Azure DevOps tracker](trackers.md#azure-devops-tracker).
 
 ## After a package update
 
@@ -145,6 +149,45 @@ With git enabled, Implementer and Reviewer always work in a git worktree: `$(git
 
 Allowlisted git/`gh` goes through `.seh/scripts/` only: `start-task`, `commit-task`, `push-task`, `open-pr`, `update-from-base`, `return-to-base`, plus `pr-state` (read-only) and `merge-pr` (used only by `/_shipit` sessions). Jira Cloud REST goes through `.seh/scripts/jira`; Azure DevOps REST through `.seh/scripts/ado`. No rebase, reset, or force. SE Harness merges a PR only in `/_shipit`.
 
-**Git disabled.** Set `agents.baseBranch` to an empty value (in `/_setit-se`) for a project without git. Agents then skip branch, worktree, commit, push, PR, and merge steps and work in your checkout. Statuses run the same way, and the Reviewer sets `done` after acceptance with a changelog line. Several keys run one after another in the current session, in dependency order. `/_shipit` and `/_checkit` update need git and stop.
+**Git disabled.** Set `agents.baseBranch` to an empty value (in `/_setit-se`) for a project without git. Agents then skip branch, worktree, commit, push, PR, and merge steps and work in your checkout. Statuses run the same way, and the Reviewer sets `done` after acceptance. Several keys run one after another in the current session, in dependency order. `/_shipit` needs git and stops. To switch off only some git steps, use [git operations](#git-operations).
+
+## What SE Harness may do
+
+Three setup questions decide what SE Harness does on your behalf: [the change record](#change-record), [git operations](#git-operations), and, with Jira or Azure DevOps, [tracker write actions](trackers.md#write-actions). Off means **not automatically**: you can still [ask for it](#on-your-request).
+
+### Change record
+
+`agents.reportChange`: whether SE Harness writes a line to the project-root `CHANGELOG.md` after acceptance. Yes / no. Setup proposes yes when that file exists, otherwise no, and waits for your answer. A config without the key behaves as yes until a later `/_setit-se` asks.
+
+### Git operations
+
+`agents.git`: asked in one question, only when git is connected and `agents.baseBranch` is set. Nothing is preselected. Reply for example `all`, `none`, or `worktree, commit`.
+
+Each operation needs every one above it in the table. If your reply breaks that chain, setup shows the corrected set and asks you to confirm. A config with a base branch and no `agents.git` has all four on until a later `/_setit-se` asks.
+
+| Operation | On: SE Harness | Off |
+|-----------|----------------|-----|
+| `worktree` | creates the task branch and [worktree](worktrees.md) | Work happens in your checkout. Several keys run one after another in the current session, with no session per task. |
+| `commit` | commits accepted changes | Changes stay uncommitted. A worktree with such changes is kept, and the Reviewer prints its path and branch. The change record is still written when it is on. |
+| `push` | pushes the task branch | The commit stays local. |
+| `pr` | opens the pull request, and merges it in `/_shipit` | The branch is pushed; there is no PR. |
+
+The Reviewer runs the operations that are on and tells you what is left to you. SE Harness does not do a skipped step some other way. `done` means accepted and every operation that is on has finished. `/_shipit` needs all four, otherwise: `BLOCKED: /_shipit needs worktree, commit, push and pr enabled — change them in /_setit-se`.
+
+### On your request
+
+When you explicitly ask for something that is off, SE Harness does it, for that one call. Say it in the session, or in the request that starts a run:
+
+```text
+implement MT-01, and create a worktree for it
+write a spec for password reset and also copy the spec to PROJ-12
+```
+
+- Your words are passed on verbatim (`--user-request "<your words>"` on the script). SE Harness never adds this for its own steps, in any mode. Your config does not change.
+- **Git:** works for creating the worktree, commit, push and opening the PR. It runs the operation you asked for even when an earlier one is off. It does not work with git disabled, does not let anything merge outside `/_shipit`, and does not satisfy the `/_shipit` requirement.
+- **Tracker:** the write is a one-off copy. Repo files stay the source for that action, nothing is synced, and the local status does not change. If the target field already has content, you are asked before it is overwritten. If the needed mapping is missing, SE Harness lists the values, asks, saves the mapping with your consent and runs the write; the action stays off. A requested read takes every part from the tracker.
+- An item created on your request is [bound](trackers.md#binding) to the task.
+
+## Language
 
 Replies follow the conversation language. Spec, prompt, log, changelog, and PR text follow `agents.contentLanguage` from config. Status strings stay as configured; do not translate them from the conversation.

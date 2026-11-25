@@ -72,11 +72,11 @@ OFF means seh does not do it automatically where it normally would. On the user'
 
 ## Acceptance criteria
 
-- [ ] No `readOnly` in `docs/guide/` outside the migration note.
-- [ ] Guide describes the three setup questions, disabled actions / ops, and binding, consistent with the PRD.
-- [ ] `CHANGELOG.md` `[2.0.0]` has Added, Changed, Removed and the migration note.
-- [ ] `npm test` green.
-- [ ] Guide explains running a disabled action / op on request.
+- [x] No `readOnly` in `docs/guide/` outside the migration note.
+- [x] Guide describes the three setup questions, disabled actions / ops, and binding, consistent with the PRD.
+- [x] `CHANGELOG.md` `[2.0.0]` has Added, Changed, Removed and the migration note.
+- [x] `npm test` green.
+- [x] Guide explains running a disabled action / op on request.
 
 ## Verification
 

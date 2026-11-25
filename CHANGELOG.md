@@ -4,8 +4,15 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 ## [2.0.0] - 2026-11-25
 
+### Migration from 1.x
+
+- Run `seh install`, then `/<prefix>setit-se`.
+- Tracker config: until setup has run, `jira` / `ado` `get` and write verbs are `BLOCKED:`. Setup migrates `agents.tracker.readOnly` once to `agents.tracker.write`: `true` → all five actions off; `false` or missing → all on.
+- Setup asks once for a missing `agents.reportChange`, and for a missing `agents.git` when a base branch is set. Until answered, both count as on.
+
 ### Added
 
+- Config key `agents.tracker.write` with one switch per tracker write: `create`, `spec`, `prompt`, `log`, `status`. `create` lets seh create items and links, or leaves a task on a files basename.
 - Config key `agents.git` (`worktree`, `commit`, `push`, `pr`; chain `pr` ⇒ `push` ⇒ `commit` ⇒ `worktree`; missing = all `true` with a base branch) in the PRD and `references/` (`harness.config.json`, `harness.config.md`, `AGENTS.md`).
 - `tracker:` key in `references/spec.feature.md` frontmatter, and the PRD binding rules (naming, stub, move on binding, conflict).
 - `--user-request "<words>"` on the `jira` / `ado` write verbs and `get`: the user's explicit request runs a disabled tracker action for that call (`get` then reads every part from the tracker). Empty words are `BLOCKED:`. PRD and `references/` state the rule.
