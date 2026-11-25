@@ -46,7 +46,7 @@ When Jira is connected, add `agents.tracker` from `harness.tracker.json` (includ
 
 Credentials in `harness.credentials.local.json`: `jiraToken` for Jira; `adoPat` for ADO (may coexist only when the other tracker is disconnected and the unused key is empty). Setup must not require both tokens active at once.
 
-`agents.tracker.write` holds the booleans `create`, `spec`, `prompt`, `log`, `status`; `/{{prefix}}setit-se` asks them in one question with nothing preselected (the `false` values in the skeletons are placeholders). Reading the tracker (`meta`, `get`) is always on. An action that is ON writes to the work item / issue. An action that is OFF is `BLOCKED:` in the script with no HTTP and its artifact falls back to the files tracker:
+`agents.tracker.write` holds the booleans `create`, `spec`, `prompt`, `log`, `status`; `/{{prefix}}setit-se` asks them in one question with nothing preselected (the `false` values in the skeletons are placeholders). Reading the tracker (`meta`, `get`) is always on. An action that is ON writes to the work item / issue. An action that is OFF is not done automatically: it is `BLOCKED:` in the script with no HTTP and its artifact falls back to the files tracker (the user’s explicit request still runs it, see below):
 
 | Action | Verbs refused when OFF | When OFF |
 |--------|------------------------|----------|
@@ -57,6 +57,8 @@ Credentials in `harness.credentials.local.json`: `jiraToken` for Jira; `adoPat` 
 | `status` | `transition` | `status:` in local spec frontmatter (`agents.statuses`) |
 
 Mappings are asked only for enabled actions: status keys `todo`…`done` with `status`, `fields.spec` / `prompt` / `log` with the matching action, `issueTypes` / `workItemTypes` with `create`. `statuses.blocker` and `fetchFields` are always asked; `blocker` is required when a `depends` entry is read from the tracker (`null` = no such dependencies). A tracker config with no `write` block is `BLOCKED:` run `/{{prefix}}setit-se`. A config from before 2.0 has `readOnly` instead: a later `/{{prefix}}setit-se` migrates it once (`true` → all actions `false`; `false` or missing → all `true`) and deletes it; scripts read only `write`. Same for Jira and ADO.
+
+Explicit user request: OFF means seh does not do the action automatically; when the user explicitly asks for it, seh does it. Pass `--user-request "<the user's words>"` to the write verb or `get`; it lifts the guard for that call only (empty value: `BLOCKED:`). The words come from the user in this session or from a launch line that carries them verbatim; seh never adds the flag for its own steps, in any mode. The write is a one-off copy: repo files stay the source, nothing is synced, local status is unchanged; ask before overwriting a non-empty target field. `get <key> --user-request` reads every part from the tracker. Missing mapping: list values from `meta`, ask, save it to config with the user's consent, run the action; the action stays OFF. A requested `create` binds the task (`tracker:`); a later switch to ON moves local content once and is `BLOCKED:` when both sides are non-empty.
 
 Jira skeleton:
 

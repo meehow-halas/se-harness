@@ -8,10 +8,13 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 
 - Config key `agents.git` (`worktree`, `commit`, `push`, `pr`; chain `pr` ⇒ `push` ⇒ `commit` ⇒ `worktree`; missing = all `true` with a base branch) in the PRD and `references/` (`harness.config.json`, `harness.config.md`, `AGENTS.md`).
 - `tracker:` key in `references/spec.feature.md` frontmatter, and the PRD binding rules (naming, stub, move on binding, conflict).
+- `--user-request "<words>"` on the `jira` / `ado` write verbs and `get`: the user's explicit request runs a disabled tracker action for that call (`get` then reads every part from the tracker). Empty words are `BLOCKED:`. PRD and `references/` state the rule.
+- `jira get` / `ado get` accept the basename of a task whose spec has `tracker:`.
 
 ### Changed
 
 - **Breaking.** PRD and `references/` describe per-action tracker writes: `agents.tracker.write` (`create`, `spec`, `prompt`, `log`, `status`) in `harness.tracker.json` and `harness.tracker.ado.json`; a disabled action falls back to the files-tracker location.
+- **Breaking.** `jira` / `ado` guard each write verb by its `agents.tracker.write` action (`link` belongs to `create`, `comment` to `log`); `get` takes spec, prompt, log and status each from the tracker or the repo file accordingly (a key no local spec holds: status from the tracker). A tracker config without `write` is `BLOCKED:` for `get` and write verbs; `meta` still works.
 - `agents.reportChange` is asked by `/<prefix>setit-se`. `done` means accepted and every enabled git operation finished; `/<prefix>shipit` needs all four.
 - `depends` gate: a tracker key that no local spec holds takes its status from the tracker even with `status` OFF. A disabled `worktree` operation means sequential runs, like git disabled.
 

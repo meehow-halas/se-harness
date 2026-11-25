@@ -62,8 +62,73 @@ function fieldRef(loc) {
   return loc;
 }
 
-function readOnly(t) {
-  return t.readOnly === true;
+// Tracker write action ON. Anything but true is OFF.
+function writes(t, action) {
+  return Boolean(t.write) && t.write[action] === true;
+}
+
+function readArtifactFile(root, rel) {
+  const p = path.join(root, rel);
+  return fs.existsSync(p) ? fs.readFileSync(p, "utf8").replace(/\n$/, "") : "";
+}
+
+function stripYamlFrontmatter(text) {
+  if (!text.startsWith("---")) {
+    return text;
+  }
+  const end = text.indexOf("\n---", 3);
+  return end === -1 ? text : text.slice(end + 4).replace(/^\n/, "");
+}
+
+// Scalar value of a top-level frontmatter key, or "".
+function frontmatterValue(text, key) {
+  const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  const line = block && new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(block[1]);
+  if (!line) {
+    return "";
+  }
+  const raw = line[1].trim();
+  const quoted = /^(["'])(.*?)\1/.exec(raw);
+  return quoted ? quoted[2] : raw.replace(/(^|\s+)#.*$/, "");
+}
+
+function localSpec(root, base) {
+  return readArtifactFile(root, `docs/features/${base}.feature.md`);
+}
+
+// A local spec holds a key as its basename or in tracker:.
+function heldLocally(root, key) {
+  const dir = path.join(root, "docs/features");
+  if (!fs.existsSync(dir)) {
+    return false;
+  }
+  return fs
+    .readdirSync(dir)
+    .filter((n) => n.endsWith(".feature.md"))
+    .some(
+      (n) =>
+        n === `${key}.feature.md` ||
+        frontmatterValue(fs.readFileSync(path.join(dir, n), "utf8"), "tracker") === key
+    );
+}
+
+// get: each body and the status from the store its write action names.
+// requested (--user-request) reads every part from the tracker.
+function assemble(t, root, base, key, requested, fromTracker) {
+  const fromFile = {
+    spec: () => stripYamlFrontmatter(localSpec(root, base)).trim(),
+    prompt: () => readArtifactFile(root, `docs/prompt/${base}.prompt.md`).trim(),
+    log: () => readArtifactFile(root, `docs/feature-log/${base}.log.md`).trim(),
+  };
+  const out = {};
+  for (const kind of ["spec", "prompt", "log"]) {
+    out[kind] = requested || writes(t, kind) ? fromTracker[kind]() : fromFile[kind]();
+  }
+  out.status =
+    requested || writes(t, "status") || !heldLocally(root, key)
+      ? fromTracker.status()
+      : frontmatterValue(localSpec(root, base), "status");
+  return out;
 }
 
 function escapeHtml(s) {
@@ -116,19 +181,6 @@ function scalar(v) {
     return typeof v.displayName === "string" ? v.displayName : "";
   }
   return String(v);
-}
-
-function readArtifactFile(root, rel) {
-  const p = path.join(root, rel);
-  return fs.existsSync(p) ? fs.readFileSync(p, "utf8").replace(/\n$/, "") : "";
-}
-
-function stripYamlFrontmatter(text) {
-  if (!text.startsWith("---")) {
-    return text;
-  }
-  const end = text.indexOf("\n---", 3);
-  return end === -1 ? text : text.slice(end + 4).replace(/^\n/, "");
 }
 
 const cmd = process.argv[2];
@@ -292,10 +344,12 @@ if (cmd === "comments-api-version") {
 
 if (cmd === "needs-comments") {
   const t = trackerFrom(readJson(process.argv[3]));
-  const kinds = ["spec", "prompt", "log"];
-  const need =
-    !readOnly(t) &&
-    (kinds.some((k) => mapped(t, k) === "comment") || !mapped(t, "log"));
+  const requested = Boolean(process.argv[4]);
+  const need = ["spec", "prompt", "log"].some(
+    (k) =>
+      (requested || writes(t, k)) &&
+      (mapped(t, k) === "comment" || (k === "log" && !mapped(t, k)))
+  );
   process.stdout.write(need ? "true\n" : "false\n");
   process.exit(0);
 }
@@ -311,14 +365,19 @@ if (cmd === "mapped-field") {
   process.exit(0);
 }
 
-if (cmd === "read-only") {
-  let on = false;
-  try {
-    on = readOnly(trackerFrom(JSON.parse(fs.readFileSync(process.argv[3], "utf8"))));
-  } catch {
-    on = false;
+if (cmd === "write") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  if (!t.write || typeof t.write !== "object") {
+    fail("no-write");
   }
-  process.stdout.write(on ? "true\n" : "false\n");
+  process.stdout.write(`${writes(t, process.argv[4])}\n`);
+  process.exit(0);
+}
+
+if (cmd === "resolve-key") {
+  const arg = process.argv[4] || "";
+  const root = path.dirname(process.argv[3]);
+  process.stdout.write(`${frontmatterValue(localSpec(root, arg), "tracker") || arg}\n`);
   process.exit(0);
 }
 
@@ -492,7 +551,7 @@ if (cmd === "format-get") {
   const cfgPath = process.argv[3];
   const t = trackerFrom(readJson(cfgPath));
   const item = readJson(process.argv[4]);
-  const comments = process.argv[5] ? readJson(process.argv[5]) : {};
+  const comments = readJson(process.argv[5]);
   const fields = (item && item.fields) || {};
   const id = String(item.id != null ? item.id : fields["System.Id"] || "");
   const commentsText = () =>
@@ -500,40 +559,35 @@ if (cmd === "format-get") {
       .map((c) => htmlToText(scalar(c && c.text)))
       .filter(Boolean)
       .join("\n\n");
-  let spec;
-  let prompt;
-  let log;
-  if (readOnly(t)) {
-    const root = path.dirname(cfgPath);
-    spec = stripYamlFrontmatter(
-      readArtifactFile(root, `docs/features/${id}.feature.md`)
-    ).trim();
-    prompt = readArtifactFile(root, `docs/prompt/${id}.prompt.md`).trim();
-    log = readArtifactFile(root, `docs/feature-log/${id}.log.md`).trim();
-  } else {
-    const text = (kind) => {
-      const loc = mapped(t, kind);
-      if (!loc) {
-        return "";
-      }
-      return loc === "comment"
-        ? commentsText()
-        : htmlToText(scalar(fields[fieldRef(loc)]));
-    };
-    spec = text("spec");
-    prompt = text("prompt");
-    log = text("log");
-    if (!mapped(t, "spec")) {
-      spec = htmlToText(scalar(fields["System.Description"]));
+  const text = (kind) => {
+    const loc = mapped(t, kind);
+    if (!loc) {
+      return "";
     }
-    if (!mapped(t, "log")) {
-      log = commentsText();
+    return loc === "comment"
+      ? commentsText()
+      : htmlToText(scalar(fields[fieldRef(loc)]));
+  };
+  const { spec, prompt, log, status } = assemble(
+    t,
+    path.dirname(cfgPath),
+    process.argv[6] || id,
+    id,
+    Boolean(process.argv[7]),
+    {
+      spec: () =>
+        mapped(t, "spec")
+          ? text("spec")
+          : htmlToText(scalar(fields["System.Description"])),
+      prompt: () => text("prompt"),
+      log: () => (mapped(t, "log") ? text("log") : commentsText()),
+      status: () => scalar(fields["System.State"]),
     }
-  }
+  );
   const lines = [
     `id: ${id}`,
     `title: ${scalar(fields["System.Title"])}`,
-    `status: ${scalar(fields["System.State"])}`,
+    `status: ${status}`,
     `type: ${scalar(fields["System.WorkItemType"])}`,
   ];
   const shown = new Set();

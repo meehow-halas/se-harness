@@ -29,8 +29,15 @@ const FIX = {
   specName: "Engineering Spec",
 };
 
+const ACTIONS = ["create", "spec", "prompt", "log", "status"];
+
+function flags(value, over = {}) {
+  return { ...Object.fromEntries(ACTIONS.map((a) => [a, value])), ...over };
+}
+
 function tracker(over = {}) {
   return {
+    write: flags(true),
     url: FIX.url,
     user: FIX.user,
     projectKey: FIX.projectKey,
@@ -260,6 +267,13 @@ function argvHasToken(logFile, token) {
   }
   return fs.readFileSync(logFile, "utf8").includes(token);
 }
+
+const TRACKER = {
+  spec: "spec body qx7",
+  prompt: "prompt body qx7",
+  log: "log row qx7",
+  status: "Queued For Build",
+};
 
 describe("jira", () => {
   test("BLOCKED when curl is missing", () => {
@@ -556,76 +570,269 @@ describe("jira", () => {
       );
     });
   });
-  describe("readOnly", () => {
+  describe("write actions", () => {
     const KEY = "QX7-42";
-    const verbsFor = (cwd) => {
-      const body = path.join(cwd, "ro-body.md");
-      return [
-        ["create", "--type", "feature", "--title", "t"],
-        ["set", KEY, "spec", "--file", body],
-        ["set", KEY, "prompt", "--file", body],
-        ["set", KEY, "log", "--file", body],
-        ["comment", KEY, "--file", body],
-        ["transition", KEY, "codeReview"],
-        ["link", KEY, "depends", "QX7-43"],
-      ];
-    };
+    const OTHER = "QX7-43";
+    const BASE = "007-local-qx";
+    const routes = () => defaultRoutes();
 
-    for (const token of [FIX.token, null]) {
-      test(`write verbs BLOCKED with zero requests when readOnly true (credentials ${token === null ? "absent" : "present"})`, () => {
+    // [action, verb argv builder]
+    const VERBS = [
+      ["create", () => ["create", "--type", "feature", "--title", "t"]],
+      ["create", () => ["link", KEY, "depends", OTHER]],
+      ["spec", (f) => ["set", KEY, "spec", "--file", f]],
+      ["prompt", (f) => ["set", KEY, "prompt", "--file", f]],
+      ["log", (f) => ["set", KEY, "log", "--file", f]],
+      ["log", (f) => ["comment", KEY, "--file", f]],
+      ["status", () => ["transition", KEY, "codeReview"]],
+    ];
+
+    function bodyFile(cwd) {
+      writeFile(cwd, "w-body.md", "x\n");
+      return path.join(cwd, "w-body.md");
+    }
+
+    function requested(stub) {
+      return fs.existsSync(stub.logFile);
+    }
+
+    function writeLocal(cwd, base, { status = `local-status-${base}`, trackerKey = "" } = {}) {
+      writeFile(
+        cwd,
+        `docs/features/${base}.feature.md`,
+        `---\nid: ${base}\n# status: a comment line\nstatus: ${status}\ntracker: ${trackerKey}\n---\n\nfile spec ${base}\n`
+      );
+      writeFile(cwd, `docs/prompt/${base}.prompt.md`, `file prompt ${base}\n`);
+      writeFile(cwd, `docs/feature-log/${base}.log.md`, `file log ${base}\n`);
+    }
+
+    function blocks(stdout) {
+      const out = {};
+      for (const k of ["spec", "prompt", "log"]) {
+        const m = new RegExp(`BEGIN ${k}\\n([\\s\\S]*?)\\nEND ${k}`).exec(stdout);
+        assert.ok(m, stdout);
+        out[k] = m[1];
+      }
+      out.status = /^status: ?(.*)$/m.exec(stdout)[1];
+      return out;
+    }
+
+    function get(cwd, args) {
+      const stub = writeCurlStub(cwd, routes());
+      const result = runJira(cwd, ["get", ...args], stub.env);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout, /^OK\n/);
+      return { ...blocks(result.stdout), stdout: result.stdout, stub };
+    }
+
+    const fileParts = (base) => ({
+      spec: `file spec ${base}`,
+      prompt: `file prompt ${base}`,
+      log: `file log ${base}`,
+      status: `local-status-${base}`,
+    });
+
+    const parts = ({ spec, prompt, log, status }) => ({ spec, prompt, log, status });
+
+    for (const [action, argv] of VERBS) {
+      const verb = argv("f").filter((_, i) => i === 0 || (i === 2 && argv("f")[0] === "set")).join(" ");
+
+      for (const token of [FIX.token, null]) {
+        test(`${verb} with ${action} OFF is BLOCKED with zero requests (credentials ${token ? "present" : "absent"})`, () => {
+          withTempDir((cwd) => {
+            writeProject(cwd, { trackerOver: { write: flags(true, { [action]: false }) }, token });
+            const stub = writeCurlStub(cwd, routes());
+            const result = runJira(cwd, argv(bodyFile(cwd)), stub.env);
+            assert.notEqual(result.status, 0);
+            assertBlocked(
+              result,
+              new RegExp(`tracker action ${action} is disabled — write the repo file \\(agents\\.tracker\\.write\\.${action}\\)`)
+            );
+            assert.equal(requested(stub), false);
+          });
+        });
+      }
+
+      test(`${verb} with only ${action} ON reaches the tracker`, () => {
         withTempDir((cwd) => {
-          writeProject(cwd, { trackerOver: { readOnly: true }, token });
-          fs.writeFileSync(path.join(cwd, "ro-body.md"), "x\n");
-          const stub = writeCurlStub(cwd, defaultRoutes());
-          for (const args of verbsFor(cwd)) {
-            const result = runJira(cwd, args, stub.env);
-            assertBlocked(result, /read-only/);
-            assert.equal(fs.existsSync(stub.logFile), false, `curl ran for ${args[0]}`);
+          writeProject(cwd, { trackerOver: { write: flags(false, { [action]: true }) } });
+          const stub = writeCurlStub(cwd, routes());
+          const result = runJira(cwd, argv(bodyFile(cwd)), stub.env);
+          assert.equal(result.status, 0, result.stdout + result.stderr);
+          assert.equal(requested(stub), true);
+        });
+      });
+
+      test(`${verb} with everything OFF runs on --user-request`, () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { write: flags(false) } });
+          const stub = writeCurlStub(cwd, routes());
+          const args = [...argv(bodyFile(cwd)), "--user-request", "please do it now"];
+          const result = runJira(cwd, args, stub.env);
+          assert.equal(result.status, 0, result.stdout + result.stderr);
+          assert.equal(requested(stub), true);
+          // The lift is for that call only.
+          fs.rmSync(stub.logFile);
+          assertBlocked(runJira(cwd, argv(bodyFile(cwd)), stub.env), /is disabled/);
+          assert.equal(requested(stub), false);
+        });
+      });
+
+      test(`${verb} with empty --user-request words is BLOCKED with zero requests`, () => {
+        for (const value of [false, true]) {
+          withTempDir((cwd) => {
+            writeProject(cwd, { trackerOver: { write: flags(value) } });
+            const stub = writeCurlStub(cwd, routes());
+            for (const tail of [["--user-request", ""], ["--user-request", "  "], ["--user-request"]]) {
+              const result = runJira(cwd, [...argv(bodyFile(cwd)), ...tail], stub.env);
+              assertBlocked(result, /empty --user-request/);
+            }
+            assert.equal(requested(stub), false);
+          });
+        }
+      });
+    }
+
+    test("an action missing from the write block is OFF", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { write: { spec: "true" } } });
+        const stub = writeCurlStub(cwd, routes());
+        assertBlocked(runJira(cwd, ["set", KEY, "spec", "--file", bodyFile(cwd)], stub.env), /action spec is disabled/);
+        assert.equal(requested(stub), false);
+      });
+    });
+
+    test("--user-request words as a title value stay a title", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { write: flags(false) } });
+        const stub = writeCurlStub(cwd, routes());
+        const result = runJira(cwd, ["create", "--type", "feature", "--title", "--user-request"], stub.env);
+        assertBlocked(result, /action create is disabled/);
+        assert.equal(requested(stub), false);
+      });
+    });
+
+    for (const readOnly of [true, false]) {
+      test(`readOnly ${readOnly} without write: get and write verbs BLOCKED run setup; meta works`, () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { write: undefined, readOnly } });
+          const stub = writeCurlStub(cwd, routes());
+          const file = bodyFile(cwd);
+          const calls = [
+            ["get", KEY],
+            ["get", KEY, "--user-request", "w"],
+            ...VERBS.map(([, argv]) => argv(file)),
+            ...VERBS.map(([, argv]) => [...argv(file), "--user-request", "w"]),
+          ];
+          for (const args of calls) {
+            assertBlocked(runJira(cwd, args, stub.env), /tracker config predates 2\.0 — run \/.*setit-se/);
+          }
+          assert.equal(requested(stub), false);
+          assert.equal(runJira(cwd, ["meta"], stub.env).status, 0);
+          assert.equal(requested(stub), true);
+        });
+      });
+    }
+
+    test("readOnly is ignored when write is present", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { readOnly: true } });
+        const stub = writeCurlStub(cwd, routes());
+        const result = runJira(cwd, ["set", KEY, "spec", "--file", bodyFile(cwd)], stub.env);
+        assert.equal(result.status, 0, result.stdout + result.stderr);
+        assert.equal(requested(stub), true);
+      });
+    });
+
+    for (const on of [["spec", "log"], ["prompt", "status"], ACTIONS, []]) {
+      test(`get takes each part from its store (ON: ${on.join(",") || "none"})`, () => {
+        withTempDir((cwd) => {
+          const write = flags(false, Object.fromEntries(on.map((a) => [a, true])));
+          writeProject(cwd, { trackerOver: { write } });
+          writeLocal(cwd, KEY);
+          const got = get(cwd, [KEY]);
+          const file = fileParts(KEY);
+          for (const part of ["spec", "prompt", "log", "status"]) {
+            assert.equal(got[part], write[part] ? TRACKER[part] : file[part], part);
           }
         });
       });
     }
 
-    test("readOnly false explicitly still writes", () => {
+    test("get with everything OFF and no local files: empty bodies, tracker status and scalars", () => {
       withTempDir((cwd) => {
-        writeProject(cwd, { trackerOver: { readOnly: false } });
-        const stub = writeCurlStub(cwd, defaultRoutes());
-        const result = runJira(cwd, ["create", "--type", "feature", "--title", "t"], stub.env);
-        assertOk(result, { key: "QX7-99" });
-        const link = runJira(cwd, ["link", KEY, "relates", "QX7-43"], stub.env);
-        assertOk(link, { key: KEY });
+        writeProject(cwd, { trackerOver: { write: flags(false) } });
+        const got = get(cwd, [KEY]);
+        assert.deepEqual(parts(got), { spec: "", prompt: "", log: "", status: TRACKER.status });
+        assert.match(got.stdout, /summary: Unique title from QX7/);
       });
     });
 
-    test("get takes bodies from files; scalars from tracker", () => {
+    test("status OFF: a key held in another spec's tracker: does not get the tracker status", () => {
       withTempDir((cwd) => {
-        writeProject(cwd, { trackerOver: { readOnly: true } });
-        writeFile(cwd, "docs/features/QX7-42.feature.md", "---\nid: QX7-42\n---\n\nro file spec 7q\n");
-        writeFile(cwd, "docs/prompt/QX7-42.prompt.md", "ro file prompt 7q\n");
-        writeFile(cwd, "docs/feature-log/QX7-42.log.md", "ro file log 7q\n");
-        const stub = writeCurlStub(cwd, defaultRoutes());
-        const result = runJira(cwd, ["get", KEY], stub.env);
-        assert.equal(result.status, 0, result.stderr + result.stdout);
-        assert.match(result.stdout, /^OK\n/);
-        assert.match(result.stdout, /summary: Unique title from QX7\n/);
-        assert.match(result.stdout, new RegExp(`status: ${FIX.todoStatus}\\n`));
-        assert.match(result.stdout, /BEGIN spec\nro file spec 7q\nEND spec/);
-        assert.match(result.stdout, /BEGIN prompt\nro file prompt 7q\nEND prompt/);
-        assert.match(result.stdout, /BEGIN log\nro file log 7q\nEND log/);
-        assert.doesNotMatch(result.stdout, /spec body qx7|prompt body qx7|log row qx7/);
+        writeProject(cwd, { trackerOver: { write: flags(false) } });
+        writeLocal(cwd, BASE, { trackerKey: `"${KEY}" # bound` });
+        assert.equal(get(cwd, [KEY]).status, "");
       });
     });
 
-    test("get with no local files gives empty bodies and OK", () => {
+    test("status OFF: specs holding other keys do not hold this one", () => {
       withTempDir((cwd) => {
-        writeProject(cwd, { trackerOver: { readOnly: true } });
-        const stub = writeCurlStub(cwd, defaultRoutes());
-        const result = runJira(cwd, ["get", KEY], stub.env);
-        assert.match(result.stdout, /^OK\n/);
-        assert.match(result.stdout, /BEGIN spec\n\nEND spec/);
-        assert.match(result.stdout, /BEGIN prompt\n\nEND prompt/);
-        assert.match(result.stdout, /BEGIN log\n\nEND log/);
-        assert.doesNotMatch(result.stdout, /body qx7|row qx7/);
+        writeProject(cwd, { trackerOver: { write: flags(false) } });
+        writeLocal(cwd, BASE, { trackerKey: OTHER });
+        writeLocal(cwd, `${KEY}0`);
+        assert.equal(get(cwd, [KEY]).status, TRACKER.status);
+      });
+    });
+
+    test("status OFF: a key held as basename without a status line prints an empty status", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { write: flags(false) } });
+        writeFile(cwd, `docs/features/${KEY}.feature.md`, "---\nid: x\n---\n\nbody\nstatus: not frontmatter\n");
+        assert.equal(get(cwd, [KEY]).status, "");
+      });
+    });
+
+    test("get <basename> of a bound task: tracker parts from the key, local parts from the basename", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { write: flags(false, { spec: true, log: true }) } });
+        writeLocal(cwd, BASE, { trackerKey: KEY });
+        writeLocal(cwd, KEY);
+        const got = get(cwd, [BASE]);
+        assert.deepEqual(parts(got), {
+          spec: TRACKER.spec,
+          prompt: `file prompt ${BASE}`,
+          log: TRACKER.log,
+          status: `local-status-${BASE}`,
+        });
+        assert.match(got.stdout, new RegExp(`^key: ${KEY}$`, "m"));
+      });
+    });
+
+    test("get <basename> with status ON prints the tracker status", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { write: flags(false, { status: true }) } });
+        writeLocal(cwd, BASE, { trackerKey: KEY });
+        assert.equal(get(cwd, [BASE]).status, TRACKER.status);
+      });
+    });
+
+    test("get --user-request reads every part from the tracker; without it, from the repo", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd, { trackerOver: { write: flags(false) } });
+        writeLocal(cwd, BASE, { trackerKey: KEY });
+        assert.deepEqual(parts(get(cwd, [BASE])), fileParts(BASE));
+        assert.deepEqual(parts(get(cwd, [BASE, "--user-request", "show the ticket"])), TRACKER);
+        assert.deepEqual(parts(get(cwd, [KEY, "--user-request", "show the ticket"])), TRACKER);
+      });
+    });
+
+    test("get with empty --user-request words is BLOCKED with zero requests", () => {
+      withTempDir((cwd) => {
+        writeProject(cwd);
+        const stub = writeCurlStub(cwd, routes());
+        assertBlocked(runJira(cwd, ["get", KEY, "--user-request", ""], stub.env), /empty --user-request/);
+        assert.equal(requested(stub), false);
       });
     });
   });

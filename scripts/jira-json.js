@@ -98,16 +98,14 @@ function mapped(t, kind) {
   return typeof v === "string" ? v.trim() : "";
 }
 
-function readOnly(t) {
-  return t.readOnly === true;
+// Tracker write action ON. Anything but true is OFF.
+function writes(t, action) {
+  return Boolean(t.write) && t.write[action] === true;
 }
 
 function readArtifactFile(root, rel) {
   const p = path.join(root, rel);
-  if (!fs.existsSync(p)) {
-    return "";
-  }
-  return fs.readFileSync(p, "utf8").replace(/\n$/, "");
+  return fs.existsSync(p) ? fs.readFileSync(p, "utf8").replace(/\n$/, "") : "";
 }
 
 function stripYamlFrontmatter(text) {
@@ -115,10 +113,58 @@ function stripYamlFrontmatter(text) {
     return text;
   }
   const end = text.indexOf("\n---", 3);
-  if (end === -1) {
-    return text;
+  return end === -1 ? text : text.slice(end + 4).replace(/^\n/, "");
+}
+
+// Scalar value of a top-level frontmatter key, or "".
+function frontmatterValue(text, key) {
+  const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  const line = block && new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(block[1]);
+  if (!line) {
+    return "";
   }
-  return text.slice(end + 4).replace(/^\n/, "");
+  const raw = line[1].trim();
+  const quoted = /^(["'])(.*?)\1/.exec(raw);
+  return quoted ? quoted[2] : raw.replace(/(^|\s+)#.*$/, "");
+}
+
+function localSpec(root, base) {
+  return readArtifactFile(root, `docs/features/${base}.feature.md`);
+}
+
+// A local spec holds a key as its basename or in tracker:.
+function heldLocally(root, key) {
+  const dir = path.join(root, "docs/features");
+  if (!fs.existsSync(dir)) {
+    return false;
+  }
+  return fs
+    .readdirSync(dir)
+    .filter((n) => n.endsWith(".feature.md"))
+    .some(
+      (n) =>
+        n === `${key}.feature.md` ||
+        frontmatterValue(fs.readFileSync(path.join(dir, n), "utf8"), "tracker") === key
+    );
+}
+
+// get: each body and the status from the store its write action names.
+// requested (--user-request) reads every part from the tracker.
+function assemble(t, root, base, key, requested, fromTracker) {
+  const fromFile = {
+    spec: () => stripYamlFrontmatter(localSpec(root, base)).trim(),
+    prompt: () => readArtifactFile(root, `docs/prompt/${base}.prompt.md`).trim(),
+    log: () => readArtifactFile(root, `docs/feature-log/${base}.log.md`).trim(),
+  };
+  const out = {};
+  for (const kind of ["spec", "prompt", "log"]) {
+    out[kind] = requested || writes(t, kind) ? fromTracker[kind]() : fromFile[kind]();
+  }
+  out.status =
+    requested || writes(t, "status") || !heldLocally(root, key)
+      ? fromTracker.status()
+      : frontmatterValue(localSpec(root, base), "status");
+  return out;
 }
 
 const cmd = process.argv[2];
@@ -466,14 +512,19 @@ if (cmd === "format-meta") {
   process.exit(0);
 }
 
-if (cmd === "read-only") {
-  let on = false;
-  try {
-    on = readOnly(trackerFrom(JSON.parse(fs.readFileSync(process.argv[3], "utf8"))));
-  } catch {
-    on = false;
+if (cmd === "write") {
+  const t = trackerFrom(readJson(process.argv[3]));
+  if (!t.write || typeof t.write !== "object") {
+    fail("no-write");
   }
-  process.stdout.write(on ? "true\n" : "false\n");
+  process.stdout.write(`${writes(t, process.argv[4])}\n`);
+  process.exit(0);
+}
+
+if (cmd === "resolve-key") {
+  const arg = process.argv[4] || "";
+  const root = path.dirname(process.argv[3]);
+  process.stdout.write(`${frontmatterValue(localSpec(root, arg), "tracker") || arg}\n`);
   process.exit(0);
 }
 
@@ -485,39 +536,33 @@ if (cmd === "format-get") {
   const fields = (issue && issue.fields) || {};
   const key = issue.key || "";
   const summary = fields.summary || "";
-  const status = (fields.status && fields.status.name) || "";
   const issuetype = (fields.issuetype && fields.issuetype.name) || "";
-  let spec;
-  let prompt;
-  let log;
-  if (readOnly(t)) {
-    const root = path.dirname(cfgPath);
-    spec = stripYamlFrontmatter(
-      readArtifactFile(root, `docs/features/${key}.feature.md`)
-    ).trim();
-    prompt = readArtifactFile(root, `docs/prompt/${key}.prompt.md`).trim();
-    log = readArtifactFile(root, `docs/feature-log/${key}.log.md`).trim();
-  } else {
-    const locText = (kind) => {
-      const loc = mapped(t, kind);
-      if (!loc || loc === "comment") {
-        return loc === "comment" ? commentsText(comments) : "";
-      }
-      if (loc === "description") {
-        return fieldText(fields.description);
-      }
-      return fieldText(fields[loc]);
-    };
-    spec = locText("spec");
-    prompt = locText("prompt");
-    log = locText("log");
-    if (!mapped(t, "spec") && fields.description) {
-      spec = fieldText(fields.description);
+  const locText = (kind) => {
+    const loc = mapped(t, kind);
+    if (!loc || loc === "comment") {
+      return loc === "comment" ? commentsText(comments) : "";
     }
-    if (!mapped(t, "log")) {
-      log = commentsText(comments);
+    if (loc === "description") {
+      return fieldText(fields.description);
     }
-  }
+    return fieldText(fields[loc]);
+  };
+  const { spec, prompt, log, status } = assemble(
+    t,
+    path.dirname(cfgPath),
+    process.argv[6] || key,
+    key,
+    Boolean(process.argv[7]),
+    {
+      spec: () =>
+        !mapped(t, "spec") && fields.description
+          ? fieldText(fields.description)
+          : locText("spec"),
+      prompt: () => locText("prompt"),
+      log: () => (mapped(t, "log") ? locText("log") : commentsText(comments)),
+      status: () => (fields.status && fields.status.name) || "",
+    }
+  );
   const lines = [
     `key: ${key}`,
     `summary: ${summary}`,

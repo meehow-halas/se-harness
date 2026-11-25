@@ -28,8 +28,15 @@ const FIX = {
   specName: "QX9 Engineering Spec",
 };
 
+const ACTIONS = ["create", "spec", "prompt", "log", "status"];
+
+function flags(value, over = {}) {
+  return { ...Object.fromEntries(ACTIONS.map((a) => [a, value])), ...over };
+}
+
 function tracker(over = {}) {
   return {
+    write: flags(true),
     kind: "ado",
     organizationUrl: FIX.organizationUrl,
     project: FIX.project,
@@ -184,6 +191,13 @@ function argvHasToken(logFile, token) {
   }
   return fs.readFileSync(logFile, "utf8").includes(token);
 }
+
+const TRACKER = {
+  spec: "QX9 spec body",
+  prompt: "QX9 prompt body",
+  log: "QX9 tracker note",
+  status: "QX9 Backlog New",
+};
 
 describe("ado", () => {
   test("BLOCKED when curl is missing", () => {
@@ -945,86 +959,280 @@ describe("ado", () => {
       });
     });
 
-    describe("readOnly", () => {
-      const verbsFor = (cwd) => {
-        const body = path.join(cwd, "ro-body.md");
-        return [
-          ["create", "--type", "feature", "--title", "t"],
-          ["set", ID, "spec", "--file", body],
-          ["set", ID, "prompt", "--file", body],
-          ["set", ID, "log", "--file", body],
-          ["comment", ID, "--file", body],
-          ["transition", ID, "codeReview"],
-          ["link", ID, "depends", "48214"],
-        ];
-      };
+    describe("write actions", () => {
+      const KEY = "48213";
+      const OTHER = "48214";
+      const BASE = "007-local-qx";
+      const routes = () =>
+        defaultRoutes({
+          [`GET ${itemPath()}`]: { code: 200, body: workItem },
+          [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [{ text: TRACKER.log }] } },
+          [`GET ${itemPath("48214")}`]: { code: 200, body: workItem },
+          [`PATCH ${itemPath()}`]: { code: 200, body: {} },
+          [`POST ${itemPath()}/comments`]: { code: 200, body: { id: 1 } },
+          [`POST ${witPath(`/_apis/wit/workitems/%24${encodeURIComponent(FIX.featureType)}`)}`]: {
+            code: 200,
+            body: { id: 5521 },
+          },
+        });
 
-      for (const token of [FIX.token, null]) {
-        test(`write verbs BLOCKED with zero requests when readOnly true (credentials ${token === null ? "absent" : "present"})`, () => {
+      // [action, verb argv builder]
+      const VERBS = [
+        ["create", () => ["create", "--type", "feature", "--title", "t"]],
+        ["create", () => ["link", KEY, "depends", OTHER]],
+        ["spec", (f) => ["set", KEY, "spec", "--file", f]],
+        ["prompt", (f) => ["set", KEY, "prompt", "--file", f]],
+        ["log", (f) => ["set", KEY, "log", "--file", f]],
+        ["log", (f) => ["comment", KEY, "--file", f]],
+        ["status", () => ["transition", KEY, "codeReview"]],
+      ];
+
+      function bodyFile(cwd) {
+        writeFile(cwd, "w-body.md", "x\n");
+        return path.join(cwd, "w-body.md");
+      }
+
+      function requested(stub) {
+        return fs.existsSync(stub.logFile);
+      }
+
+      function writeLocal(cwd, base, { status = `local-status-${base}`, trackerKey = "" } = {}) {
+        writeFile(
+          cwd,
+          `docs/features/${base}.feature.md`,
+          `---\nid: ${base}\n# status: a comment line\nstatus: ${status}\ntracker: ${trackerKey}\n---\n\nfile spec ${base}\n`
+        );
+        writeFile(cwd, `docs/prompt/${base}.prompt.md`, `file prompt ${base}\n`);
+        writeFile(cwd, `docs/feature-log/${base}.log.md`, `file log ${base}\n`);
+      }
+
+      function blocks(stdout) {
+        const out = {};
+        for (const k of ["spec", "prompt", "log"]) {
+          const m = new RegExp(`BEGIN ${k}\\n([\\s\\S]*?)\\nEND ${k}`).exec(stdout);
+          assert.ok(m, stdout);
+          out[k] = m[1];
+        }
+        out.status = /^status: ?(.*)$/m.exec(stdout)[1];
+        return out;
+      }
+
+      function get(cwd, args) {
+        const stub = writeCurlStub(cwd, routes());
+        const result = runAdo(cwd, ["get", ...args], stub.env);
+        assert.equal(result.status, 0, result.stdout + result.stderr);
+        assert.match(result.stdout, /^OK\n/);
+        return { ...blocks(result.stdout), stdout: result.stdout, stub };
+      }
+
+      const fileParts = (base) => ({
+        spec: `file spec ${base}`,
+        prompt: `file prompt ${base}`,
+        log: `file log ${base}`,
+        status: `local-status-${base}`,
+      });
+
+      const parts = ({ spec, prompt, log, status }) => ({ spec, prompt, log, status });
+
+      for (const [action, argv] of VERBS) {
+        const verb = argv("f").filter((_, i) => i === 0 || (i === 2 && argv("f")[0] === "set")).join(" ");
+
+        for (const token of [FIX.token, null]) {
+          test(`${verb} with ${action} OFF is BLOCKED with zero requests (credentials ${token ? "present" : "absent"})`, () => {
+            withTempDir((cwd) => {
+              writeProject(cwd, { trackerOver: { write: flags(true, { [action]: false }) }, token });
+              const stub = writeCurlStub(cwd, routes());
+              const result = runAdo(cwd, argv(bodyFile(cwd)), stub.env);
+              assert.notEqual(result.status, 0);
+              assertBlocked(
+                result,
+                new RegExp(`tracker action ${action} is disabled — write the repo file \\(agents\\.tracker\\.write\\.${action}\\)`)
+              );
+              assert.equal(requested(stub), false);
+            });
+          });
+        }
+
+        test(`${verb} with only ${action} ON reaches the tracker`, () => {
           withTempDir((cwd) => {
-            writeProject(cwd, { trackerOver: { readOnly: true }, token });
-            fs.writeFileSync(path.join(cwd, "ro-body.md"), "x\n");
-            for (const args of verbsFor(cwd)) {
-              const stub = writeCurlStub(cwd, defaultRoutes());
-              fs.rmSync(stub.logFile, { force: true });
-              const result = runAdo(cwd, args, stub.env);
-              assertBlocked(result, /read-only/);
-              assert.equal(fs.existsSync(stub.logFile), false, `curl ran for ${args[0]}`);
+            writeProject(cwd, { trackerOver: { write: flags(false, { [action]: true }) } });
+            const stub = writeCurlStub(cwd, routes());
+            const result = runAdo(cwd, argv(bodyFile(cwd)), stub.env);
+            assert.equal(result.status, 0, result.stdout + result.stderr);
+            assert.equal(requested(stub), true);
+          });
+        });
+
+        test(`${verb} with everything OFF runs on --user-request`, () => {
+          withTempDir((cwd) => {
+            writeProject(cwd, { trackerOver: { write: flags(false) } });
+            const stub = writeCurlStub(cwd, routes());
+            const args = [...argv(bodyFile(cwd)), "--user-request", "please do it now"];
+            const result = runAdo(cwd, args, stub.env);
+            assert.equal(result.status, 0, result.stdout + result.stderr);
+            assert.equal(requested(stub), true);
+            // The lift is for that call only.
+            fs.rmSync(stub.logFile);
+            assertBlocked(runAdo(cwd, argv(bodyFile(cwd)), stub.env), /is disabled/);
+            assert.equal(requested(stub), false);
+          });
+        });
+
+        test(`${verb} with empty --user-request words is BLOCKED with zero requests`, () => {
+          for (const value of [false, true]) {
+            withTempDir((cwd) => {
+              writeProject(cwd, { trackerOver: { write: flags(value) } });
+              const stub = writeCurlStub(cwd, routes());
+              for (const tail of [["--user-request", ""], ["--user-request", "  "], ["--user-request"]]) {
+                const result = runAdo(cwd, [...argv(bodyFile(cwd)), ...tail], stub.env);
+                assertBlocked(result, /empty --user-request/);
+              }
+              assert.equal(requested(stub), false);
+            });
+          }
+        });
+      }
+
+      test("an action missing from the write block is OFF", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { write: { spec: "true" } } });
+          const stub = writeCurlStub(cwd, routes());
+          assertBlocked(runAdo(cwd, ["set", KEY, "spec", "--file", bodyFile(cwd)], stub.env), /action spec is disabled/);
+          assert.equal(requested(stub), false);
+        });
+      });
+
+      test("--user-request words as a title value stay a title", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { write: flags(false) } });
+          const stub = writeCurlStub(cwd, routes());
+          const result = runAdo(cwd, ["create", "--type", "feature", "--title", "--user-request"], stub.env);
+          assertBlocked(result, /action create is disabled/);
+          assert.equal(requested(stub), false);
+        });
+      });
+
+      for (const readOnly of [true, false]) {
+        test(`readOnly ${readOnly} without write: get and write verbs BLOCKED run setup; meta works`, () => {
+          withTempDir((cwd) => {
+            writeProject(cwd, { trackerOver: { write: undefined, readOnly } });
+            const stub = writeCurlStub(cwd, routes());
+            const file = bodyFile(cwd);
+            const calls = [
+              ["get", KEY],
+              ["get", KEY, "--user-request", "w"],
+              ...VERBS.map(([, argv]) => argv(file)),
+              ...VERBS.map(([, argv]) => [...argv(file), "--user-request", "w"]),
+            ];
+            for (const args of calls) {
+              assertBlocked(runAdo(cwd, args, stub.env), /tracker config predates 2\.0 — run \/.*setit-se/);
+            }
+            assert.equal(requested(stub), false);
+            assert.equal(runAdo(cwd, ["meta"], stub.env).status, 0);
+            assert.equal(requested(stub), true);
+          });
+        });
+      }
+
+      test("readOnly is ignored when write is present", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { readOnly: true } });
+          const stub = writeCurlStub(cwd, routes());
+          const result = runAdo(cwd, ["set", KEY, "spec", "--file", bodyFile(cwd)], stub.env);
+          assert.equal(result.status, 0, result.stdout + result.stderr);
+          assert.equal(requested(stub), true);
+        });
+      });
+
+      for (const on of [["spec", "log"], ["prompt", "status"], ACTIONS, []]) {
+        test(`get takes each part from its store (ON: ${on.join(",") || "none"})`, () => {
+          withTempDir((cwd) => {
+            const write = flags(false, Object.fromEntries(on.map((a) => [a, true])));
+            writeProject(cwd, { trackerOver: { write } });
+            writeLocal(cwd, KEY);
+            const got = get(cwd, [KEY]);
+            const file = fileParts(KEY);
+            for (const part of ["spec", "prompt", "log", "status"]) {
+              assert.equal(got[part], write[part] ? TRACKER[part] : file[part], part);
             }
           });
         });
       }
 
-      test("readOnly false explicitly still writes", () => {
+      test("get with everything OFF and no local files: empty bodies, tracker status and scalars", () => {
         withTempDir((cwd) => {
-          writeProject(cwd, { trackerOver: { readOnly: false } });
-          const route = witPath(`/_apis/wit/workitems/%24${encodeURIComponent(FIX.bugType)}`);
-          const stub = writeCurlStub(cwd, defaultRoutes({ [`POST ${route}`]: { code: 200, body: { id: 5521 } } }));
-          const result = runAdo(cwd, ["create", "--type", "bug", "--title", "t"], stub.env);
-          assertOk(result, { id: "5521" });
-          assert.equal(fs.existsSync(stub.logFile), true);
+          writeProject(cwd, { trackerOver: { write: flags(false) } });
+          const got = get(cwd, [KEY]);
+          assert.deepEqual(parts(got), { spec: "", prompt: "", log: "", status: TRACKER.status });
+          assert.match(got.stdout, /title: QX9 widget title/);
         });
       });
 
-      test("get takes bodies from files; scalars from tracker", () => {
+      test("status OFF: a key held in another spec's tracker: does not get the tracker status", () => {
         withTempDir((cwd) => {
-          writeProject(cwd, { trackerOver: { readOnly: true } });
-          writeFile(cwd, "docs/features/48213.feature.md", "---\nx: 1\n---\nro file spec 7q\n");
-          writeFile(cwd, "docs/prompt/48213.prompt.md", "ro file prompt 7q\n");
-          writeFile(cwd, "docs/feature-log/48213.log.md", "ro file log 7q\n");
-          const stub = writeCurlStub(
-            cwd,
-            defaultRoutes({
-              [`GET ${itemPath()}`]: { code: 200, body: workItem },
-              [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [{ text: "tracker comment" }] } },
-            })
-          );
-          const result = runAdo(cwd, ["get", ID], stub.env);
-          assert.equal(result.status, 0, result.stdout + result.stderr);
-          assert.match(result.stdout, /^OK\n/);
-          assert.match(result.stdout, /status: QX9 Backlog New\n/);
-          assert.match(result.stdout, /BEGIN spec\nro file spec 7q\nEND spec/);
-          assert.match(result.stdout, /BEGIN prompt\nro file prompt 7q\nEND prompt/);
-          assert.match(result.stdout, /BEGIN log\nro file log 7q\nEND log/);
-          assert.doesNotMatch(result.stdout, /QX9 spec body|QX9 prompt body|tracker comment/);
+          writeProject(cwd, { trackerOver: { write: flags(false) } });
+          writeLocal(cwd, BASE, { trackerKey: `"${KEY}" # bound` });
+          assert.equal(get(cwd, [KEY]).status, "");
         });
       });
 
-      test("get with no local files gives empty bodies and OK", () => {
+      test("status OFF: specs holding other keys do not hold this one", () => {
         withTempDir((cwd) => {
-          writeProject(cwd, { trackerOver: { readOnly: true } });
-          const stub = writeCurlStub(
-            cwd,
-            defaultRoutes({
-              [`GET ${itemPath()}`]: { code: 200, body: workItem },
-              [`GET ${itemPath()}/comments`]: { code: 200, body: { comments: [] } },
-            })
-          );
-          const result = runAdo(cwd, ["get", ID], stub.env);
-          assert.match(result.stdout, /^OK\n/);
-          assert.match(result.stdout, /BEGIN spec\n\nEND spec/);
-          assert.match(result.stdout, /BEGIN prompt\n\nEND prompt/);
-          assert.match(result.stdout, /BEGIN log\n\nEND log/);
+          writeProject(cwd, { trackerOver: { write: flags(false) } });
+          writeLocal(cwd, BASE, { trackerKey: OTHER });
+          writeLocal(cwd, `${KEY}0`);
+          assert.equal(get(cwd, [KEY]).status, TRACKER.status);
+        });
+      });
+
+      test("status OFF: a key held as basename without a status line prints an empty status", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { write: flags(false) } });
+          writeFile(cwd, `docs/features/${KEY}.feature.md`, "---\nid: x\n---\n\nbody\nstatus: not frontmatter\n");
+          assert.equal(get(cwd, [KEY]).status, "");
+        });
+      });
+
+      test("get <basename> of a bound task: tracker parts from the key, local parts from the basename", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { write: flags(false, { spec: true, log: true }) } });
+          writeLocal(cwd, BASE, { trackerKey: KEY });
+          writeLocal(cwd, KEY);
+          const got = get(cwd, [BASE]);
+          assert.deepEqual(parts(got), {
+            spec: TRACKER.spec,
+            prompt: `file prompt ${BASE}`,
+            log: TRACKER.log,
+            status: `local-status-${BASE}`,
+          });
+          assert.match(got.stdout, new RegExp(`^id: ${KEY}$`, "m"));
+        });
+      });
+
+      test("get <basename> with status ON prints the tracker status", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { write: flags(false, { status: true }) } });
+          writeLocal(cwd, BASE, { trackerKey: KEY });
+          assert.equal(get(cwd, [BASE]).status, TRACKER.status);
+        });
+      });
+
+      test("get --user-request reads every part from the tracker; without it, from the repo", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd, { trackerOver: { write: flags(false) } });
+          writeLocal(cwd, BASE, { trackerKey: KEY });
+          assert.deepEqual(parts(get(cwd, [BASE])), fileParts(BASE));
+          assert.deepEqual(parts(get(cwd, [BASE, "--user-request", "show the ticket"])), TRACKER);
+          assert.deepEqual(parts(get(cwd, [KEY, "--user-request", "show the ticket"])), TRACKER);
+        });
+      });
+
+      test("get with empty --user-request words is BLOCKED with zero requests", () => {
+        withTempDir((cwd) => {
+          writeProject(cwd);
+          const stub = writeCurlStub(cwd, routes());
+          assertBlocked(runAdo(cwd, ["get", KEY, "--user-request", ""], stub.env), /empty --user-request/);
+          assert.equal(requested(stub), false);
         });
       });
     });

@@ -53,11 +53,13 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 
 One tracker connection: files-only when `agents.tracker` is absent, or Jira / Azure DevOps (`agents.tracker.kind`: `jira` or `ado`) when it is present. Do not mirror the same artifact text in two places.
 
-Which mode is active is in `harness.config.json`. If `agents.tracker` is present, the tracker (`kind` `jira`: issue key; `kind` `ado`: numeric work item id) is read via `.seh/scripts/jira` (Jira Cloud REST) or `.seh/scripts/ado` (Azure DevOps WIT REST) by `kind` — **`.seh/scripts/ado` (Recommended)** for ADO over raw REST / `curl` / `az boards`; not MCP. Reading is always on. `agents.tracker.write` says which writes are on; each artifact and the status live in one store:
+Which mode is active is in `harness.config.json`. If `agents.tracker` is present, the tracker (`kind` `jira`: issue key; `kind` `ado`: numeric work item id) is read via `.seh/scripts/jira` (Jira Cloud REST) or `.seh/scripts/ado` (Azure DevOps WIT REST) by `kind` — **`.seh/scripts/ado` (Recommended)** for ADO over raw REST / `curl` / `az boards`; not MCP. Reading is always on. `agents.tracker.write` says which writes are on; each artifact and the status live in one store.
+
+OFF means seh does not do the action automatically; on the user's explicit request seh still does it, passing `--user-request "<the user's words>"` to that one call (words from this session or a launch line carrying them verbatim; never for seh's own steps; empty is `BLOCKED:`). Such a write is a one-off copy: repo files stay the source, nothing is synced, local status is unchanged; ask before overwriting a non-empty field. `get <key> --user-request` reads every part from the tracker. Missing mapping: list values from `meta`, ask, save it with the user's consent, run; the action stays OFF. A requested `create` binds the task.
 
 | Action | ON | OFF |
 |--------|----|-----|
-| `create` | seh creates the item first (basename = key) and links items | Files basename, `tracker:` empty; never `create` or `link` |
+| `create` | seh creates the item first (basename = key) and links items | Files basename, `tracker:` empty; no `create` or `link` unless the user asks |
 | `spec` | Mapped field | `docs/features/<basename>.feature.md` |
 | `prompt` | Mapped field | `docs/prompt/<basename>.prompt.md` |
 | `log` | Log field and comments | `docs/feature-log/<basename>.log.md` |
