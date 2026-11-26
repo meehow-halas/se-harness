@@ -2,6 +2,12 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [2.1.2] - 2026-11-26
+
+### Fixed
+
+- The Implementer no longer overwrites a local spec, prompt or log with a stub or a new file while it has content: it turns a file into a stub only after the tracker `set` succeeded, and stops with `BLOCKED:` otherwise. Found when `/<prefix>runit` replaced full specs with frontmatter-only files in a consuming repo.
+
 ## [2.1.1] - 2026-11-25
 
 ### Fixed
