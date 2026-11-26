@@ -93,14 +93,15 @@ Allowlisted git/`gh` and Jira / Azure DevOps operations run through `.seh/script
 | `open-pr` | Reviewer, after acceptance |
 | `update-from-base` | Reviewer, only on a merge conflict with `Auto-merge: yes` |
 | `return-to-base` | Reviewer, after the last enabled git operation (removes the seh worktree when clean) |
+| `next-task` | Architect, for a new files basename. Reads refs, writes only a counter in `.git/`; prints `number:` |
 | `jira` | `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress`, `transition codeReview` at the end, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 | `ado` | Same who-calls-what as `jira`, when `agents.tracker.kind` is `ado`: `/{{prefix}}setit-se` (`meta`); Architect (`create`, `set`, `comment`, `get`, `transition todo`, `link`); Implementer (`get`, `transition inProgress` / `codeReview`, `comment` / `set log`); Reviewer (`get`, `transition inReview` / `inProgress` / `done`, `comment`) |
 
 A `jira` / `ado` write verb in the rows above applies only when its action is ON (`create`: `create`, `link`; `spec` / `prompt` / `log`: `set` of that part, `comment` with `log`; `status`: `transition`); otherwise it is `BLOCKED:` and agents do not call it.
 
-**Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with the change record written and status set where it lives. The scripts also answer `UNCHANGED` + `git: disabled`.
+**Git disabled:** when `agents.baseBranch` in `harness.config.json` is empty or `null`, agents skip every git script and step (no worktree, branch, commit, push, PR), work in the launch checkout, and run multi-key calls sequentially. `done` then means accepted, with the change record written and status set where it lives. The scripts also answer `UNCHANGED` + `git: disabled`. Exception: the Architect still calls `next-task`, which answers `OK` + `git: disabled`.
 
-Architect and Consultant: no git writes; they do not call the git scripts. Consultant does not call `jira` or `ado`.
+Architect and Consultant: no git writes; they do not call the git scripts, except that the Architect calls `next-task` for a new files basename. Consultant does not call `jira` or `ado`.
 
 ## Tests
 

@@ -80,6 +80,8 @@ Each artifact and the status live in exactly one store; never mirror. Pick the s
 
 **Stub.** With `spec` ON, a bound task has a local spec file only when basename ≠ key or `status` is OFF. It is frontmatter only (`id`, `title`, `status` (only with `status` OFF), `type`, `depends`, `relates`, `ui`, `tracker`); read those fields from it. Text sent to the tracker as the spec has no `status:` line.
 
+**Never overwrite a local spec, prompt or log.** Turn a local file into a stub only in step 3 of **Move on binding**, after that `set` succeeded. With `spec` OFF, or with a file that has body content, never write a stub over it, and never write a new file over an existing one: read it first, then edit only the parts you change. A stub with the same basename as an existing spec is never a reason to write. If the file is not what you expect, stop: `BLOCKED: <path> already has content — keep it or confirm overwrite`.
+
 **Status.** Steps: `todo` → `todo`, `in progress` → `inProgress`, `implemented` → `codeReview`, `in review` → `inReview`, `done` → `done`. `status` ON: `transition` to the step (a `null` map prints `UNCHANGED`); compare what you read with `agents.tracker.statuses`; do not write the local `status:`. A `status:` line still in the local spec of such a task has not moved yet: until **Move on binding** removes it, it is the task's status (compare with `agents.statuses`) and wins over `get`. `status` OFF or unbound: write and compare the `agents.statuses` string in the spec frontmatter; a local spec with no `status:` line is `BLOCKED: <task> has no status — set status: in <path>`. A mapped status missing from the item type's workflow is a stop (fix the mapping in `/{{prefix}}setit-se`).
 
 ### Move on binding

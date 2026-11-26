@@ -1,0 +1,128 @@
+#!/bin/sh
+# next-task
+# Allocate the number of a new files basename (NNN-slug): the highest number in
+# the task directories, the task branches (local and remote-tracking, as of the
+# last fetch) and the per-clone counter, plus 1. Writes only that counter, in
+# the git common dir. Gaps are never filled. With git disabled or outside a git
+# work tree: the task directories only, nothing written.
+
+. "$(dirname "$0")/lib.sh"
+
+if [ $# -gt 0 ]; then
+  blocked "next-task takes no arguments" "usage: next-task"
+fi
+
+max=0
+
+# Raise max to the decimal number $1 (digits only). Leading zeros are stripped
+# first: the shell would read 008 as octal.
+take() {
+  _num=$1
+  while :; do
+    case $_num in
+      0?*) _num=${_num#0} ;;
+      *) break ;;
+    esac
+  done
+  if [ "$_num" -gt "$max" ]; then
+    max=$_num
+  fi
+}
+
+# Sets prefix to the digits of a leading "<digits>-" in $1; fails without one.
+number_prefix() {
+  case $1 in
+    *-*) ;;
+    *) return 1 ;;
+  esac
+  prefix=${1%%-*}
+  case $prefix in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+}
+
+scan_directories() {
+  _root=$(project_root)
+  for _dir in docs/features docs/prompt docs/feature-log; do
+    for _path in "$_root/$_dir"/*; do
+      if [ -e "$_path" ] && number_prefix "${_path##*/}"; then
+        take "$prefix"
+      fi
+    done
+  done
+}
+
+# A branch counts when it looks like a files basename: the slug after the number
+# holds a letter. ADO keys and their suffix branches (1234, 1234-2) do not.
+scan_branches() {
+  _refs=$(git for-each-ref --format='%(refname)' refs/heads refs/remotes) ||
+    blocked "git for-each-ref failed" "fix the git error, then retry next-task"
+  while IFS= read -r _ref; do
+    case $_ref in
+      refs/heads/*) _name=${_ref#refs/heads/} ;;
+      refs/remotes/*/*)
+        _name=${_ref#refs/remotes/}
+        _name=${_name#*/}
+        ;;
+      *) continue ;;
+    esac
+    number_prefix "$_name" || continue
+    _slug=${_name#*-}
+    case $_slug in
+      */*) continue ;;
+      *[A-Za-z]*) take "$prefix" ;;
+    esac
+  done <<EOT
+$_refs
+EOT
+}
+
+git_enabled() {
+  _cfg=$(config_path)
+  if [ -f "$_cfg" ] && _gb=$(_extract_base_branch "$_cfg") && [ -z "$_gb" ]; then
+    return 1
+  fi
+  command -v git >/dev/null 2>&1 &&
+    [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]
+}
+
+if ! git_enabled; then
+  scan_directories
+  ok "number: $(printf '%03d' $((max + 1)))" "git: disabled"
+fi
+
+common=$(abs_git_common_dir)
+counter="$common/seh-next-task"
+lock="$counter.lock"
+tmp="$counter.tmp.$$"
+
+waited=0
+while ! mkdir "$lock" 2>/dev/null; do
+  if [ "$waited" -ge 5 ]; then
+    blocked "another next-task is running" "retry; remove $lock if no seh session is running"
+  fi
+  sleep 1
+  waited=$((waited + 1))
+done
+# Set only once the lock is ours: a refused call must not remove another's lock.
+trap 'rm -f "$tmp"; rmdir "$lock" 2>/dev/null || true' EXIT
+trap 'exit 1' HUP INT TERM
+
+if [ -e "$counter" ]; then
+  last=$(cat "$counter" 2>/dev/null) || last=
+  case $last in
+    ''|*[!0-9]*) last=0 ;;
+  esac
+  case $last in
+    *[1-9]*) take "$last" ;;
+    *) blocked "counter $counter does not hold a positive integer" "fix or delete that file, then retry next-task" ;;
+  esac
+fi
+scan_directories
+scan_branches
+
+next=$((max + 1))
+printf '%s\n' "$next" > "$tmp" && mv "$tmp" "$counter" ||
+  blocked "cannot write $counter" "check the permissions of $common, then retry next-task"
+
+ok "number: $(printf '%03d' "$next")"

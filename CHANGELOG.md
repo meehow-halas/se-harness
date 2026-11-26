@@ -2,6 +2,22 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-11-26
+
+### Added
+
+- `.seh/scripts/next-task`: allocates the number of a new files basename from the task directories, local and remote task branches and a per-clone counter in `.git/` (`max + 1`).
+
+### Changed
+
+- The Architect takes the number from `next-task` instead of choosing the smallest free one: numbers on task branches are seen, gaps are no longer filled.
+
+## [2.1.2] - 2026-11-26
+
+### Fixed
+
+- The Implementer no longer overwrites a local spec, prompt or log with a stub or a new file while it has content: it turns a file into a stub only after the tracker `set` succeeded, and stops with `BLOCKED:` otherwise. Found when `/<prefix>runit` replaced full specs with frontmatter-only files in a consuming repo.
+
 ## [2.1.1] - 2026-11-25
 
 ### Fixed
