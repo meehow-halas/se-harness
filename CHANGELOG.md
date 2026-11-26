@@ -2,6 +2,13 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] - 2026-11-26
+
+### Added
+
+- Pack `csharp`: fix an analyzer or compiler diagnostic instead of suppressing it (no new `#pragma warning disable`, `[SuppressMessage]`, or `NoWarn`), and follow the project's `.editorconfig` where it disagrees with the file's style.
+- Pack `csharp` project rules also load for `.editorconfig` and `*.globalconfig`, and forbid changing analyzer severities, `NoWarn`, or those files as a side effect of a feature.
+
 ## [2.2.0] - 2026-11-26
 
 ### Added
