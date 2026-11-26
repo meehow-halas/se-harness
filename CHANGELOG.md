@@ -9,6 +9,16 @@ All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://
 - Pack `csharp`: fix an analyzer or compiler diagnostic instead of suppressing it (no new `#pragma warning disable`, `[SuppressMessage]`, or `NoWarn`), and follow the project's `.editorconfig` where it disagrees with the file's style.
 - Pack `csharp` project rules also load for `.editorconfig` and `*.globalconfig`, and forbid changing analyzer severities, `NoWarn`, or those files as a side effect of a feature.
 
+## [2.2.0] - 2026-11-26
+
+### Added
+
+- `.seh/scripts/next-task`: allocates the number of a new files basename from the task directories, local and remote task branches and a per-clone counter in `.git/` (`max + 1`).
+
+### Changed
+
+- The Architect takes the number from `next-task` instead of choosing the smallest free one: numbers on task branches are seen, gaps are no longer filled.
+
 ## [2.1.2] - 2026-11-26
 
 ### Fixed
