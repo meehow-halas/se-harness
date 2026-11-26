@@ -5,7 +5,8 @@ paths:
 
 # C#
 
-- Follow the style of the file you are editing, including the namespace form (file-scoped or block) it already uses.
+- Follow the style of the file you are editing, including the namespace form (file-scoped or block) it already uses. Where the file and the project's `.editorconfig` disagree, follow `.editorconfig`.
+- Fix an analyzer or compiler diagnostic instead of suppressing it: no new `#pragma warning disable`, `[SuppressMessage]`, or `NoWarn` entry, unless the code around it already suppresses that diagnostic with a stated reason.
 - Keep nullable reference types enabled where the project enables them. Do not silence a warning with `!` or `#nullable disable`; fix the flow or make the type nullable.
 - Do not block on a task: no `.Result`, `.Wait()`, or `GetAwaiter().GetResult()`. Pass a `CancellationToken` through public async methods that do I/O.
 - Do not use `async void` outside an event handler.
