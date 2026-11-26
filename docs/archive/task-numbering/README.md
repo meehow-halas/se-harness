@@ -10,7 +10,7 @@ Source: conversation 2026-11-26 (numbering is blind to task branches; gap-fillin
 
 | NN | Stage | Executor | Status | Verification |
 |----|-------|----------|--------|--------------|
-| 01 | [next-task script, Architect, PRD, guide, release](01-next-task.md) | agent | planned | `node --test scripts/next-task.test.js`; `npm test`; diff review |
+| 01 | [next-task script, Architect, PRD, guide, release](01-next-task.md) | agent | done | `node --test scripts/next-task.test.js`; `npm test`; diff review |
 
 ## Decisions
 
