@@ -70,6 +70,8 @@ One task = three files, same basename (example `001-feature-example-name`):
 
 Task key = basename. Branch name = basename.
 
+The number of a new task is the highest one found in these directories, in task branch names (local and remote, as of your last fetch) and in a counter kept in `.git/`, plus one (`.seh/scripts/next-task`; with git disabled, the directories only). Gaps are normal: a number is not reused and tasks are never renumbered.
+
 Status lives in the spec file frontmatter. The strings come from `agents.statuses` in config. Do not translate them from the conversation language. Change those strings with `/_setit-se` (config only).
 
 When Implementer or Reviewer starts a worktree, `start-task` copies this task’s three files from the launch working tree into the worktree when they exist there, and removes their uncommitted copies from the launch working tree. From then on the task's files live in the worktree, and after the PR on the task branch.
