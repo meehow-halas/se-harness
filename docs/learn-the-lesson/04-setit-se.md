@@ -21,13 +21,13 @@ Q7, Q11, Q12, Q15.
 
 ## Acceptance criteria
 
-- [ ] Generated `learnthelesson` gets no `disable-model-invocation` on Cursor/OpenCode and no `agents/openai.yaml` on Codex; other work skills unchanged.
-- [ ] `learnthelesson` appears in every list the other work skills are on (copy, cleanup, old-prefix cleanup, `invokePrefix`, host commands).
-- [ ] First run does not ask about lessons and does not write `agents.lessons.enabled`.
-- [ ] Later run: changes the key only on the user's request, shows current and new value, writes after confirmation, regenerates nothing.
-- [ ] Pack regenerate and repair call `lessons-render`; `lesson-*` files survive a pack regenerate.
-- [ ] `src/cli.test.js` asserts the `$<prefix>learnthelesson` rewrite on a Codex row and `/` elsewhere, with a non-default prefix.
-- [ ] `npm test` passes.
+- [x] Generated `learnthelesson` gets no `disable-model-invocation` on Cursor/OpenCode and no `agents/openai.yaml` on Codex; other work skills unchanged.
+- [x] `learnthelesson` appears in every list the other work skills are on (copy, cleanup, old-prefix cleanup, `invokePrefix`, host commands).
+- [x] First run does not ask about lessons and does not write `agents.lessons.enabled`.
+- [x] Later run: changes the key only on the user's request, shows current and new value, writes after confirmation, regenerates nothing.
+- [x] Pack regenerate and repair call `lessons-render`; `lesson-*` files survive a pack regenerate.
+- [x] `src/cli.test.js` asserts the `$<prefix>learnthelesson` rewrite on a Codex row and `/` elsewhere, with a non-default prefix.
+- [x] `npm test` passes.
 
 ## Verification
 

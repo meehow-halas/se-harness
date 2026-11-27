@@ -898,6 +898,29 @@ describe("seh uninstall", () => {
       });
     });
 
+    test("learnthelesson is an invoke skill: its slash form gets the row's invokePrefix", () => {
+      withTempDir((root) => {
+        const { pkg, project } = setup(root);
+        fs.writeFileSync(
+          path.join(pkg, "skills", "setit-se", "SKILL.md"),
+          "---\nname: setit-se\ndescription: x\n---\nRun /{{prefix}}learnthelesson; not /{{prefix}}learnthelessonx.\n"
+        );
+        const hostsFile = path.join(pkg, "references", "hosts.json");
+        const table = JSON.parse(read(hostsFile));
+        for (const h of table.hosts) if (h.id === "codex") h.invokePrefix = "$";
+        fs.writeFileSync(hostsFile, JSON.stringify(table));
+        const result = runCli(["install", "--prefix", "q_"], { cwd: project, packageRoot: pkg });
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(
+          read(path.join(project, ".agents", "skills", "q_setit-se", "SKILL.md")),
+          /Run \$q_learnthelesson; not \/q_learnthelessonx\./
+        );
+        for (const dir of [".claude", ".cursor", ".opencode"]) {
+          assert.match(read(path.join(project, dir, "skills", "q_setit-se", "SKILL.md")), /Run \/q_learnthelesson;/, dir);
+        }
+      });
+    });
+
     test("hook matcher comes from the row, not a hardcoded value", () => {
       withTempDir((root) => {
         const { pkg, project } = setup(root);
@@ -1267,7 +1290,7 @@ describe("seh install --prefix", () => {
       for (const f of walk(path.join(project, ".seh"))) {
         assert.equal(read(f).includes("{{prefix}}"), false, f);
       }
-      for (const name of ["planit", "designit", "doit", "checkit", "runit", "shipit", "scopeit", "grillit", "setit-se"]) {
+      for (const name of ["planit", "designit", "doit", "checkit", "runit", "shipit", "scopeit", "grillit", "learnthelesson", "setit-se"]) {
         assert.equal(exists(path.join(project, ".seh", "skills", name, "SKILL.md")), true, name);
       }
       const scopeit = read(path.join(project, ".seh", "skills", "scopeit", "SKILL.md"));
