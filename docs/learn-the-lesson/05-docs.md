@@ -22,11 +22,11 @@ Q7, Q8, Q9.
 
 ## Acceptance criteria
 
-- [ ] `docs/guide/lessons.md` covers every item in Scope and agrees with the PRD (PRD wins on conflict).
-- [ ] README change limited to one sentence plus one Guide entry.
-- [ ] Example has no client, repo, or person names.
-- [ ] Every new relative link resolves to an existing file/heading.
-- [ ] No change to `package.json` or `CHANGELOG.md`.
+- [x] `docs/guide/lessons.md` covers every item in Scope and agrees with the PRD (PRD wins on conflict).
+- [x] README change limited to one sentence plus one Guide entry.
+- [x] Example has no client, repo, or person names.
+- [x] Every new relative link resolves to an existing file/heading.
+- [x] No change to `package.json` or `CHANGELOG.md`.
 
 ## Verification
 

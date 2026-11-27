@@ -14,7 +14,7 @@ Source: conversation 2026-11-27 (ifm PR review session: the agent fixed review c
 | 02 | [lessons-render script and Codex section](02-render-script.md) | agent | done | `node --test scripts/lessons-render.test.js references/codex-adapters.test.js`; `npm test` |
 | 03 | [learnthelesson skill](03-skill.md) | agent | done | diff review against criteria; `npm test` |
 | 04 | [setit-se and install integration](04-setit-se.md) | agent | done | `node --test src/cli.test.js`; `npm test`; diff review |
-| 05 | [README and guide](05-docs.md) | agent | planned | link check; diff review against PRD |
+| 05 | [README and guide](05-docs.md) | agent | done | link check; diff review against PRD |
 
 ## Decisions
 
