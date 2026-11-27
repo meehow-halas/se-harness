@@ -48,6 +48,10 @@ Models and optional role `rules` (reviewer may have `checklist`) come from `agen
 | `/{{prefix}}shipit` | Many specced tasks: one `/{{prefix}}runit` session per task in parallel, auto-merge, dependents start after their dependency is merged. Writes a run report. Never specs. Needs all four git operations. |
 | `/{{prefix}}scopeit` | Creates or updates the project PRD (purpose, users, scope, non-goals). Never writes config. |
 | `/{{prefix}}grillit` | Members, app context, and a consult round. |
+| `/{{prefix}}learnthelesson` | Turns corrections, review fixes and “remember this” into project lessons; writes only after acceptance. |
+
+Project lessons: [`docs/lessons/LESSONS.md`](docs/lessons/LESSONS.md).
+After a user correction or finished review fixes, offer `/{{prefix}}learnthelesson`, unless `agents.lessons.enabled` is `false` in `harness.config.json`.
 
 ## Tracker
 

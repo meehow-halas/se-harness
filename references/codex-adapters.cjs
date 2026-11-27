@@ -9,9 +9,12 @@
 //   node .seh/references/codex-adapters.cjs rules-section <AGENTS.md> <rulesDir> <rule.md>...
 //
 // agent / openai-yaml print the file body. rules-section prints the full new
-// AGENTS.md text (input unchanged when the section is already current).
+// AGENTS.md text (input unchanged when the section is already current). It also
+// lists the lesson-* rule files found in <rulesDir> (resolved from the
+// AGENTS.md directory), so a regenerate that passes only seh-* files keeps them.
 
 const fs = require("fs");
+const path = require("path");
 
 const READ_ONLY_SENTENCE =
   "Read-only role: do not create, edit, or delete any file, and do not run a command that changes the working tree, the index, or git state. The host does not enforce this for you; you must.";
@@ -172,8 +175,13 @@ function main(argv) {
   } else if (cmd === "rules-section") {
     const [agentsFile, rulesDir, ...rules] = rest;
     const current = fs.existsSync(agentsFile) ? fs.readFileSync(agentsFile, "utf8") : "";
-    const entries = rules.map((f) => ({
-      file: rulesDir.replace(/\/+$/, "") + "/" + require("path").basename(f),
+    const dir = path.resolve(path.dirname(agentsFile), rulesDir);
+    const files = new Map(rules.map((f) => [path.basename(f), f]));
+    for (const name of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
+      if (/^lesson-.*\.mdc?$/.test(name) && !files.has(name)) files.set(name, path.join(dir, name));
+    }
+    const entries = [...files].map(([name, f]) => ({
+      file: rulesDir.replace(/\/+$/, "") + "/" + name,
       paths: parseRulePaths(fs.readFileSync(f, "utf8")),
     }));
     process.stdout.write(upsertRulesSection(current, entries));

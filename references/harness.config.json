@@ -66,6 +66,9 @@
       "consult": "significant"
     },
     "reportChange": true,
+    "lessons": {
+      "enabled": true
+    },
     "git": {
       "worktree": true,
       "commit": true,

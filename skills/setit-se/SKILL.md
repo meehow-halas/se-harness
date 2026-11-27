@@ -152,7 +152,7 @@ Do not write `harness.config.json` or generate live files until these are confir
 
 **Packs.** After detection (below), state which packs you will generate. Honour `packsIgnored` if the user names packs to skip.
 
-Start the live config from `.seh/references/harness.config.json`. Fill answers, including `agents.reportChange` and, when asked, `agents.git`. When `agents.baseBranch` is empty, remove `agents.git` from the live config: it was not asked, and a later connect asks it. Leave `agents.statuses` at the skeleton defaults unless the user confirmed other strings. Leave `jiraOffer` `null` until the tracker offer. Omit `agents.tracker`. Set `seh.generatedFrom` to the trimmed contents of `.seh/VERSION`. Do not put credentials in config.
+Start the live config from `.seh/references/harness.config.json`. Fill answers, including `agents.reportChange` and, when asked, `agents.git`. When `agents.baseBranch` is empty, remove `agents.git` from the live config: it was not asked, and a later connect asks it. Remove the `agents.lessons` block from the live config and do not ask about lessons: a missing key means enabled, and only a later run changes it, when the user asks. Leave `agents.statuses` at the skeleton defaults unless the user confirmed other strings. Leave `jiraOffer` `null` until the tracker offer. Omit `agents.tracker`. Set `seh.generatedFrom` to the trimmed contents of `.seh/VERSION`. Do not put credentials in config.
 
 ### 4. Generate from `.seh/`
 
@@ -166,7 +166,7 @@ The seh source is `.seh/references/AGENTS.md`.
 
 Treat a symlink as the target’s body, read once. If `CLAUDE.md` already links to `AGENTS.md` (or the reverse), that is one existing document, not two. If a named path exists but the symlink is broken, treat that path as missing and use the other file if it exists.
 
-Build the **proposed** `AGENTS.md` in this order; **do not write yet**. When a host row has `rulesIndex` `agents-md` and rule files were generated, append the seh-managed rules section from **Rule packs** to the proposed body:
+Build the **proposed** `AGENTS.md` in this order; **do not write yet**. When a host row has `rulesIndex` `agents-md` and its `rulesDir` holds `seh-*` or `lesson-*` rule files, append the seh-managed rules section from **Rule packs** to the proposed body:
 
 | What exists at project root | Merge input (then always merge with the seh template) |
 |-----------------------------|--------------------------------------------------------|
@@ -218,11 +218,11 @@ If `.seh/VERSION` (trimmed) does not equal `seh.generatedFrom`: regenerate live 
 **Missing generated files (repair).** VERSION and prefix may be equal while a host tree is still incomplete, for example after a package added a host row or `commandsDir` without a version change, or after someone deleted a file. Check every row in `.seh/references/hosts.json`:
 
 - the five agents in its `agentsDir`, each in this host's format from **Live agents** (for example an OpenCode copy that still has `name:` or `tools:`, or lacks `mode: subagent`, counts as missing);
-- `<skillsDir>/<prefix><name>/SKILL.md` for every work-skill template present in `.seh/skills/`, with `disable-model-invocation: true` where **Work skills** requires it for this host;
-- on a `codex-toml` row, the five `<role>.toml` files instead of `.md`, and `agents/openai.yaml` for every work skill when `skillHide` is `openai-yaml`;
+- `<skillsDir>/<prefix><name>/SKILL.md` for every work-skill template present in `.seh/skills/`, with `disable-model-invocation: true` where **Work skills** requires it for this host (never on `learnthelesson`);
+- on a `codex-toml` row, the five `<role>.toml` files instead of `.md`, and `agents/openai.yaml` for every work skill except `learnthelesson` when `skillHide` is `openai-yaml`;
 - when `commandsDir` is set, `<commandsDir>/<prefix><name>.md` for those same skills, matching what the current `.seh/references/host-command.md` renders (a command without the `Host:` line counts as missing).
 
-If any of these is missing, regenerate live agents, work skills, and host commands for **every** row, with the same copy rules as first run. Tell the user in one line which paths were missing. Do not show the rename message and do not regenerate rule packs for this reason. Then continue below.
+If any of these is missing, regenerate live agents, work skills, and host commands for **every** row, with the same copy rules as first run. Tell the user in one line which paths were missing. Do not show the rename message and do not regenerate rule packs for this reason. Then run **Lesson rules** (see **Generation**); when it changes the `agents-md` section, use the acceptance step of **Rule packs**. Then continue below.
 
 **Status migration (once, on a later run).** If `agents.statuses` has the key `code review` and no `implemented` key, the flow changed. Rename it to `implemented` (key and value) in config and tell the user. Do not edit spec files. List every spec under `docs/features/` (or the mapped tracker) whose `status:` is `code review`, and tell the user to set it to `implemented`, or to `in review` if a review is running. `in review` stays valid.
 
@@ -234,6 +234,7 @@ If any of these is missing, regenerate live agents, work skills, and host comman
 
 - `agents.reportChange` missing → ask the **Changelog question** and write the answer. Until answered it counts as `true`.
 - `agents.baseBranch` set, git connected (see **`agents.baseBranch`** under **First run**), and `agents.git` missing → ask the **Git operations question** and write the answer. Until answered all four count as `true`.
+- `agents.lessons.enabled` missing → do not ask and do not write it. It means `true`.
 
 Then **one change at a time**. Show current and new value, wait for confirmation, then write. Do not overwrite keys the user did not confirm.
 
@@ -245,6 +246,7 @@ Then **one change at a time**. Show current and new value, wait for confirmation
 | `agents.reportChange` | **Changelog question**, showing the current value. Config only. |
 | `agents.git` | Only when git is connected and `agents.baseBranch` is set: **Git operations question**, showing the current set. Config only. |
 | Tracker write actions (`agents.tracker.write`) | See **Tracker** → **Change**. Config only. |
+| `agents.lessons.enabled` | Only when the user asks to turn lessons on or off; never offer it. Show the current value (missing = `true`) and the new one, write after confirmation. Config only: regenerate nothing and leave lesson files in place. `false` stops proactive offers and recording; existing lessons stay loaded, listing and removal still work. |
 | Statuses, tracker maps, `fetchFields`, content language, product line | Config only. Do **not** regenerate agent bodies. |
 
 - Do not touch `agents.brainstorm` (that is `/{{prefix}}grillit`).
@@ -381,16 +383,17 @@ Read the prefix from `.seh/PREFIX` (first line, may be empty). Copy these direct
 - `shipit`
 - `scopeit`
 - `grillit` (when present)
+- `learnthelesson`
 
 Do **not** overwrite the install-owned `/{{prefix}}setit-se` skill from this copy step. If a listed template is missing, still copy the others; the copied stub (when present) stops with `BLOCKED:` until a later package fills the body.
 
-Cleanup in **each** `skillsDir`: delete a leftover `seh-feature` directory and the pre-prefix names `seh-setup`, `seh-planit`, `seh-doit`, `seh-checkit`, `seh-shipit`, `seh-brainstorm`. If `seh.generatedPrefix` in `harness.config.json` is set and differs from `.seh/PREFIX`, also delete the live directories made with that old prefix (only `setit-se`, `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `scopeit`, `grillit` with that prefix). Never delete a directory whose name is not on these lists. Do not leave aliases. After generating, set `seh.generatedPrefix` to the `.seh/PREFIX` value (empty string allowed). A prefix change alone (VERSION equal, `seh.generatedPrefix` different) also triggers this regeneration.
+Cleanup in **each** `skillsDir`: delete a leftover `seh-feature` directory and the pre-prefix names `seh-setup`, `seh-planit`, `seh-doit`, `seh-checkit`, `seh-shipit`, `seh-brainstorm`. If `seh.generatedPrefix` in `harness.config.json` is set and differs from `.seh/PREFIX`, also delete the live directories made with that old prefix (only `setit-se`, `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `scopeit`, `grillit`, `learnthelesson` with that prefix). Never delete a directory whose name is not on these lists. Do not leave aliases. After generating, set `seh.generatedPrefix` to the `.seh/PREFIX` value (empty string allowed). A prefix change alone (VERSION equal, `seh.generatedPrefix` different) also triggers this regeneration.
 
-When the host `id` is `cursor` or `opencode`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/{{prefix}}setit-se`). The package templates may omit that field.
+When the host `id` is `cursor` or `opencode`, add frontmatter `disable-model-invocation: true` on each copied work-skill `SKILL.md` (not on `/{{prefix}}setit-se` and not on `learnthelesson`: it triggers on intent, so it stays model-invocable). The package templates may omit that field.
 
-**`invokePrefix`.** Templates in `.seh/` name what the user types as slash plus prefix plus name. On a row whose `invokePrefix` is set and is not `/` (today Codex: `$`), in every copied work-skill file and every generated agent file for that host, replace each such slash form (names: `setit-se`, `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `scopeit`, `grillit`) with `<invokePrefix><prefix><name>`. Do not touch paths such as `.seh/scripts/…`. Rows without `invokePrefix`, or with `/`, get the text as is. In your own messages to the user use the same prefix for this session’s host. The `BLOCKED:` strings printed by `.seh/scripts/` keep `/`: when you relay one on such a host, say it with that host’s prefix.
+**`invokePrefix`.** Templates in `.seh/` name what the user types as slash plus prefix plus name. On a row whose `invokePrefix` is set and is not `/` (today Codex: `$`), in every copied work-skill file and every generated agent file for that host, replace each such slash form (names: `setit-se`, `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `scopeit`, `grillit`, `learnthelesson`) with `<invokePrefix><prefix><name>`. Do not touch paths such as `.seh/scripts/…`. Rows without `invokePrefix`, or with `/`, get the text as is. In your own messages to the user use the same prefix for this session’s host. The `BLOCKED:` strings printed by `.seh/scripts/` keep `/`: when you relay one on such a host, say it with that host’s prefix.
 
-**`skillHide` `openai-yaml`** (today Codex, which has no frontmatter switch). For each copied work skill write `<skillsDir>/<prefix><name>/agents/openai.yaml` with the stdout of `node .seh/references/codex-adapters.cjs openai-yaml` (`policy.allow_implicit_invocation: false`; `$<prefix><name>` still works). Not for `<prefix>setit-se`. Rows without `skillHide` get nothing.
+**`skillHide` `openai-yaml`** (today Codex, which has no frontmatter switch). For each copied work skill write `<skillsDir>/<prefix><name>/agents/openai.yaml` with the stdout of `node .seh/references/codex-adapters.cjs openai-yaml` (`policy.allow_implicit_invocation: false`; `$<prefix><name>` still works). Not for `<prefix>setit-se` and not for `<prefix>learnthelesson` (it stays model-invocable). Rows without `skillHide` get nothing.
 
 **Shared skills directory.** Codex reads `.agents/skills`, which other tools may also use. Write and delete only seh-owned names (the lists in the cleanup above). Never delete or rewrite an entry seh did not write, and never remove the directory itself. Removing a seh skill directory removes its `agents/openai.yaml` with it.
 
@@ -400,7 +403,7 @@ When the host `id` is `cursor` or `opencode`, add frontmatter `disable-model-inv
 - Write nothing else into the command. The skill holds the procedure.
 - Rows with `commandsDir` `null` or missing get no command files.
 - Do not write or overwrite `<prefix>setit-se.md`. Install owns it.
-- Cleanup in **each** `commandsDir` follows the skill cleanup above. When `seh.generatedPrefix` differs from `.seh/PREFIX`, delete `<oldprefix><name>.md` for `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `scopeit`, `grillit`. Never delete another file.
+- Cleanup in **each** `commandsDir` follows the skill cleanup above. When `seh.generatedPrefix` differs from `.seh/PREFIX`, delete `<oldprefix><name>.md` for `planit`, `designit`, `doit`, `checkit`, `runit`, `shipit`, `scopeit`, `grillit`, `learnthelesson`. Never delete another file.
 
 ### Rule packs
 
@@ -438,20 +441,32 @@ When the host `id` is `opencode`, after writing that host’s `seh-*` rule files
 - Do not edit a project-root `opencode.json` or `opencode.jsonc`. OpenCode combines `instructions` from both configs.
 - Uninstall does not remove this glob (setup-owned, like the rule files).
 
-**`rulesIndex` `agents-md`** (today Codex reads only `AGENTS.md`, so a rules directory alone is never loaded). After writing that host’s `seh-*` rule files, keep one seh-managed section in project-root `AGENTS.md`. Build the new text with
+**`rulesIndex` `agents-md`** (today Codex reads only `AGENTS.md`, so a rules directory alone is never loaded). After writing that host’s `seh-*` rule files and running **Lesson rules**, keep one seh-managed section in project-root `AGENTS.md`. Build the new text with
 
 ```text
 node .seh/references/codex-adapters.cjs rules-section AGENTS.md <rulesDir> <the seh-* rule files just written>
 ```
 
-(stdout is the full new `AGENTS.md`; with no rule files it removes the section). Text outside the `<!-- seh:rules:start -->` … `<!-- seh:rules:end -->` markers is never changed; rerun with the same rules changes nothing. Pointers are advisory (Codex does not scope by `paths`). **Show the managed section to the user and wait for acceptance before writing**, the same way as the rest of `AGENTS.md`:
+(stdout is the full new `AGENTS.md`; the helper also lists the `lesson-*` files in `<rulesDir>`, and with no rule files of either kind it removes the section). Text outside the `<!-- seh:rules:start -->` … `<!-- seh:rules:end -->` markers is never changed; rerun with the same rules changes nothing. Pointers are advisory (Codex does not scope by `paths`). **Show the managed section to the user and wait for acceptance before writing**, the same way as the rest of `AGENTS.md`:
 
 - First run: add it to the proposed `AGENTS.md` of step 5 (rule files are generated before that step), so the user accepts it with the rest.
 - Later run: only when the helper’s output differs from the current file, show just the section and write it after acceptance. This is the one exception to “Do not remake or re-merge `AGENTS.md`”. An `AGENTS.md` that does not exist yet is created from the section alone only after the same acceptance. If the helper reports an unbalanced marker, stop with `BLOCKED: unbalanced seh:rules marker in AGENTS.md — fix the file, then /{{prefix}}setit-se again`.
 
 Codex caps combined `AGENTS.md` size (32 KiB by default); mention it only if the file is near that.
 
-On regenerate: in **each** `rulesDir`, delete existing `seh-*` files this skill wrote, then write the current filtered set. Do not delete rule files that are not `seh-` prefixed. Leave the OpenCode `instructions` glob in place. When a regenerate leaves a `rulesIndex` host with zero rule files, remove its managed section (same acceptance step).
+On regenerate: in **each** `rulesDir`, delete existing `seh-*` files this skill wrote, then write the current filtered set. Do not delete rule files that are not `seh-` prefixed. Leave the OpenCode `instructions` glob in place. Never delete or edit `lesson-*` files here. When a regenerate leaves a `rulesIndex` host with no `seh-*` and no `lesson-*` files, remove its managed section (same acceptance step).
+
+### Lesson rules
+
+Lesson rule files (`lesson-*`) come from `docs/lessons/`, and only `.seh/scripts/lessons-render` writes or removes them. Run it from the project root after writing the `seh-*` rule files (first run and every regenerate) and after a repair, also when lessons are disabled:
+
+```text
+.seh/scripts/lessons-render
+```
+
+The script can also rewrite the seh-managed section of `AGENTS.md`. Setup writes that section only after acceptance, so note whether `AGENTS.md` exists and what it holds before the run, and when the script changed it, put it back (delete it if it did not exist). Then do the acceptance step of **`rulesIndex` `agents-md`**: its helper lists the lesson files the script just rendered.
+
+`OK` and `UNCHANGED`: continue. `BLOCKED:`: relay the line, do not write lesson files yourself, finish the rest of setup, and tell the user to fix the cause and run `/{{prefix}}learnthelesson` or the script again.
 
 ### Codex notice
 

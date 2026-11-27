@@ -2,6 +2,21 @@
 
 All notable changes to `se-harness` (`seh`). Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] - 2026-11-27
+
+### Added
+
+- Skill `learnthelesson`: turns user corrections, review fixes, resolved conflicts or CI failures, and "remember this" into project lessons. It triggers on intent (the one work skill that stays model-invocable), only proposes on its own initiative, and writes nothing without acceptance.
+- Lessons live in `docs/lessons/<group>/<topic>.md` with the index `LESSONS.md`; new templates `references/lesson.md` and `references/lessons-index.md`.
+- Script `lessons-render` renders lessons as `lesson-*` rule files into every host `rulesDir`, keeps the OpenCode `instructions` glob and the Codex section in `AGENTS.md`, and removes rule files whose source is gone.
+- Config key `agents.lessons.enabled` (missing = on). `setit-se` does not ask about it on first run and changes it only on request.
+- `AGENTS.md` template: skill row, a link to the lessons index, and the instruction to offer `learnthelesson` after a correction or review fixes.
+
+### Changed
+
+- `setit-se` generates `learnthelesson` for every host and runs `lessons-render` on first run, pack regeneration, and repair; `lesson-*` files survive a regeneration.
+- `codex-adapters.cjs rules-section` also lists the `lesson-*` files found in the rules directory.
+
 ## [2.3.0] - 2026-11-26
 
 ### Added

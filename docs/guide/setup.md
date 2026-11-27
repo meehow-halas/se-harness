@@ -24,11 +24,11 @@ npx https://github.com/meehow-halas/se-harness install
 
 npm and GitHub are equivalent. `#<ref>` is an optional tag, branch, or commit.
 
-**Result:** `.seh/` and the project skill `/_setit-se` in every host `skillsDir` (today `.claude/skills/_setit-se`, `.cursor/skills/_setit-se`, `.opencode/skills/_setit-se`, and `.agents/skills/_setit-se` for Codex), plus the OpenCode command `.opencode/commands/_setit-se.md`. Setup is **not** done. Work skills (`/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit`, `/_grillit`) do not exist yet.
+**Result:** `.seh/` and the project skill `/_setit-se` in every host `skillsDir` (today `.claude/skills/_setit-se`, `.cursor/skills/_setit-se`, `.opencode/skills/_setit-se`, and `.agents/skills/_setit-se` for Codex), plus the OpenCode command `.opencode/commands/_setit-se.md`. Setup is **not** done. Work skills (`/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit`, `/_grillit`, `/_learnthelesson`) do not exist yet.
 
 ## Skill names and `--prefix`
 
-Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the skills are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit` and `/_grillit`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. These docs show the default `_` names.
+Skills are installed with a name prefix. `seh install --prefix P` sets it; the default is `_`, so the skills are `/_setit-se`, `/_planit`, `/_designit`, `/_doit`, `/_checkit`, `/_runit`, `/_shipit`, `/_scopeit`, `/_grillit` and `/_learnthelesson`. `--prefix my-` gives `/my-doit`, `--prefix ""` gives `/doit`. Allowed characters: letters, digits, `_`, `-`. These docs show the default `_` names.
 
 ```text
 npx se-harness install --prefix my-
@@ -85,6 +85,7 @@ It does **not** touch `agents.brainstorm` (that is `/_grillit`), create or rewri
 | Jira / Azure DevOps tracker | offer once: add or decline | add / change mapping or [write actions](trackers.md#write-actions) / remove | config + local credentials file; no agent-body regen |
 | Project PRD | create only if missing | no rewrite | — |
 | `AGENTS.md` | merge + accept | no remake | later: only create missing `CLAUDE.md` if `.claude/` exists |
+| [Project lessons](lessons.md#turning-lessons-off) (`agents.lessons.enabled`) | not asked, not written (on) | only when you ask; a missing key means on | config only; nothing is regenerated |
 | Brainstorm members / model / consult | no | no | `/_grillit` |
 
 **Jira / Azure DevOps.** First run offers a tracker once. Later: add, change the mapping or the write actions, or remove. Details: [Jira tracker](trackers.md#jira-tracker), [Azure DevOps tracker](trackers.md#azure-devops-tracker).

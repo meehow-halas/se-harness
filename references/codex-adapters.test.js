@@ -236,4 +236,42 @@ describe("rules section", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  test("CLI: lesson files in rulesDir stay listed when only seh-* files are passed", () => {
+    const dir = tmp();
+    try {
+      const rules = path.join(dir, "my", "rules");
+      fs.mkdirSync(rules, { recursive: true });
+      const seh = path.join(rules, "seh-go-core.md");
+      const scoped = path.join(rules, "lesson-go-errors.md");
+      fs.writeFileSync(seh, '---\npaths:\n  - "cmd/**/*.go"\n---\n# Go\n');
+      fs.writeFileSync(scoped, '---\npaths:\n  - "pkg/**/*.go"\n---\n\n# Errors\n');
+      fs.writeFileSync(path.join(rules, "lesson-general-naming.md"), "# Naming\n");
+      fs.writeFileSync(path.join(rules, "own-rule.md"), "# Own\n");
+      const agents = path.join(dir, "AGENTS.md");
+      fs.writeFileSync(agents, "# Mine\n");
+      const run = (...files) =>
+        spawnSync("node", [SCRIPT, "rules-section", agents, "my/rules", ...files], { encoding: "utf8" });
+
+      const r = run(seh);
+      assert.equal(r.status, 0, r.stderr);
+      assert.ok(r.stdout.startsWith("# Mine\n\n"));
+      assert.match(r.stdout, /`my\/rules\/seh-go-core\.md`.*`cmd\/\*\*\/\*\.go`/);
+      assert.match(r.stdout, /`my\/rules\/lesson-go-errors\.md`.*`pkg\/\*\*\/\*\.go`/);
+      assert.match(r.stdout, /`my\/rules\/lesson-general-naming\.md` for all work/);
+      assert.doesNotMatch(r.stdout, /own-rule/);
+
+      // Passing a lesson file too does not list it twice.
+      fs.writeFileSync(agents, r.stdout);
+      const again = run(seh, scoped);
+      assert.equal(again.stdout, r.stdout);
+
+      // No rule file passed: the lessons alone keep the section.
+      const none = run();
+      assert.match(none.stdout, /lesson-go-errors/);
+      assert.doesNotMatch(none.stdout, /seh-go-core/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

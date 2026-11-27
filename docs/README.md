@@ -12,13 +12,14 @@ Five kinds of things live here. Only the PRD is normative.
 
 | Path | What |
 |------|------|
-| [guide/](guide/) | Reference split out of the root `README.md`: setup, git worktrees, skills and agents, trackers, brainstorm, hosts, example runs. Describes the PRD; the PRD wins. |
+| [guide/](guide/) | Reference split out of the root `README.md`: setup, git worktrees, skills and agents, trackers, brainstorm, hosts, project lessons, example runs. Describes the PRD; the PRD wins. |
 
 ## Active work
 
 | Path | What | Status |
 |------|------|--------|
 | `<slug>/` | A feature plan being executed (`docs/<slug>/`). Moved to `archive/` when every stage is `done`. | `Planning: complete` |
+| [learn-the-lesson/](learn-the-lesson/README.md) | `/_learnthelesson`: project lessons for agents. | `Planning: complete` |
 
 ## Not approved, for later
 
