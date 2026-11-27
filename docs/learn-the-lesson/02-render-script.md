@@ -32,14 +32,14 @@ Contract `lessons-render [--root <dir>]`:
 
 ## Acceptance criteria
 
-- [ ] A fixture with two groups, one path-scoped and one `general` lesson renders the right file name, frontmatter and body for every row of a test `hosts.json` (not the real table values hardcoded in the script).
-- [ ] A second run prints `UNCHANGED` and changes no file.
-- [ ] Removing a source removes only its `lesson-*` files; an unrelated rule file and `seh-*` files stay.
-- [ ] `paths:` in a `general` lesson → `BLOCKED:`, exit non-zero, no file written.
-- [ ] OpenCode glob added once; other `instructions` kept.
-- [ ] Codex section lists both `seh-*` and `lesson-*` files; text outside markers unchanged; regenerate with only `seh-*` input keeps lesson pointers when lesson files exist in `rulesDir`.
-- [ ] Assumption on always-on loading per host checked against host docs; result noted in the PRD or README assumptions.
-- [ ] `npm test` passes.
+- [x] A fixture with two groups, one path-scoped and one `general` lesson renders the right file name, frontmatter and body for every row of a test `hosts.json` (not the real table values hardcoded in the script).
+- [x] A second run prints `UNCHANGED` and changes no file.
+- [x] Removing a source removes only its `lesson-*` files; an unrelated rule file and `seh-*` files stay.
+- [x] `paths:` in a `general` lesson → `BLOCKED:`, exit non-zero, no file written.
+- [x] OpenCode glob added once; other `instructions` kept.
+- [x] Codex section lists both `seh-*` and `lesson-*` files; text outside markers unchanged; regenerate with only `seh-*` input keeps lesson pointers when lesson files exist in `rulesDir`.
+- [x] Assumption on always-on loading per host checked against host docs; result noted in the PRD or README assumptions.
+- [x] `npm test` passes.
 
 ## Verification
 

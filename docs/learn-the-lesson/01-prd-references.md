@@ -29,13 +29,13 @@ Q1–Q9, Q11, Q12, Q15.
 
 ## Acceptance criteria
 
-- [ ] `docs/prd.md` names `/<prefix>learnthelesson`, `docs/lessons/`, `LESSONS.md`, `lesson-` prefix and `agents.lessons.enabled` with the Q7 semantics.
-- [ ] The PRD purpose → storage table covers every row of Q3, including "not a lesson".
-- [ ] `references/lesson.md` and `references/lessons-index.md` exist and match Q4/Q5.
-- [ ] `references/harness.config.md` documents `agents.lessons.enabled` (missing = on, first run does not ask).
-- [ ] `references/AGENTS.md` adds exactly the skill row and two lines; no lesson content in it.
-- [ ] No change to `package.json` or `CHANGELOG.md`.
-- [ ] `npm test` passes.
+- [x] `docs/prd.md` names `/<prefix>learnthelesson`, `docs/lessons/`, `LESSONS.md`, `lesson-` prefix and `agents.lessons.enabled` with the Q7 semantics.
+- [x] The PRD purpose → storage table covers every row of Q3, including "not a lesson".
+- [x] `references/lesson.md` and `references/lessons-index.md` exist and match Q4/Q5.
+- [x] `references/harness.config.md` documents `agents.lessons.enabled` (missing = on, first run does not ask).
+- [x] `references/AGENTS.md` adds exactly the skill row and two lines; no lesson content in it.
+- [x] No change to `package.json` or `CHANGELOG.md`.
+- [x] `npm test` passes.
 
 ## Verification
 
