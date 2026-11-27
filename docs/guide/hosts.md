@@ -17,13 +17,24 @@ Codex differences:
 
 - Skills live in `.agents/skills` (shared with other tools; uninstall removes only SE Harness entries). A skill is invoked as `$_setit-se` (or picked in `/skills`), not `/_setit-se`. Codex has no project command directory, so there is no command file and nothing is written under `~/.codex/`.
 - Live agents are TOML, `.codex/agents/<name>.toml`. `model` is written only when one is set; otherwise the session model is inherited. A Codex subagent inherits the parent sandbox, so Consultant read-only is an instruction, not enforced.
-- Work skills get `agents/openai.yaml` with `allow_implicit_invocation: false`, so the model does not start them on its own.
+- Work skills get `agents/openai.yaml` with `allow_implicit_invocation: false`, so the model does not start them on its own. The exception is `$_learnthelesson`, which [triggers on intent](lessons.md#when-it-triggers) on every host.
 - Rules go to `.codex/rules/*.md`; `$_setit-se` keeps one SE Harness section in `AGENTS.md` that points at them. Path scoping is soft (instruction only).
 - The session-start update check is a `.codex/hooks.json` `SessionStart` hook. Codex loads it only in a **trusted project**.
 - **Approve the hook:** after `seh install`, opening the project in Codex shows a notification that hooks need review. Open `/hooks` and accept the SE Harness `SessionStart` hook, otherwise the update check never runs.
 - Sessions per key are not started automatically; one ready-to-paste request is printed per key.
 
 One session per key (multi-key `/_planit`, `/_doit`, `/_checkit`, `/_runit`, and every `/_shipit`) starts automatically only in the Claude Code desktop app, with git enabled. Cursor, OpenCode, and Codex print one ready-to-paste request per key, keeping your wording about not asking questions (for example "don't ask me"). With git disabled, several keys run one after another in the current session on every host.
+
+## Lessons
+
+[Project lessons](lessons.md) are rendered from `docs/lessons/` into every host's rules directory:
+
+| Host | Rule file | Loaded |
+|------|-----------|--------|
+| Claude Code | `.claude/rules/lesson-<group>-<topic>.md` | With `paths`: when a matching file is read or edited. Without: at launch |
+| Cursor | `.cursor/rules/lesson-<group>-<topic>.mdc` | With paths: by `globs`. Without: always (`alwaysApply: true`) |
+| OpenCode | `.opencode/rules/lesson-<group>-<topic>.md` | Through the `.opencode/opencode.json` `instructions` glob, together with `AGENTS.md`; path scoping does not limit loading |
+| Codex | `.codex/rules/lesson-<group>-<topic>.md` | Through pointers in the SE Harness section of `AGENTS.md`; path scoping is soft (instruction only) |
 
 ## Models per host
 

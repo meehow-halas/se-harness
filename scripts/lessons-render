@@ -1,0 +1,41 @@
+#!/bin/sh
+# lessons-render [--root <dir>]
+# Renders docs/lessons/<group>/<topic>.md into every host rulesDir listed in
+# .seh/references/hosts.json as lesson-<group>-<topic><rulesExt>, removes
+# lesson-* rule files that have no source, and keeps the OpenCode instructions
+# glob and the AGENTS.md rules section current. Does not read
+# agents.lessons.enabled and does not touch git.
+# Output: OK + "written: <path>" / "removed: <path>" lines, UNCHANGED, or BLOCKED:.
+
+. "$(dirname "$0")/lib.sh"
+
+root=
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --root)
+      if [ $# -lt 2 ] || [ -z "$2" ]; then
+        blocked "missing value for --root" "pass lessons-render --root <dir>"
+      fi
+      root=$2
+      shift 2
+      ;;
+    *)
+      blocked "unknown argument $1" "pass lessons-render [--root <dir>]"
+      ;;
+  esac
+done
+
+if [ -z "$root" ]; then
+  root=$(project_root)
+fi
+
+if [ ! -d "$root" ]; then
+  blocked "$root is not a directory" "pass --root <project dir>"
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  blocked "node is required to render lessons" "install node, then retry lessons-render"
+fi
+
+exec node "$(dirname "$0")/lessons-render.cjs" "$root"
