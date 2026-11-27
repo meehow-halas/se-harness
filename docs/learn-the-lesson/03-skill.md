@@ -30,13 +30,13 @@ Q1–Q7, Q10, Q11, Q15.
 
 ## Acceptance criteria
 
-- [ ] SKILL.md is English, uses `{{prefix}}` for every slash form, and has no `disable-model-invocation`.
-- [ ] Description triggers on intent, names examples in more than one form, and states proactive mode only proposes.
-- [ ] Every Q3 target and "not a lesson" appear in the classification step.
-- [ ] Disabled semantics match Q7 exactly, including the `BLOCKED:` text.
-- [ ] Writes go through `.seh/references/lesson.md`, `LESSONS.md` and `.seh/scripts/lessons-render`; no prose rendering of host files.
-- [ ] No commit step; no write outside the project.
-- [ ] `npm test` passes.
+- [x] SKILL.md is English, uses `{{prefix}}` for every slash form, and has no `disable-model-invocation`.
+- [x] Description triggers on intent, names examples in more than one form, and states proactive mode only proposes.
+- [x] Every Q3 target and "not a lesson" appear in the classification step.
+- [x] Disabled semantics match Q7 exactly, including the `BLOCKED:` text.
+- [x] Writes go through `.seh/references/lesson.md`, `LESSONS.md` and `.seh/scripts/lessons-render`; no prose rendering of host files.
+- [x] No commit step; no write outside the project.
+- [x] `npm test` passes.
 
 ## Verification
 
